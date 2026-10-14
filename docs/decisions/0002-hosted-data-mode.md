@@ -41,4 +41,4 @@ API keys. Licence research found:
 
 ## Connectivity from the hosted app
 
-To be recorded from the Data status page after the first deployment to Streamlit Community Cloud.
+To be recorded from the Data sources page after the first deployment to Streamlit Community Cloud.

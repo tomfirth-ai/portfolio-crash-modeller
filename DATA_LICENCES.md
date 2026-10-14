@@ -11,6 +11,6 @@ Only freely redistributable data is ever committed.
 
 ## Data fetched at runtime
 
-Some history is fetched when the app runs and is never stored in this repository, because its
-publishers allow use but not redistribution. The app's Data status page lists these sources and
-checks that each one can be reached.
+Some data is fetched when the app runs and is never stored in this repository, either because its
+publisher allows use but not redistribution, or because it has to be up to date. The app's Data
+sources page lists these sources and checks that each one can be reached.

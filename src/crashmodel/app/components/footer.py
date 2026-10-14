@@ -5,8 +5,8 @@ import streamlit as st
 from crashmodel.app.presenters.copy import DISCLAIMER
 
 
-def render_footer(data_status_page: st.Page) -> None:
-    """Draw the disclaimer and a link to the data sources page."""
+def render_footer(data_sources_page: st.Page) -> None:
+    """Draw the disclaimer and a link to the data sources page, labelled with its title."""
     st.divider()
     st.caption(DISCLAIMER)
-    st.page_link(data_status_page, label="Data sources and status", icon=":material/database:")
+    st.page_link(data_sources_page)

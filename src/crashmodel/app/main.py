@@ -5,7 +5,8 @@ from pathlib import Path
 import streamlit as st
 
 from crashmodel.app.components.footer import render_footer
-from crashmodel.app.presenters.copy import page_title
+from crashmodel.app.presenters import data_sources
+from crashmodel.app.presenters.copy import HOME_TITLE, REFERENCE_SECTION, page_title
 
 PAGES_DIRECTORY = Path(__file__).parent / "pages"
 
@@ -18,17 +19,19 @@ def main() -> None:
     """
     # The cards and tables are laid out for the centred column, whatever the screen width.
     st.set_page_config(page_icon=":material/thunderstorm:", layout="centered")
-    home = st.Page(PAGES_DIRECTORY / "home.py", title="Home", icon=":material/home:", default=True)
-    data_status = st.Page(
-        PAGES_DIRECTORY / "data_status.py",
-        title="Data status",
-        icon=":material/database:",
-        url_path="data-status",
+    home = st.Page(
+        PAGES_DIRECTORY / "home.py", title=HOME_TITLE, icon=":material/home:", default=True
     )
-    page = st.navigation({"": [home], "Reference": [data_status]})
+    sources = st.Page(
+        PAGES_DIRECTORY / "data_sources.py",
+        title=data_sources.TITLE,
+        icon=":material/database:",
+        url_path="data-sources",
+    )
+    page = st.navigation({"": [home], REFERENCE_SECTION: [sources]})
     # Set after navigation: a title set earlier would replace every page's own tab title.
     st.set_page_config(page_title=page_title(page.title))
     body = st.container()
-    render_footer(data_status)
+    render_footer(sources)
     with body:
         page.run()

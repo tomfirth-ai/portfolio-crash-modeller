@@ -1,17 +1,20 @@
-"""What the Data status page says about each runtime source."""
+"""What the Data sources page says about each source the app fetches when it runs."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from crashmodel.data.diagnostics import SourceStatus
 
-TITLE = "Data sources and status"
+TITLE = "Data sources"
 
 INTRODUCTION = (
-    "Some history is fetched when the app runs instead of being stored here, because its "
-    "publishers allow use but not redistribution. This page checks that each of those sources can "
-    "be reached from wherever the app is running."
+    "Some data is fetched when the app runs rather than stored with it, either because its "
+    "publisher allows use but not redistribution, or because it has to be up to date. This page "
+    "checks that each source can be reached from wherever the app is running."
 )
+
+CHECK_BUTTON = "Check the sources"
+CHECKING = "Checking each source..."
 
 BYTES_PER_KILOBYTE = 1024
 MILLISECONDS_PER_SECOND = 1000

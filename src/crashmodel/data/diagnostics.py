@@ -1,8 +1,9 @@
 """Connectivity checks for the data sources the hosted app fetches at runtime.
 
-The hosted demo fetches some history at runtime rather than committing it, because those sources may
-be used but not redistributed. These checks show whether each source is reachable from wherever the
-app is running, which matters most on shared cloud hosts.
+The hosted demo fetches some data at runtime rather than committing it, either because the
+publisher allows use but not redistribution, or because the data has to be up to date. These checks
+show whether each source is reachable from wherever the app is running, which matters most on
+shared cloud hosts.
 """
 
 import time
@@ -51,12 +52,12 @@ HOSTED_SOURCES: tuple[DataSource, ...] = (
     DataSource(
         name="Kenneth R. French Data Library",
         url="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip",
-        purpose="Equity history for the crash episodes, fetched at runtime and never stored",
+        purpose="Share price history for the crash episodes",
     ),
     DataSource(
         name="Federal Reserve Board H.10",
         url="https://www.federalreserve.gov/releases/h10/hist/dat00_uk.htm",
-        purpose="Pound to dollar exchange rates (public domain)",
+        purpose="Recent exchange rates between the pound and the dollar",
     ),
 )
 
