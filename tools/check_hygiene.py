@@ -2,12 +2,17 @@
 
 Checks every file in the git index (staged additions included):
 
-* nothing under ``private/`` or ``local/``, and no private notes or local settings;
-* no binary data formats such as spreadsheets, databases or notebooks;
-* images only in the reviewed screenshots directory, as real PNG files without metadata;
+* nothing in a ``private/`` or ``local/`` directory at any depth, and no private notes, local
+  settings, secrets or denylist;
+* no data or document formats such as spreadsheets, databases, notebooks or PDFs, nor their
+  journal files;
+* no other binary content except reviewed screenshots, which must be PNG files in ``docs/img/``
+  without metadata;
 * no file larger than a sensible limit;
-* no valid ISIN (a fund or share identifier) in ``config/`` or ``data/``, where only asset-class
-  proxies and demo instruments belong.
+* no valid ISIN (a fund or share identifier) in the names or content of files in ``config/`` or
+  ``data/``, where only asset-class proxies and demo instruments belong.
+
+CI runs this check on every push, so it is the public backstop for anything the local hooks miss.
 
 Usage::
 
@@ -25,11 +30,10 @@ from tools._report import Problem, report
 from tools._text import decode_text
 from tools.policy import (
     BLOCKED_FORMAT,
-    BLOCKED_SUFFIXES,
     IMAGE_DIRECTORY,
     IMAGE_SUFFIXES,
-    PRIVATE_FILES,
-    PRIVATE_PREFIXES,
+    is_blocked_format,
+    is_private_path,
     is_screenshot_path,
     screenshot_problem,
 )
@@ -40,7 +44,13 @@ LUHN_DOUBLED_DIGIT_LIMIT = 9
 LUHN_MODULUS = 10
 ALPHANUMERIC_BASE = 36
 
-_ISIN_SHAPE = re.compile(r"\b[A-Z]{2}[A-Z0-9]{9}\d\b")
+_ISIN_SHAPE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}[A-Z0-9]{9}[0-9](?![A-Za-z0-9])")
+"""Two letters, nine letters or digits, and a check digit, with no letter or digit either side.
+
+Underscores count as a boundary, so ``isin_US0378331005`` is caught. ISINs are upper case, and a
+case-insensitive search would mistake names such as ``portfolio005`` for one.
+"""
+ISIN_RULE = "config and data hold only asset-class proxies and demo instruments"
 
 
 def is_valid_isin(candidate: str) -> bool:
@@ -57,26 +67,39 @@ def is_valid_isin(candidate: str) -> bool:
     return total % LUHN_MODULUS == 0
 
 
+def contains_isin(text: str) -> bool:
+    """Whether the text holds an ISIN-shaped string with a valid check digit."""
+    return any(is_valid_isin(match) for match in _ISIN_SHAPE.findall(text))
+
+
 def path_problems(path: str) -> Iterator[str]:
     """Yield the policy problems with a tracked path, judged by its name alone."""
-    suffix = PurePosixPath(path).suffix.lower()
-    if path.startswith(PRIVATE_PREFIXES) or path in PRIVATE_FILES:
+    if is_private_path(path):
         yield "private or local file is tracked"
-    if suffix in BLOCKED_SUFFIXES:
+    if is_blocked_format(path):
         yield BLOCKED_FORMAT
-    if suffix in IMAGE_SUFFIXES and not path.startswith(IMAGE_DIRECTORY):
+    is_image = PurePosixPath(path).suffix.lower() in IMAGE_SUFFIXES
+    if is_image and not path.startswith(IMAGE_DIRECTORY):
         yield f"images belong in {IMAGE_DIRECTORY} after review"
+    if path.startswith(ISIN_DIRECTORIES) and contains_isin(path):
+        yield f"file name contains an ISIN; {ISIN_RULE}"
 
 
 def content_problems(path: str, content: bytes) -> Iterator[str]:
     """Yield the policy problems with a tracked file's content."""
     if len(content) > MAX_FILE_BYTES:
         yield f"file is larger than {MAX_FILE_BYTES:,} bytes"
-    if is_screenshot_path(path) and (problem := screenshot_problem(content)) is not None:
-        yield problem
-    text = decode_text(content) if path.startswith(ISIN_DIRECTORIES) else None
-    if text is not None and any(is_valid_isin(match) for match in _ISIN_SHAPE.findall(text)):
-        yield "contains an ISIN; config and data hold only asset-class proxies and demo instruments"
+    if is_blocked_format(path):
+        return
+    if is_screenshot_path(path):
+        if (problem := screenshot_problem(content)) is not None:
+            yield problem
+        return
+    text = decode_text(content)
+    if text is None:
+        yield f"binary content; only screenshots in {IMAGE_DIRECTORY} may be binary"
+    elif path.startswith(ISIN_DIRECTORIES) and contains_isin(text):
+        yield f"contains an ISIN; {ISIN_RULE}"
 
 
 def check_repository(root: Path, files: Sequence[StoredFile]) -> list[Problem]:

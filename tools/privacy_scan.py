@@ -28,7 +28,7 @@ import os
 import sys
 from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from tools._git import changed_files, git, read_objects, repo_root
 from tools._report import EXIT_CLEAN, EXIT_CONFIG_ERROR, EXIT_PROBLEMS, Problem
@@ -40,7 +40,7 @@ from tools.denylist import (
     configured_denylist_path,
     load_denylist,
 )
-from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES, is_screenshot_path, screenshot_problem
+from tools.policy import BLOCKED_FORMAT, is_blocked_format, is_screenshot_path, screenshot_problem
 
 SHORT_ID_LENGTH = 12
 """Characters of a git object id shown in findings."""
@@ -104,7 +104,7 @@ def scan_documents(documents: Iterable[Document], entries: Sequence[Entry]) -> l
 
 def _content_findings(document: Document, location: str, matcher: Matcher) -> list[Finding]:
     path = document.path or ""
-    if PurePosixPath(path).suffix.lower() in BLOCKED_SUFFIXES:
+    if is_blocked_format(path):
         return [Finding(location, BLOCKED_FORMAT)]
     text = decode_text(document.content)
     if text is not None:

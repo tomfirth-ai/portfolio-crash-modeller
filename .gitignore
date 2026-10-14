@@ -13,32 +13,43 @@ dist/
 .ruff_cache/
 .hypothesis/
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
-# Secrets and local configuration
+# Secrets, local configuration and the privacy denylist
 .env
 .streamlit/secrets.toml
 .claude/settings.local.json
 CLAUDE.local.md
+denylist.txt
 
 # Private and local data (never public)
 private/
 local/
 .cache/
 data/cache/
+*.bak*
+
+# Data and document formats are never committed; tools/policy.py blocks them as well
 *.db
 *.sqlite
 *.sqlite3
-*.bak*
-
-# Binary data formats are never committed
-*.xlsx
-*.xls
+*-wal
+*-shm
+*-journal
+*.feather
+*.ipynb
+*.numbers
 *.ods
 *.parquet
+*.pdf
 *.pkl
-*.ipynb
+*.xls
+*.xlsb
+*.xlsm
+*.xlsx
+*.zip
 
 # OS and editors
 .DS_Store

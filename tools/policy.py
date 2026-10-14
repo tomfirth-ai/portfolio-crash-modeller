@@ -10,17 +10,24 @@ BLOCKED_SUFFIXES = frozenset(
         ".db",
         ".feather",
         ".ipynb",
+        ".numbers",
         ".ods",
         ".parquet",
+        ".pdf",
         ".pkl",
         ".sqlite",
         ".sqlite3",
         ".xls",
+        ".xlsb",
+        ".xlsm",
         ".xlsx",
         ".zip",
     }
 )
-"""Binary data formats that are never committed, because no text scan can see inside them."""
+"""Data and document formats that are never committed, because no text scan can see inside them.
+
+Journal files such as ``store.db-wal`` count as their database's format.
+"""
 
 BLOCKED_FORMAT = "binary data formats are never committed"
 
@@ -30,11 +37,13 @@ IMAGE_SUFFIXES = frozenset({".png"})
 IMAGE_DIRECTORY = "docs/img/"
 """The one directory where reviewed screenshots may live."""
 
-PRIVATE_PREFIXES = ("private/", "local/")
-"""Directories that hold private or machine-local files and must never be tracked."""
+PRIVATE_DIRECTORIES = frozenset({"private", "local"})
+"""Directories, at any depth, that hold private or machine-local files."""
 
-PRIVATE_FILES = frozenset({"CLAUDE.local.md", ".claude/settings.local.json"})
-"""Individual private files that must never be tracked."""
+PRIVATE_FILE_NAMES = frozenset(
+    {"CLAUDE.local.md", "settings.local.json", "secrets.toml", ".env", "denylist.txt"}
+)
+"""Files, in any directory, that hold private notes, local settings, secrets or the denylist."""
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 PNG_METADATA_CHUNKS = frozenset({b"tEXt", b"zTXt", b"iTXt", b"eXIf"})
@@ -43,6 +52,18 @@ PNG_END_CHUNK = b"IEND"
 PNG_LENGTH_BYTES = 4
 PNG_TYPE_BYTES = 4
 PNG_CHECKSUM_BYTES = 4
+
+
+def is_private_path(path: str) -> bool:
+    """Whether a path is a private file or lies in a private directory."""
+    *directories, name = PurePosixPath(path).parts
+    return name in PRIVATE_FILE_NAMES or not PRIVATE_DIRECTORIES.isdisjoint(directories)
+
+
+def is_blocked_format(path: str) -> bool:
+    """Whether a path has a blocked suffix, counting ``.db-wal`` and the like as ``.db``."""
+    suffix = PurePosixPath(path).suffix.lower()
+    return suffix.split("-")[0] in BLOCKED_SUFFIXES
 
 
 def is_screenshot_path(path: str) -> bool:
