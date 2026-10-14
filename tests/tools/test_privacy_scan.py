@@ -347,3 +347,31 @@ def test_history_scan_reports_content_that_returns_unchanged_once(
 
     assert scan.main(["--all-history", "--denylist", str(denylist)]) == EXIT_PROBLEMS
     assert "1 problem(s) found" in capsys.readouterr().err
+
+
+LOCK_LINE = 'wheels = [{ hash = "sha256:9f271828e0", upload-time = "2031-02-17T09:30:00Z" }]\n'
+
+
+def test_the_lock_file_is_scanned_for_words_but_not_numbers(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / "uv.lock").write_text(LOCK_LINE, encoding="utf-8")
+    run_git("add", "uv.lock")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_CLEAN
+
+    (repo / "uv.lock").write_text(LOCK_LINE + 'name = "zqxw"\n', encoding="utf-8")
+    run_git("add", "uv.lock")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
+
+
+@pytest.mark.parametrize("path", ["notes.md", "docs/uv.lock"])
+def test_numbers_in_any_other_file_are_still_scanned(
+    repo: Path, run_git: GitRunner, denylist: Path, path: str
+) -> None:
+    (repo / path).parent.mkdir(parents=True, exist_ok=True)
+    (repo / path).write_text(LOCK_LINE, encoding="utf-8")
+    run_git("add", path)
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS

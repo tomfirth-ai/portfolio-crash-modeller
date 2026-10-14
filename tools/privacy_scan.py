@@ -25,6 +25,7 @@ Usage::
 
 import argparse
 import os
+import re
 import sys
 from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
@@ -46,6 +47,14 @@ SHORT_ID_LENGTH = 12
 """Characters of a git object id shown in findings."""
 HIDDEN_NAME = "<name hidden>"
 """Shown instead of a file name that matches the denylist."""
+WORDS_ONLY_FILES = frozenset({"uv.lock"})
+"""Files generated from public package metadata, whose numbers are only scanned as words.
+
+Their digits are hashes, sizes, versions and upload times, which match denylisted amounts and dates
+by chance. Package names are still scanned. The rule covers these exact paths only.
+"""
+
+_DIGIT = re.compile(r"[0-9]")
 
 
 @dataclass(frozen=True)
@@ -108,6 +117,8 @@ def _content_findings(document: Document, location: str, matcher: Matcher) -> li
         return [Finding(location, BLOCKED_FORMAT)]
     text = decode_text(document.content)
     if text is not None:
+        if path in WORDS_ONLY_FILES:
+            text = _DIGIT.sub(" ", text)
         return scan_text(text, matcher, location)
     if is_screenshot_path(path):
         problem = screenshot_problem(document.content)
