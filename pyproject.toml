@@ -84,6 +84,8 @@ filterwarnings = ["error"]
 [tool.coverage.run]
 source = ["crashmodel", "tools"]
 branch = true
+# Page scripts are executed by Streamlit AppTest in tests/app, outside coverage's view.
+omit = ["src/crashmodel/app/pages/*"]
 
 [tool.coverage.report]
 show_missing = true

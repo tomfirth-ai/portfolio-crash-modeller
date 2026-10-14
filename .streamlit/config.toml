@@ -1,0 +1,10 @@
+[browser]
+# Do not send usage statistics to Streamlit.
+gatherUsageStats = false
+
+[client]
+# Visitors see a minimal toolbar without developer options.
+toolbarMode = "minimal"
+
+[theme]
+primaryColor = "#0B6E69"
