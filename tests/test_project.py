@@ -1,11 +1,17 @@
+import tomllib
+from pathlib import Path
+
 import pytest
 
 import crashmodel
 from crashmodel import project
 
+PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
-def test_package_exposes_its_version() -> None:
-    assert crashmodel.__version__ == "0.1.0"
+
+def test_installed_version_matches_pyproject() -> None:
+    declared = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]["version"]
+    assert crashmodel.__version__ == declared
 
 
 def test_user_agent_names_the_tool_and_version_only() -> None:

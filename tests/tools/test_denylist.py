@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.tools.helpers import GitRunner
 from tests.tools.sentinels import (
     AMOUNT_LINE,
     DATE_LINE,
@@ -10,7 +11,6 @@ from tests.tools.sentinels import (
     SENTINEL_DENYLIST,
     TICKER_LINE,
     UNITS_LINE,
-    GitRunner,
 )
 from tools import denylist
 from tools.denylist import DenylistError, Entry, Matcher

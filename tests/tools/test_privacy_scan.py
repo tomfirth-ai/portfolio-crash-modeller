@@ -2,7 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import NAME_LINE, TICKER_LINE, GitRunner, png, png_chunk
+from tests.tools.helpers import GitRunner, png, png_chunk
+from tests.tools.sentinels import NAME_LINE, TICKER_LINE
 from tools import privacy_scan as scan
 from tools._report import EXIT_CLEAN, EXIT_CONFIG_ERROR, EXIT_PROBLEMS
 from tools.denylist import parse_entry
@@ -62,20 +63,21 @@ def test_staged_scan_passes_clean_changes(repo: Path, run_git: GitRunner, denyli
     assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_CLEAN
 
 
-def test_scan_fails_closed_without_a_denylist(repo: Path, tmp_path: Path) -> None:
+@pytest.mark.usefixtures("repo")
+def test_scan_fails_closed_without_a_denylist(tmp_path: Path) -> None:
     missing = tmp_path / "nowhere" / "denylist.txt"
     assert scan.main(["--staged", "--denylist", str(missing)]) == EXIT_CONFIG_ERROR
 
 
-def test_scan_treats_a_malformed_denylist_as_a_configuration_error(
-    repo: Path, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("repo")
+def test_scan_treats_a_malformed_denylist_as_a_configuration_error(tmp_path: Path) -> None:
     malformed = tmp_path / "malformed.txt"
     malformed.write_text("2031-02-30\n", encoding="utf-8")
     assert scan.main(["--staged", "--denylist", str(malformed)]) == EXIT_CONFIG_ERROR
 
 
-def test_message_scan_checks_the_commit_message(repo: Path, tmp_path: Path, denylist: Path) -> None:
+@pytest.mark.usefixtures("repo")
+def test_message_scan_checks_the_commit_message(tmp_path: Path, denylist: Path) -> None:
     message = tmp_path / "COMMIT_EDITMSG"
     message.write_text("Add ZQXW prices\n", encoding="utf-8")
 
@@ -139,8 +141,9 @@ def test_push_scan_rescans_commits_that_only_another_remote_has(
     assert push_scan(denylist, remote="backup") == EXIT_CLEAN
 
 
+@pytest.mark.usefixtures("repo")
 def test_push_scan_refuses_to_guess_the_remote(
-    repo: Path, denylist: Path, monkeypatch: pytest.MonkeyPatch
+    denylist: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("PRE_COMMIT_REMOTE_NAME", raising=False)
 
@@ -198,8 +201,9 @@ def test_screenshots_that_are_not_clean_pngs_are_refused(
     assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
 
 
+@pytest.mark.usefixtures("repo")
 def test_short_entries_trigger_a_false_positive_warning(
-    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     path = tmp_path / "short.txt"
     path.write_text("AB\n", encoding="utf-8")

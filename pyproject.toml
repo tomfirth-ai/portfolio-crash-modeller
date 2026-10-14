@@ -55,6 +55,7 @@ select = [
     "ERA",     # commented-out code
     "T20",     # stray print calls
     "S",       # security
+    "ARG",     # unused arguments
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -68,7 +69,7 @@ convention = "google"
 python_version = "3.12"
 strict = true
 warn_unreachable = true
-files = ["src", "tools", "tests"]
+files = ["src", "tools", "tests", "streamlit_app.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -90,6 +91,7 @@ branch = true
 omit = ["src/crashmodel/app/pages/*"]
 
 [tool.coverage.report]
+fail_under = 100
 show_missing = true
 skip_covered = true
 exclude_also = ['if __name__ == "__main__":']

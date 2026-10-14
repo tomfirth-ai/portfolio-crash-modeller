@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import GitRunner
+from tests.tools.helpers import GitRunner
 from tools import check_style
 from tools._report import EXIT_CLEAN, EXIT_PROBLEMS
 from tools.check_style import DASH_LOOKALIKES
@@ -63,16 +63,19 @@ diff --git a/color.py b/color.py
 """
 
 
-def test_commit_messages_ignore_git_comments_and_the_verbose_diff(repo: Path) -> None:
+@pytest.mark.usefixtures("repo")
+def test_commit_messages_ignore_git_comments_and_the_verbose_diff() -> None:
     assert check_style.check_message(VERBOSE_DRAFT.encode()) == []
 
 
-def test_commit_message_problems_are_still_found_above_the_comments(repo: Path) -> None:
+@pytest.mark.usefixtures("repo")
+def test_commit_message_problems_are_still_found_above_the_comments() -> None:
     draft = VERBOSE_DRAFT.replace("Add the palette", "Add the color palette")
     assert [problem.line for problem in check_style.check_message(draft.encode())] == [1]
 
 
-def test_commit_messages_that_are_not_utf8_are_reported(repo: Path) -> None:
+@pytest.mark.usefixtures("repo")
+def test_commit_messages_that_are_not_utf8_are_reported() -> None:
     [problem] = check_style.check_message(b"Caf\xe9 prices\n")
     assert problem.message == "not UTF-8 text"
 

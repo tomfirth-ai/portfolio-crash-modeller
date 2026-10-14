@@ -4,12 +4,19 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import SENTINEL_DENYLIST, GitRunner
+from tests.tools.helpers import GitRunner
+from tests.tools.sentinels import SENTINEL_DENYLIST
 
 
 @pytest.fixture
 def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """An empty git repository, isolated from the user's own git configuration, as the cwd."""
+    """An empty git repository, isolated from the user's own git setup, as the cwd.
+
+    Every inherited ``GIT_*`` variable is removed first: when tests run inside a git hook or
+    under ``git -c``, variables such as ``GIT_INDEX_FILE`` would point git at another repository.
+    """
+    for name in [name for name in os.environ if name.startswith("GIT_")]:
+        monkeypatch.delenv(name)
     home = tmp_path / "home"
     home.mkdir()
     empty_config = home / ".gitconfig"

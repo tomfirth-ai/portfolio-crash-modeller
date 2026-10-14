@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import GitRunner
+from tests.tools.helpers import GitRunner
 from tools._git import GitError, changed_files, git, index_files, read_objects
 
 

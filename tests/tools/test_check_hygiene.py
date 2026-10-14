@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import GitRunner, png, png_chunk
+from tests.tools.helpers import GitRunner, png, png_chunk
 from tools import check_hygiene
 from tools._report import EXIT_CLEAN, EXIT_PROBLEMS
 from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES
