@@ -31,7 +31,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests", "scripts"]
+src = ["src", "."]
 
 [tool.ruff.lint]
 select = [
@@ -59,17 +59,18 @@ select = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "S101", "PLR2004"]
-"scripts/**" = ["T201", "S603", "S607"]
+"tests/**" = ["D", "S101", "S603", "S607", "PLR2004"]
+"tools/**" = ["T201", "S603", "S607"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unreachable = true
-files = ["src", "tests"]
+files = ["src", "tools", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = [
     "--strict-markers",
     "--strict-config",
