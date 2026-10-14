@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import NAME_LINE, TICKER_LINE, GitRunner
+from tests.tools.sentinels import NAME_LINE, TICKER_LINE, GitRunner, png, png_chunk
 from tools import privacy_scan as scan
 from tools.denylist import parse_entry
 
@@ -158,18 +158,43 @@ def test_push_scan_takes_the_remote_from_pre_commit(
     assert scan.main(["--push", "--denylist", str(denylist)]) == scan.EXIT_CLEAN
 
 
-def test_reviewed_images_are_skipped_but_other_binaries_are_refused(
+def test_screenshots_get_a_note_but_other_binaries_are_refused(
     repo: Path, run_git: GitRunner, denylist: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     (repo / "docs" / "img").mkdir(parents=True)
-    (repo / "docs" / "img" / "home.png").write_bytes(b"\x89PNG\x00binary")
+    (repo / "docs" / "img" / "home.png").write_bytes(png())
     (repo / "blob.bin").write_bytes(b"\x00\x01binary")
     run_git("add", "docs/img/home.png", "blob.bin")
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
     output = capsys.readouterr().err
-    assert "note: docs/img/home.png: image not scanned; review it by eye" in output
+    assert "note: docs/img/home.png: screenshot pixels cannot be scanned" in output
     assert "blob.bin: binary file cannot be scanned" in output
+
+
+def test_a_clean_screenshot_passes_with_a_note(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / "docs" / "img").mkdir(parents=True)
+    (repo / "docs" / "img" / "home.png").write_bytes(png())
+    run_git("add", "docs/img/home.png")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_CLEAN
+
+
+@pytest.mark.parametrize(
+    "content",
+    [b"PK\x03\x04\x00\x00 an archive", png(png_chunk(b"tEXt", b"Author\x00Someone"))],
+    ids=["renamed archive", "metadata"],
+)
+def test_screenshots_that_are_not_clean_pngs_are_refused(
+    repo: Path, run_git: GitRunner, denylist: Path, content: bytes
+) -> None:
+    (repo / "docs" / "img").mkdir(parents=True)
+    (repo / "docs" / "img" / "chart.png").write_bytes(content)
+    run_git("add", "docs/img/chart.png")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
 
 
 def test_short_entries_trigger_a_false_positive_warning(

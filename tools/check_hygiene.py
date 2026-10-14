@@ -4,7 +4,7 @@ Checks every file in the git index (staged additions included):
 
 * nothing under ``private/`` or ``local/``, and no private notes or local settings;
 * no binary data formats such as spreadsheets, databases or notebooks;
-* images only in the reviewed screenshots directory;
+* images only in the reviewed screenshots directory, as real PNG files without metadata;
 * no file larger than a sensible limit;
 * no valid ISIN (a fund or share identifier) in ``config/`` or ``data/``, where only asset-class
   proxies and demo instruments belong.
@@ -21,11 +21,14 @@ from pathlib import Path, PurePosixPath
 
 from tools._git import StoredFile, decode_text, index_files, read_objects, repo_root
 from tools.policy import (
+    BLOCKED_FORMAT,
     BLOCKED_SUFFIXES,
     IMAGE_DIRECTORY,
     IMAGE_SUFFIXES,
     PRIVATE_FILES,
     PRIVATE_PREFIXES,
+    is_screenshot_path,
+    screenshot_problem,
 )
 
 MAX_FILE_BYTES = 1_000_000
@@ -57,7 +60,7 @@ def path_problems(path: str) -> Iterator[str]:
     if path.startswith(PRIVATE_PREFIXES) or path in PRIVATE_FILES:
         yield "private or local file is tracked"
     if suffix in BLOCKED_SUFFIXES:
-        yield "binary data formats are never committed"
+        yield BLOCKED_FORMAT
     if suffix in IMAGE_SUFFIXES and not path.startswith(IMAGE_DIRECTORY):
         yield f"images belong in {IMAGE_DIRECTORY} after review"
 
@@ -66,6 +69,8 @@ def content_problems(path: str, content: bytes) -> Iterator[str]:
     """Yield the policy problems with a tracked file's content."""
     if len(content) > MAX_FILE_BYTES:
         yield f"file is larger than {MAX_FILE_BYTES:,} bytes"
+    if is_screenshot_path(path) and (problem := screenshot_problem(content)) is not None:
+        yield problem
     text = decode_text(content) if path.startswith(ISIN_DIRECTORIES) else None
     if text is not None and any(is_valid_isin(match) for match in _ISIN_SHAPE.findall(text)):
         yield "contains an ISIN; config and data hold only asset-class proxies and demo instruments"

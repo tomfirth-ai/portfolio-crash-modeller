@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tools.sentinels import GitRunner
+from tests.tools.sentinels import GitRunner, png, png_chunk
 from tools import check_hygiene
 
 PUBLIC_EXAMPLE_ISIN = "US0378331005"
@@ -50,6 +50,25 @@ def test_isins_outside_config_and_data_pass() -> None:
 def test_oversized_files_are_flagged() -> None:
     content = b"x" * (check_hygiene.MAX_FILE_BYTES + 1)
     assert list(check_hygiene.content_problems("big.txt", content))
+
+
+@pytest.mark.parametrize(
+    ("content", "problem"),
+    [
+        (png(), None),
+        (png(png_chunk(b"tEXt", b"Author\x00Someone")), "metadata"),
+        (png(png_chunk(b"eXIf", b"MM\x00*")), "metadata"),
+        (b"PK\x03\x04 an archive", "not a PNG file"),
+        (png()[:20], "incomplete"),
+    ],
+)
+def test_screenshots_must_be_pngs_without_metadata(content: bytes, problem: str | None) -> None:
+    problems = list(check_hygiene.content_problems("docs/img/home.png", content))
+    if problem is None:
+        assert problems == []
+    else:
+        assert len(problems) == 1
+        assert problem in problems[0]
 
 
 def test_force_added_private_files_are_caught(repo: Path, run_git: GitRunner) -> None:

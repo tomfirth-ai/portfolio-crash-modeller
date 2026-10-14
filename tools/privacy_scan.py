@@ -38,7 +38,7 @@ from tools.denylist import (
     configured_denylist_path,
     load_denylist,
 )
-from tools.policy import BLOCKED_SUFFIXES, IMAGE_DIRECTORY, IMAGE_SUFFIXES
+from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES, is_screenshot_path, screenshot_problem
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -116,14 +116,18 @@ def scan_documents(documents: Iterable[Document], entries: Sequence[Entry]) -> l
 
 
 def _content_findings(document: Document, location: str, matcher: Matcher) -> list[Finding]:
-    suffix = PurePosixPath(document.path or "").suffix.lower()
-    if suffix in BLOCKED_SUFFIXES:
-        return [Finding(location, "binary data formats are never committed")]
+    path = document.path or ""
+    if PurePosixPath(path).suffix.lower() in BLOCKED_SUFFIXES:
+        return [Finding(location, BLOCKED_FORMAT)]
     text = decode_text(document.content)
     if text is not None:
         return scan_text(text, matcher, location)
-    if suffix in IMAGE_SUFFIXES and (document.path or "").startswith(IMAGE_DIRECTORY):
-        return [Finding(location, "image not scanned; review it by eye", blocking=False)]
+    if is_screenshot_path(path):
+        problem = screenshot_problem(document.content)
+        if problem is not None:
+            return [Finding(location, problem)]
+        note = "screenshot pixels cannot be scanned; review it by eye"
+        return [Finding(location, note, blocking=False)]
     return [Finding(location, "binary file cannot be scanned")]
 
 
