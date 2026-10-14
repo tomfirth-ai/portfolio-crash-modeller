@@ -1,5 +1,6 @@
 """Smoke tests that run the real Streamlit app in-process, with the network blocked."""
 
+import ast
 from collections.abc import Callable
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from crashmodel.data import diagnostics
 from tests.app.copy_rules import copy_problems
 
 ENTRY_POINT = Path(__file__).parents[2] / "streamlit_app.py"
+PAGES = sorted((Path(__file__).parents[2] / "src/crashmodel/app/pages").glob("[!_]*.py"))
 DATA_SOURCES_PAGE = "src/crashmodel/app/pages/data_sources.py"
 RUN_TIMEOUT_SECONDS = 30
 """Generous, because the first run imports the dataframe stack."""
@@ -105,3 +107,18 @@ def test_every_rendered_word_follows_the_copy_rules(
 
     assert texts
     assert {text: copy_problems(text) for text in texts if copy_problems(text)} == {}
+
+
+@pytest.mark.parametrize("page", PAGES, ids=lambda page: page.stem)
+def test_pages_hold_no_bare_strings_that_streamlit_would_draw(page: Path) -> None:
+    module = ast.parse(page.read_text(encoding="utf-8"))
+    docstring = module.body[0]
+    bare_strings = [
+        node.lineno
+        for node in ast.walk(module)
+        if isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+        and node is not docstring
+    ]
+    assert bare_strings == []

@@ -1,10 +1,10 @@
 [browser]
-# Do not send usage statistics to Streamlit.
+# Do not send usage statistics from local runs. Streamlit Community Cloud collects them regardless.
 gatherUsageStats = false
 
-[client]
-# Visitors see a minimal toolbar without developer options.
-toolbarMode = "minimal"
+[runner]
+# Pages draw only what they ask for: no bare strings or expressions written to the page by magic.
+magicEnabled = false
 
 [theme]
 primaryColor = "#0B6E69"

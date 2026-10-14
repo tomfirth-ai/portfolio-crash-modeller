@@ -31,8 +31,8 @@ def test_reachable_sources_are_described_in_words_with_the_answer_first() -> Non
     assert data_sources.status_row(result).as_table_row() == {
         "Source": "Example source",
         "Status": "Reachable",
-        "Response time": "1.2 s",
-        "Size": "4 KB",
+        "Response time": "1.2\u00a0s",
+        "Size": "4\u00a0KB",
         "Used for": "Testing",
     }
 
@@ -60,7 +60,7 @@ def test_timing_and_size_are_blank_without_a_response() -> None:
     ("seconds", "shown"), [(0.042, "42 ms"), (0.9994, "999 ms"), (1.0, "1.0 s"), (12.34, "12.3 s")]
 )
 def test_durations_use_milliseconds_below_a_second(seconds: float, shown: str) -> None:
-    assert data_sources.format_duration(seconds) == shown
+    assert data_sources.format_duration(seconds) == shown.replace(" ", "\u00a0")
 
 
 @pytest.mark.parametrize(
@@ -68,7 +68,7 @@ def test_durations_use_milliseconds_below_a_second(seconds: float, shown: str) -
     [(0, "0 bytes"), (1, "1 byte"), (300, "300 bytes"), (4096, "4 KB"), (2_621_440, "2.5 MB")],
 )
 def test_sizes_use_the_unit_that_reads_best(size_bytes: int, shown: str) -> None:
-    assert data_sources.format_size(size_bytes) == shown
+    assert data_sources.format_size(size_bytes) == shown.replace(" ", "\u00a0")
 
 
 UP = SourceStatus(source=SOURCE)

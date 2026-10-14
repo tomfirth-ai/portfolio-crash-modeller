@@ -26,6 +26,8 @@ FAILURE_REASONS = {
 BYTES_PER_KILOBYTE = 1024
 BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE * 1024
 MILLISECONDS_PER_SECOND = 1000
+UNIT_SPACE = "\u00a0"
+"""A non-breaking space, so a figure and its unit never wrap onto separate lines."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -63,17 +65,18 @@ def describe_status(result: SourceStatus) -> str:
 def format_duration(seconds: float) -> str:
     """Show a duration in milliseconds below one second, and in seconds above."""
     if seconds < 1:
-        return f"{seconds * MILLISECONDS_PER_SECOND:.0f} ms"
-    return f"{seconds:.1f} s"
+        return f"{seconds * MILLISECONDS_PER_SECOND:.0f}{UNIT_SPACE}ms"
+    return f"{seconds:.1f}{UNIT_SPACE}s"
 
 
 def format_size(size_bytes: int) -> str:
     """Show a size in bytes, kilobytes or megabytes, whichever reads best."""
     if size_bytes < BYTES_PER_KILOBYTE:
-        return f"{size_bytes} byte" if size_bytes == 1 else f"{size_bytes} bytes"
+        unit = "byte" if size_bytes == 1 else "bytes"
+        return f"{size_bytes}{UNIT_SPACE}{unit}"
     if size_bytes < BYTES_PER_MEGABYTE:
-        return f"{size_bytes / BYTES_PER_KILOBYTE:,.0f} KB"
-    return f"{size_bytes / BYTES_PER_MEGABYTE:,.1f} MB"
+        return f"{size_bytes / BYTES_PER_KILOBYTE:,.0f}{UNIT_SPACE}KB"
+    return f"{size_bytes / BYTES_PER_MEGABYTE:,.1f}{UNIT_SPACE}MB"
 
 
 def status_row(result: SourceStatus) -> StatusRow:
