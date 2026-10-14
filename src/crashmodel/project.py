@@ -20,8 +20,8 @@ def repository_url() -> str | None:
 def user_agent() -> str:
     """Return the User-Agent sent to data publishers: tool name, version and repository.
 
-    Publishers such as the ONS ask automated clients to identify themselves this way, and never
-    with a personal name or email address.
+    Saying which tool is calling, and where to find out about it, is polite practice for automated
+    clients. By project rule it never includes a personal name or email address.
     """
     url = repository_url()
     return f"{PACKAGE}/{__version__}" + (f" (+{url})" if url else "")

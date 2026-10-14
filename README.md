@@ -31,16 +31,17 @@ uv run streamlit run streamlit_app.py
 ## Develop
 
 ```sh
-uv run pytest            # tests, with network access blocked
-uv run mypy              # strict type checks
-uv run ruff check .      # lint
-uv run pre-commit install
+uv run pre-commit install            # once: installs the commit and push hooks
+uv run pre-commit run --all-files    # lint, format, types, style, hygiene and privacy checks
+uv run pytest                        # tests, with network access blocked and 100% coverage
 ```
 
-The git hooks run lint, type checks, a style check, a hygiene check and a privacy scan. The privacy
-scan compares every commit with a denylist of personal details that you keep outside the
-repository, at `~/.config/crashmodel/denylist.txt` (one entry per line). It refuses to run without
-one, so nothing personal can slip into the history unchecked.
+Together the last two run everything CI runs. The hooks also run a privacy scan, which compares
+staged files, commit messages and every commit you push with a denylist of personal details that
+you keep outside the repository, at `~/.config/crashmodel/denylist.txt` (one entry per line, with
+`#` for comment lines). It matches names, tickers, amounts and dates in the common forms they are
+written, and refuses to run without a denylist. It is a safety net, not a guarantee, so still
+review what you commit.
 
 ## Licence
 
