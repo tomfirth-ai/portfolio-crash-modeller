@@ -1,3 +1,5 @@
+import sys
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -91,3 +93,59 @@ def test_main_reads_the_index_and_skips_binary_files(
 
     assert check_style.main([]) == EXIT_PROBLEMS
     assert capsys.readouterr().err == "style: notes.md:1: American spelling 'color'; use colour\n"
+
+
+def test_every_unicode_dash_except_the_hyphen_minus_is_a_lookalike() -> None:
+    dashes = {
+        character
+        for character in map(chr, range(sys.maxunicode + 1))
+        if unicodedata.category(character) == "Pd"
+    }
+    assert dashes - {"-"} <= DASH_LOOKALIKES
+
+
+@pytest.mark.parametrize(
+    ("american", "british"),
+    [
+        ("Unrealized gains", "unrealised"),
+        ("an annualized return", "annualised"),
+        ("Minimize drawdown", "minimise"),
+        ("Analyzes", "analyses"),
+        ("the optimizer", "optimiser"),
+        ("colorblind palette", "colourblind"),
+        ("behavioral finance", "behavioural"),
+        ("a favorite split", "favourite"),
+        ("the neighborhood", "neighbourhood"),
+        ("centered", "centred"),
+        ("fibers", "fibres"),
+        ("modeling", "modelling"),
+        ("relabeled", "relabelled"),
+        ("gray", "grey"),
+        ("installments", "instalments"),
+    ],
+)
+def test_american_spellings_are_flagged_with_the_british_form(american: str, british: str) -> None:
+    [problem] = check_style.check_text(american, "README.md", prose=True)
+    assert problem.message.endswith(f"use {british}")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "size, resized, oversized, prize, seize, capsize, maize",
+        "citizen, bizarre, cluster, laboratory, humorous, Colorado, meter",
+        "totalled, modeller, labelled, emphasise, analyse, organisation, centre, colour",
+    ],
+)
+def test_british_and_shared_spellings_pass(text: str) -> None:
+    assert check_style.check_text(text, "README.md", prose=True) == []
+
+
+def test_indented_fences_in_list_items_are_code() -> None:
+    markdown = "1. Install\n\n   ```python\n   color = 1\n   ```\n"
+    assert check_style.check_text(markdown, "README.md", prose=True) == []
+
+
+def test_a_longer_fence_can_hold_a_shorter_one() -> None:
+    markdown = "````markdown\n```python\ncolor = 1\n```\ngray\n````\nThe end\n"
+    assert check_style.check_text(markdown, "README.md", prose=True) == []
