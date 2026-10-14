@@ -4,6 +4,7 @@ import pytest
 
 from tests.tools.sentinels import GitRunner, png, png_chunk
 from tools import check_hygiene
+from tools._report import EXIT_CLEAN, EXIT_PROBLEMS
 
 PUBLIC_EXAMPLE_ISIN = "US0378331005"
 """A well-known, public ISIN with a valid check digit, used only as test data."""
@@ -71,16 +72,21 @@ def test_screenshots_must_be_pngs_without_metadata(content: bytes, problem: str 
         assert problem in problems[0]
 
 
-def test_force_added_private_files_are_caught(repo: Path, run_git: GitRunner) -> None:
+def test_force_added_private_files_are_caught(
+    repo: Path, run_git: GitRunner, capsys: pytest.CaptureFixture[str]
+) -> None:
     (repo / "private").mkdir()
     (repo / "private" / "brief.md").write_text("notes\n", encoding="utf-8")
     run_git("add", "-f", "private/brief.md")
 
-    assert check_hygiene.main() == 1
+    assert check_hygiene.main([]) == EXIT_PROBLEMS
+    assert (
+        capsys.readouterr().err == "hygiene: private/brief.md: private or local file is tracked\n"
+    )
 
 
 def test_clean_repository_passes(repo: Path, run_git: GitRunner) -> None:
     (repo / "README.md").write_text("Hello\n", encoding="utf-8")
     run_git("add", "README.md")
 
-    assert check_hygiene.main() == 0
+    assert check_hygiene.main([]) == EXIT_CLEAN

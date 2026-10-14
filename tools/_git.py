@@ -33,6 +33,15 @@ class StoredFile:
         return self.mode == SUBMODULE_MODE
 
 
+class GitError(subprocess.CalledProcessError):
+    """A git command failed. The message includes git's own explanation."""
+
+    def __str__(self) -> str:
+        """Describe the failure, ending with what git printed to standard error."""
+        explanation = (self.stderr or b"").decode(errors="replace").strip()
+        return f"{super().__str__()} {explanation}".strip()
+
+
 def git(*args: str, cwd: Path | None = None, stdin: bytes | None = None) -> bytes:
     """Run a git command and return its standard output.
 
@@ -45,21 +54,19 @@ def git(*args: str, cwd: Path | None = None, stdin: bytes | None = None) -> byte
         The raw standard output.
 
     Raises:
-        subprocess.CalledProcessError: If git exits with a non-zero status.
+        GitError: If git exits with a non-zero status.
     """
-    return subprocess.run(
-        ["git", *args], cwd=cwd, input=stdin, capture_output=True, check=True
-    ).stdout
+    try:
+        return subprocess.run(
+            ["git", *args], cwd=cwd, input=stdin, capture_output=True, check=True
+        ).stdout
+    except subprocess.CalledProcessError as error:
+        raise GitError(error.returncode, error.cmd, error.output, error.stderr) from None
 
 
 def repo_root(cwd: Path | None = None) -> Path:
     """Return the top-level directory of the enclosing git repository."""
     return Path(git("rev-parse", "--show-toplevel", cwd=cwd).decode().strip())
-
-
-def tracked_files(cwd: Path | None = None) -> list[str]:
-    """Return the paths of every file in the git index, staged additions included."""
-    return [file.path for file in index_files(cwd)]
 
 
 def index_files(cwd: Path | None = None) -> list[StoredFile]:
@@ -125,13 +132,3 @@ def stored_commit_message(draft: str, cwd: Path | None = None) -> str:
     )
     kept = "".join(lines if cut is None else lines[:cut])
     return git("stripspace", "--strip-comments", cwd=cwd, stdin=kept.encode()).decode()
-
-
-def decode_text(content: bytes) -> str | None:
-    """Decode file content as UTF-8 text, or return ``None`` if it looks binary."""
-    if b"\0" in content:
-        return None
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError:
-        return None

@@ -14,12 +14,15 @@ Usage::
     python -m tools.check_hygiene
 """
 
+import argparse
 import re
 import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path, PurePosixPath
 
-from tools._git import StoredFile, decode_text, index_files, read_objects, repo_root
+from tools._git import StoredFile, index_files, read_objects, repo_root
+from tools._report import Problem, report
+from tools._text import decode_text
 from tools.policy import (
     BLOCKED_FORMAT,
     BLOCKED_SUFFIXES,
@@ -76,26 +79,24 @@ def content_problems(path: str, content: bytes) -> Iterator[str]:
         yield "contains an ISIN; config and data hold only asset-class proxies and demo instruments"
 
 
-def check_repository(root: Path, files: Sequence[StoredFile]) -> list[str]:
-    """Check every tracked file, reading content from the git index; return ``path: problem``."""
+def check_repository(root: Path, files: Sequence[StoredFile]) -> list[Problem]:
+    """Check every tracked file, reading content from the git index."""
     contents = read_objects((file.object_id for file in files if not file.is_submodule), cwd=root)
-    problems: list[str] = []
+    problems: list[Problem] = []
     for file in files:
-        problems.extend(f"{file.path}: {problem}" for problem in path_problems(file.path))
         content = contents.get(file.object_id, b"")
-        problems.extend(
-            f"{file.path}: {problem}" for problem in content_problems(file.path, content)
-        )
+        messages = [*path_problems(file.path), *content_problems(file.path, content)]
+        problems.extend(Problem(file.path, message) for message in messages)
     return problems
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Run the check and return a process exit code (0 clean, 1 problems found)."""
+    argparse.ArgumentParser(
+        description="Check that nothing private, binary or oversized is tracked."
+    ).parse_args(argv)
     root = repo_root()
-    problems = check_repository(root, index_files(root))
-    for problem in problems:
-        print(f"hygiene: {problem}", file=sys.stderr)
-    return 1 if problems else 0
+    return report("hygiene", check_repository(root, index_files(root)))
 
 
 if __name__ == "__main__":

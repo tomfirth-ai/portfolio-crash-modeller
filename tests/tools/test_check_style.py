@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.tools.sentinels import GitRunner
 from tools import check_style
+from tools._report import EXIT_CLEAN, EXIT_PROBLEMS
 from tools.check_style import DASH_LOOKALIKES
 
 
@@ -40,7 +42,7 @@ def test_spelling_rules_apply_to_prose_only() -> None:
 def test_main_checks_a_commit_message(repo: Path) -> None:
     message = repo / "COMMIT_EDITMSG"
     message.write_text(f"Fix the colour {chr(0x2014)} at last\n", encoding="utf-8")
-    assert check_style.main(["--message", str(message)]) == 1
+    assert check_style.main(["--message", str(message)]) == EXIT_PROBLEMS
 
 
 VERBOSE_DRAFT = f"""\
@@ -76,4 +78,16 @@ def test_commit_messages_that_are_not_utf8_are_reported(repo: Path) -> None:
 def test_main_checks_named_files(tmp_path: Path) -> None:
     clean = tmp_path / "clean.md"
     clean.write_text("Behaviour is analysed.\n", encoding="utf-8")
-    assert check_style.main([str(clean)]) == 0
+    assert check_style.main([str(clean)]) == EXIT_CLEAN
+
+
+def test_main_reads_the_index_and_skips_binary_files(
+    repo: Path, run_git: GitRunner, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (repo / "notes.md").write_text("The color of money\n", encoding="utf-8")
+    (repo / "blob.bin").write_bytes(b"\x00\x01")
+    run_git("add", "notes.md", "blob.bin")
+    (repo / "notes.md").unlink()
+
+    assert check_style.main([]) == EXIT_PROBLEMS
+    assert capsys.readouterr().err == "style: notes.md:1: American spelling 'color'; use colour\n"

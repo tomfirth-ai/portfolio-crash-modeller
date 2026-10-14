@@ -10,7 +10,7 @@ The project writes British English and never uses en or em dashes. This check en
 
 Usage::
 
-    python -m tools.check_style [FILE ...]      # default: every tracked file
+    python -m tools.check_style [FILE ...]      # default: every file in the git index
     python -m tools.check_style --message FILE  # commit-msg hook
 """
 
@@ -18,11 +18,12 @@ import argparse
 import re
 import sys
 import unicodedata
-from collections.abc import Iterator, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 
-from tools._git import decode_text, stored_commit_message, tracked_files
+from tools._git import index_files, read_objects, repo_root, stored_commit_message
+from tools._report import Problem, report
+from tools._text import decode_text
 
 DASH_LOOKALIKES = frozenset(
     chr(code)
@@ -74,19 +75,6 @@ _INLINE_CODE = re.compile(r"`[^`\n]*`")
 _LINK_TARGET = re.compile(r"\]\([^)]*\)|https?://\S+")
 
 
-@dataclass(frozen=True)
-class Problem:
-    """A style problem at a position in a file."""
-
-    location: str
-    line: int
-    message: str
-
-    def __str__(self) -> str:
-        """Format the problem as ``location:line: message``."""
-        return f"{self.location}:{self.line}: {self.message}"
-
-
 def _blank(match: re.Match[str]) -> str:
     return re.sub(r"[^\n]", " ", match.group(0))
 
@@ -103,7 +91,7 @@ def find_dash_lookalikes(text: str, location: str) -> Iterator[Problem]:
     for number, line in enumerate(text.splitlines(), start=1):
         for character in sorted(set(line) & DASH_LOOKALIKES):
             name = unicodedata.name(character).lower()
-            yield Problem(location, number, f"{name} found; use a hyphen, a comma or 'to'")
+            yield Problem(location, f"{name} found; use a hyphen, a comma or 'to'", number)
 
 
 def find_american_spellings(text: str, location: str) -> Iterator[Problem]:
@@ -112,7 +100,7 @@ def find_american_spellings(text: str, location: str) -> Iterator[Problem]:
         for pattern, british in AMERICAN_SPELLINGS:
             for match in pattern.finditer(line):
                 yield Problem(
-                    location, number, f"American spelling '{match.group(0)}'; use {british}"
+                    location, f"American spelling '{match.group(0)}'; use {british}", number
                 )
 
 
@@ -124,21 +112,29 @@ def check_text(text: str, location: str, *, prose: bool) -> list[Problem]:
     return problems
 
 
-def check_files(paths: Sequence[str]) -> list[Problem]:
-    """Check files on disk, skipping any that are not UTF-8 text."""
+def check_contents(contents: Mapping[str, bytes]) -> list[Problem]:
+    """Check file contents by path, skipping any that are not UTF-8 text."""
     problems: list[Problem] = []
-    for name in paths:
-        text = decode_text(Path(name).read_bytes())
+    for path, content in contents.items():
+        text = decode_text(content)
         if text is not None:
-            problems.extend(check_text(text, name, prose=Path(name).suffix in PROSE_SUFFIXES))
+            problems.extend(check_text(text, path, prose=Path(path).suffix in PROSE_SUFFIXES))
     return problems
+
+
+def index_contents() -> dict[str, bytes]:
+    """Return every file in the git index with its staged content."""
+    root = repo_root()
+    files = [file for file in index_files(root) if not file.is_submodule]
+    objects = read_objects((file.object_id for file in files), cwd=root)
+    return {file.path: objects[file.object_id] for file in files}
 
 
 def check_message(draft: bytes) -> list[Problem]:
     """Check a draft commit message, as git will store it."""
     text = decode_text(draft)
     if text is None:
-        return [Problem("commit message", 1, "not UTF-8 text")]
+        return [Problem("commit message", "not UTF-8 text")]
     return check_text(stored_commit_message(text), "commit message", prose=True)
 
 
@@ -150,11 +146,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.message is not None:
         problems = check_message(args.message.read_bytes())
+    elif args.files:
+        problems = check_contents({name: Path(name).read_bytes() for name in args.files})
     else:
-        problems = check_files(args.files or tracked_files())
-    for problem in problems:
-        print(f"style: {problem}", file=sys.stderr)
-    return 1 if problems else 0
+        problems = check_contents(index_contents())
+    return report("style", problems)
 
 
 if __name__ == "__main__":

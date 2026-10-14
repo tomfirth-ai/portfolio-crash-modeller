@@ -30,7 +30,9 @@ from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from tools._git import changed_files, decode_text, git, read_objects, repo_root
+from tools._git import changed_files, git, read_objects, repo_root
+from tools._report import EXIT_CLEAN, EXIT_CONFIG_ERROR, EXIT_PROBLEMS, Problem
+from tools._text import decode_text
 from tools.denylist import (
     DenylistError,
     Entry,
@@ -40,10 +42,6 @@ from tools.denylist import (
 )
 from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES, is_screenshot_path, screenshot_problem
 
-EXIT_CLEAN = 0
-EXIT_FINDINGS = 1
-EXIT_CONFIG_ERROR = 2
-
 SHORT_ID_LENGTH = 12
 """Characters of a git object id shown in findings."""
 HIDDEN_NAME = "<name hidden>"
@@ -51,25 +49,14 @@ HIDDEN_NAME = "<name hidden>"
 
 
 @dataclass(frozen=True)
-class Finding:
+class Finding(Problem):
     """Something the scan found, described without the matched text.
 
     Attributes:
-        location: Where it was found.
-        reason: What was found.
-        line: Line number within the location, when there is one.
         blocking: Whether it stops the commit or push. Non-blocking findings are notes.
     """
 
-    location: str
-    reason: str
-    line: int | None = None
     blocking: bool = True
-
-    def __str__(self) -> str:
-        """Format the finding as ``location:line: reason``."""
-        where = self.location if self.line is None else f"{self.location}:{self.line}"
-        return f"{where}: {self.reason}"
 
 
 @dataclass(frozen=True)
@@ -279,7 +266,7 @@ def _documents_for(args: argparse.Namespace, repository: Path) -> list[Document]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the scan and return a process exit code (0 clean, 1 findings, 2 configuration error)."""
+    """Run the scan and return a process exit code (0 clean, 1 problems, 2 configuration error)."""
     args = _parse_args(argv)
     repository = repo_root()
     try:
@@ -305,7 +292,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"privacy scan: {problems} problem(s) found; nothing was committed or pushed",
             file=sys.stderr,
         )
-        return EXIT_FINDINGS
+        return EXIT_PROBLEMS
     return EXIT_CLEAN
 
 
