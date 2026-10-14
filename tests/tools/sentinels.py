@@ -4,13 +4,15 @@ from collections.abc import Callable
 
 SENTINEL_DENYLIST = """\
 # Synthetic sentinels for tests. None of these is real.
+
 Zebedee Quartermaine
 ZQXW
 271828
 314.159
 2031-02-17
 """
-"""Line 2 is a name, 3 a ticker, 4 an amount, 5 a unit count with decimals and 6 a date."""
+NAME_LINE, TICKER_LINE, AMOUNT_LINE, UNITS_LINE, DATE_LINE = 3, 4, 5, 6, 7
+"""Where each kind of sentinel sits in ``SENTINEL_DENYLIST``."""
 
 GitRunner = Callable[..., str]
 """Runs git in the test repository and returns its standard output."""

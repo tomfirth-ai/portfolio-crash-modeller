@@ -1,0 +1,166 @@
+from decimal import Decimal
+from pathlib import Path
+
+import pytest
+
+from tests.tools.sentinels import (
+    AMOUNT_LINE,
+    DATE_LINE,
+    NAME_LINE,
+    SENTINEL_DENYLIST,
+    TICKER_LINE,
+    UNITS_LINE,
+    GitRunner,
+)
+from tools import denylist
+from tools.denylist import DenylistError, Entry, Matcher
+
+
+@pytest.fixture
+def entries(denylist: Path, tmp_path: Path) -> list[Entry]:
+    return denylist_entries(denylist, tmp_path)
+
+
+def denylist_entries(path: Path, tmp_path: Path) -> list[Entry]:
+    return denylist.load_denylist(path, repository=tmp_path / "repo")
+
+
+def matched_lines(text: str, entries: list[Entry]) -> set[int]:
+    return {entry.line for entry in Matcher(entries).entries_in(text)}
+
+
+def test_tokenise_splits_case_snake_case_digits_and_punctuation() -> None:
+    assert denylist.tokenise("zebedeeQuartermaine_HTTPServer v2.0") == (
+        "zebedee",
+        "quartermaine",
+        "http",
+        "server",
+        "v",
+        "2",
+        "0",
+    )
+
+
+def test_tokenise_ignores_accents_and_invisible_characters() -> None:
+    assert denylist.tokenise("Zébe\u00addee Quarter\u200bmaine") == ("zebedee", "quartermaine")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Owner: Zebedee Quartermaine",
+        "zebedee_quartermaine = True",
+        "ZebedeeQuartermaine",
+        "ZEBEDEE-QUARTERMAINE",
+        "ZEBEDEEQUARTERMAINE",
+        "zebedeequartermaine@example.com",
+        "Quartermaine, Zebedee",
+        "Zebedee J. Quartermaine",
+        "Zébedee Quartermaine",
+        "Zebe\u00addee Quartermaine",
+    ],
+)
+def test_names_match_in_any_case_order_or_identifier_style(text: str, entries: list[Entry]) -> None:
+    assert NAME_LINE in matched_lines(text, entries)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "zqxwz is a different word",
+        "Zebedee on his own",
+        "Quartermaine",
+        "Zebedee A B C Quartermaine",
+    ],
+)
+def test_partial_names_and_longer_words_do_not_match(text: str, entries: list[Entry]) -> None:
+    assert matched_lines(text, entries) == set()
+
+
+def test_names_match_across_a_line_break_on_the_line_where_they_start(
+    entries: list[Entry],
+) -> None:
+    matches = Matcher(entries).find("Intro\nThe owner is Zebedee\nQuartermaine.\n")
+    assert [(line, entry.line) for line, entry in matches] == [(2, NAME_LINE)]
+
+
+@pytest.mark.parametrize("text", ["McDonald", "MCDONALD", "owner=mcdonald", "Mc Donald"])
+def test_camel_case_entries_match_however_the_text_is_cased(text: str) -> None:
+    assert Matcher([denylist.parse_entry(1, "McDonald")]).entries_in(text)
+
+
+def test_tickers_match_inside_identifiers(entries: list[Entry]) -> None:
+    assert TICKER_LINE in matched_lines("n_zqxw = units_ZQXW.L", entries)
+
+
+@pytest.mark.parametrize("text", ["271,828", "271828.00", "£271,828", "27182800", "2718.28"])
+def test_amounts_match_by_value_in_pounds_pence_or_hundredths(
+    text: str, entries: list[Entry]
+) -> None:
+    assert AMOUNT_LINE in matched_lines(text, entries)
+
+
+@pytest.mark.parametrize("text", ["314.159", "314.16", "314.2", "31415.9"])
+def test_decimal_amounts_match_when_rounded(text: str, entries: list[Entry]) -> None:
+    assert UNITS_LINE in matched_lines(text, entries)
+
+
+@pytest.mark.parametrize("text", ["271827", "314", "2,718"])
+def test_different_or_indistinct_numbers_do_not_match(text: str, entries: list[Entry]) -> None:
+    assert matched_lines(text, entries) == set()
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["2031-02-17", "20310217", "17/02/2031", "17 February 2031", "17 Feb 2031", "Feb 17, 2031"],
+)
+def test_iso_dates_match_common_spellings(text: str, entries: list[Entry]) -> None:
+    assert DATE_LINE in matched_lines(text, entries)
+
+
+def test_amount_variants_drop_figures_too_short_to_be_distinctive() -> None:
+    variants = denylist.amount_variants(Decimal("68.5"))
+    assert Decimal("68.5") in variants
+    assert Decimal(6850) in variants
+    assert Decimal("0.685") not in variants
+
+
+def test_load_denylist_skips_comments_and_blank_lines(entries: list[Entry]) -> None:
+    assert [entry.line for entry in entries] == [
+        NAME_LINE,
+        TICKER_LINE,
+        AMOUNT_LINE,
+        UNITS_LINE,
+        DATE_LINE,
+    ]
+
+
+def test_load_denylist_fails_closed_when_missing(tmp_path: Path) -> None:
+    with pytest.raises(DenylistError, match="no denylist found"):
+        denylist_entries(tmp_path / "absent.txt", tmp_path)
+
+
+def test_load_denylist_fails_closed_when_empty(tmp_path: Path) -> None:
+    path = tmp_path / "denylist.txt"
+    path.write_text("# only a comment\n\n", encoding="utf-8")
+    with pytest.raises(DenylistError, match="no entries"):
+        denylist_entries(path, tmp_path)
+
+
+def test_load_denylist_refuses_a_file_inside_the_repository(repo: Path) -> None:
+    path = repo / "denylist.txt"
+    path.write_text(SENTINEL_DENYLIST, encoding="utf-8")
+    with pytest.raises(DenylistError, match="outside the repository"):
+        denylist.load_denylist(path, repository=repo)
+
+
+def test_denylist_path_comes_from_git_config_or_the_default(repo: Path, run_git: GitRunner) -> None:
+    assert (
+        denylist.configured_denylist_path(repo) == Path.home() / ".config/crashmodel/denylist.txt"
+    )
+    run_git("config", denylist.GIT_CONFIG_KEY, "/elsewhere/denylist.txt")
+    assert denylist.configured_denylist_path(repo) == Path("/elsewhere/denylist.txt")
+
+
+def test_an_entry_with_no_tokens_never_matches() -> None:
+    assert Matcher([Entry(1, sequences=((),))]).find("anything at all") == []
