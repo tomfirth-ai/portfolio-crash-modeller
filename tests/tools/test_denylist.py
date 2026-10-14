@@ -138,10 +138,39 @@ def test_rounded_or_rescaled_amounts_never_match_years(entry: str, year: str) ->
 
 @pytest.mark.parametrize(
     "text",
-    ["2031-02-17", "20310217", "17/02/2031", "17 February 2031", "17 Feb 2031", "Feb 17, 2031"],
+    [
+        "2031-02-17",
+        "2031-2-17",
+        "2031-02-17T09:30:00Z",
+        "date(2031, 2, 17)",
+        "20310217",
+        "17022031",
+        "17/02/2031",
+        "17.02.2031",
+        "17/02/31",
+        "02/17/2031",
+        "17 February 2031",
+        "17 Feb 2031",
+        "17th February 2031",
+        "Feb 17, 2031",
+        "February 17th, 2031",
+    ],
 )
 def test_iso_dates_match_common_spellings(text: str, entries: list[Entry]) -> None:
     assert DATE_LINE in matched_lines(text, entries)
+
+
+@pytest.mark.parametrize("text", ["3 Sept 2031", "3rd Sep 2031", "September 3rd, 2031"])
+def test_september_matches_every_abbreviation(text: str) -> None:
+    assert Matcher([denylist.parse_entry(1, "2031-09-03")]).entries_in(text)
+
+
+@pytest.mark.parametrize(
+    ("day", "suffix"),
+    [(1, "st"), (2, "nd"), (3, "rd"), (4, "th"), (11, "th"), (13, "th"), (22, "nd")],
+)
+def test_ordinal_suffixes(day: int, suffix: str) -> None:
+    assert denylist.ordinal_suffix(day) == suffix
 
 
 def test_amount_forms_include_pence_and_hundredths_when_distinctive() -> None:

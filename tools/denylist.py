@@ -17,7 +17,8 @@ Matching is forgiving, so that small changes of form do not slip through:
   the same amount in pence or divided by 100. A figure has to keep four significant digits to
   count as a rounded or rescaled form, and four-digit whole numbers never do, because they are
   mostly years;
-* ISO dates such as ``2031-02-17`` also match the common UK, US and long-form spellings.
+* ISO dates such as ``2031-02-17`` also match the common UK, US, code and long-form spellings,
+  from ``17/02/31`` and ``date(2031, 2, 17)`` to ``February 17th, 2031``.
 """
 
 import re
@@ -69,6 +70,10 @@ MONTH_NAMES = (
     "November",
     "December",
 )
+
+ORDINAL_SUFFIXES = {1: "st", 2: "nd", 3: "rd"}
+TEENS = range(11, 14)
+"""The 11th, 12th and 13th, which take ``th`` whatever their last digit."""
 
 _IGNORED_CATEGORIES = frozenset({"Mn", "Cf"})
 """Accents left over from decomposition, and invisible format characters such as soft hyphens."""
@@ -237,21 +242,50 @@ def abbreviated_amounts_in(text: str) -> frozenset[Decimal]:
     return frozenset(amounts)
 
 
+def ordinal_suffix(day: int) -> str:
+    """Return the ordinal suffix for a day of the month: ``st``, ``nd``, ``rd`` or ``th``."""
+    if day in TEENS:
+        return "th"
+    return ORDINAL_SUFFIXES.get(day % 10, "th")
+
+
+def month_spellings(month: int) -> tuple[str, ...]:
+    """Return the ways a month is written: in full, in three letters and, for September, Sept."""
+    name = MONTH_NAMES[month - 1]
+    return (name, name[:3], "Sept") if name == "September" else (name, name[:3])
+
+
 def date_spellings(day: date) -> tuple[str, ...]:
-    """Return the common ways a date is written, in ISO, UK, US and long forms."""
-    month = MONTH_NAMES[day.month - 1]
-    return (
+    """Return the common ways a date is written, in ISO, UK, US, code and long forms.
+
+    The numeric forms cover zero-padded and unpadded numbers and two-digit years, and
+    ``f"{year} {month} {day}"`` stands for every year-first form, including ``date(2031, 2, 17)``
+    and ``2031-2-17``. The long forms cover each month spelling, with and without an ordinal.
+    """
+    numeric = (
         day.isoformat(),
         f"{day:%Y%m%d}",
+        f"{day:%d%m%Y}",
+        f"{day.year} {day.month} {day.day}",
         f"{day:%d/%m/%Y}",
         f"{day.day}/{day.month}/{day.year}",
+        f"{day:%d/%m/%y}",
+        f"{day.day}/{day.month}/{day:%y}",
         f"{day:%m/%d/%Y}",
         f"{day.month}/{day.day}/{day.year}",
-        f"{day.day} {month} {day.year}",
-        f"{day.day} {month[:3]} {day.year}",
-        f"{month} {day.day}, {day.year}",
-        f"{month[:3]} {day.day}, {day.year}",
+        f"{day:%m/%d/%y}",
     )
+    days = (str(day.day), f"{day.day}{ordinal_suffix(day.day)}")
+    worded = tuple(
+        spelling
+        for month in month_spellings(day.month)
+        for day_of_month in days
+        for spelling in (
+            f"{day_of_month} {month} {day.year}",
+            f"{month} {day_of_month}, {day.year}",
+        )
+    )
+    return numeric + worded
 
 
 def _is_name(tokens: tuple[str, ...]) -> bool:
