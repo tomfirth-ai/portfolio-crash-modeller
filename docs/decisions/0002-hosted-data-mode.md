@@ -1,7 +1,6 @@
 # 2. Hosted data mode: commit only open data, fetch academic equity history at runtime
 
-Date: 14 October 2026. Status: accepted. Connectivity results below are added after the first
-deployment.
+Date: 14 October 2026. Status: accepted, and confirmed from the hosted app (see the end).
 
 ## Context
 
@@ -41,4 +40,9 @@ API keys. Licence research found:
 
 ## Connectivity from the hosted app
 
-To be recorded from the Data sources page after the first deployment to Streamlit Community Cloud.
+On 14 October 2026, after the first deployment to Streamlit Community Cloud, the app's Data sources
+page reported both runtime sources reachable from Cloud: the Kenneth R. French Data Library and the
+Federal Reserve Board H.10 release. The decision stands.
+
+One local check that day timed out against the French library at the 10 second limit, so runtime
+fetches must keep failing gracefully, as described above.
