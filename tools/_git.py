@@ -9,6 +9,9 @@ from pathlib import Path
 SUBMODULE_MODE = "160000"
 """The mode git records for a submodule, whose content lives in another repository."""
 
+SCISSORS = "------------------------ >8 ------------------------"
+"""Marks where ``git commit -v`` appends the diff to the message being edited."""
+
 
 @dataclass(frozen=True)
 class StoredFile:
@@ -107,6 +110,21 @@ def read_objects(object_ids: Iterable[str], cwd: Path | None = None) -> dict[str
         objects[object_id] = output[start : start + size]
         position = start + size + 1
     return objects
+
+
+def stored_commit_message(draft: str, cwd: Path | None = None) -> str:
+    """Return a draft commit message as git will store it when the message is edited.
+
+    The commit-msg hook receives the draft before git cleans it up, with git's comment lines and,
+    after ``git commit -v``, the whole diff below a scissors line. Both are removed here, using
+    git's own ``stripspace`` so the configured comment character is respected.
+    """
+    lines = draft.splitlines(keepends=True)
+    cut = next(
+        (index for index, line in enumerate(lines) if line.rstrip().endswith(SCISSORS)), None
+    )
+    kept = "".join(lines if cut is None else lines[:cut])
+    return git("stripspace", "--strip-comments", cwd=cwd, stdin=kept.encode()).decode()
 
 
 def decode_text(content: bytes) -> str | None:

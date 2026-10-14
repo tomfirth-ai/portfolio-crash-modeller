@@ -6,6 +6,7 @@ The project writes British English and never uses en or em dashes. This check en
   lookalikes, such as the Unicode minus sign and the non-breaking hyphen;
 * Markdown prose and commit messages are checked for common American spellings. Code blocks, inline
   code and links are ignored, because code often has to use American identifiers such as ``color``.
+  In a commit message, git's comment lines and the diff added by ``git commit -v`` are ignored too.
 
 Usage::
 
@@ -21,7 +22,7 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from tools._git import decode_text, tracked_files
+from tools._git import decode_text, stored_commit_message, tracked_files
 
 DASH_LOOKALIKES = frozenset(
     chr(code)
@@ -133,6 +134,14 @@ def check_files(paths: Sequence[str]) -> list[Problem]:
     return problems
 
 
+def check_message(draft: bytes) -> list[Problem]:
+    """Check a draft commit message, as git will store it."""
+    text = decode_text(draft)
+    if text is None:
+        return [Problem("commit message", 1, "not UTF-8 text")]
+    return check_text(stored_commit_message(text), "commit message", prose=True)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the check and return a process exit code (0 clean, 1 problems found)."""
     parser = argparse.ArgumentParser(description="Check for dash lookalikes and American spelling.")
@@ -140,9 +149,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--message", type=Path, metavar="FILE", help="check a commit message file")
     args = parser.parse_args(argv)
     if args.message is not None:
-        problems = check_text(
-            args.message.read_text(encoding="utf-8"), "commit message", prose=True
-        )
+        problems = check_message(args.message.read_bytes())
     else:
         problems = check_files(args.files or tracked_files())
     for problem in problems:
