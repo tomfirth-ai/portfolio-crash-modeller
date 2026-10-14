@@ -1,0 +1,19 @@
+[project]
+name = "crashmodel"
+version = "0.1.0"
+description = "Stress-test a portfolio split through real market crashes, then track the one you choose."
+authors = [{ name = "Tom Firth" }]
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "streamlit>=1.64",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+# Only resolve releases that are at least two weeks old at lock time.
+exclude-newer = "2026-09-30T00:00:00Z"
