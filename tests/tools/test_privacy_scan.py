@@ -180,3 +180,33 @@ def test_push_scan_checks_commits_that_no_remote_has(
     run_git("commit", "-q", "-m", "Add a file")
 
     assert scan.main(["--push", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_reviewed_images_are_skipped_but_other_binaries_are_refused(
+    repo: Path, run_git: GitRunner, denylist: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (repo / "docs" / "img").mkdir(parents=True)
+    (repo / "docs" / "img" / "home.png").write_bytes(b"\x89PNG\x00binary")
+    (repo / "blob.bin").write_bytes(b"\x00\x01binary")
+    run_git("add", "docs/img/home.png", "blob.bin")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+    output = capsys.readouterr().err
+    assert "not scanned, review by eye: docs/img/home.png" in output
+    assert "blob.bin: binary file cannot be scanned" in output
+
+
+def test_short_entries_trigger_a_false_positive_warning(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "short.txt"
+    path.write_text("AB\n", encoding="utf-8")
+
+    assert scan.main(["--staged", "--denylist", str(path)]) == scan.EXIT_CLEAN
+    assert "denylist line 1 is short" in capsys.readouterr().err
+
+
+def test_denylist_path_comes_from_git_config_or_the_default(repo: Path, run_git: GitRunner) -> None:
+    assert scan.configured_denylist_path(repo) == Path.home() / ".config/crashmodel/denylist.txt"
+    run_git("config", scan.GIT_CONFIG_KEY, "/elsewhere/denylist.txt")
+    assert scan.configured_denylist_path(repo) == Path("/elsewhere/denylist.txt")
