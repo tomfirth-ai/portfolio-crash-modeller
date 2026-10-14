@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+
+# Secrets and local configuration
+.env
+.streamlit/secrets.toml
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Private and local data (never public)
+private/
+local/
+.cache/
+data/cache/
+*.db
+*.sqlite
+*.sqlite3
+*.bak*
+
+# Binary data formats are never committed
+*.xlsx
+*.xls
+*.ods
+*.parquet
+*.pkl
+*.ipynb
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/
