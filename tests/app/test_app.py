@@ -9,7 +9,8 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
-from crashmodel.app.presenters.copy import DISCLAIMER
+from crashmodel.app.components import footer
+from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.data import diagnostics
 from tests.app.copy_rules import copy_problems
 
@@ -122,3 +123,23 @@ def test_pages_hold_no_bare_strings_that_streamlit_would_draw(page: Path) -> Non
         and node is not docstring
     ]
     assert bare_strings == []
+
+
+def page_links(app: AppTest) -> dict[str, str]:
+    return {link.proto.label: link.proto.page for link in app.get("page_link")}
+
+
+def test_the_footer_links_to_the_source_code_when_the_repository_is_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(footer, "repository_url", lambda: "https://github.com/example/repo")
+
+    assert page_links(run_app())[SOURCE_CODE] == "https://github.com/example/repo"
+
+
+def test_the_footer_leaves_out_the_source_link_when_no_repository_is_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(footer, "repository_url", lambda: None)
+
+    assert SOURCE_CODE not in page_links(run_app())
