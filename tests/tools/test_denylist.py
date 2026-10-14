@@ -93,21 +93,47 @@ def test_tickers_match_inside_identifiers(entries: list[Entry]) -> None:
     assert TICKER_LINE in matched_lines("n_zqxw = units_ZQXW.L", entries)
 
 
-@pytest.mark.parametrize("text", ["271,828", "271828.00", "£271,828", "27182800", "2718.28"])
-def test_amounts_match_by_value_in_pounds_pence_or_hundredths(
-    text: str, entries: list[Entry]
-) -> None:
+@pytest.mark.parametrize(
+    "text",
+    [
+        "271,828",
+        "271828.00",
+        "£271,828",
+        "VALUE = 271_828",
+        "Value 271 828",
+        "271\u202f828",
+        "271,828.37",
+        "about £271.8k",
+        "about 272K",
+        "27182800",
+        "ZZZ,1,27182800",
+        "row,7,2718.28",
+    ],
+)
+def test_amounts_match_by_value_however_they_are_written(text: str, entries: list[Entry]) -> None:
     assert AMOUNT_LINE in matched_lines(text, entries)
 
 
-@pytest.mark.parametrize("text", ["314.159", "314.16", "314.2", "31415.9"])
-def test_decimal_amounts_match_when_rounded(text: str, entries: list[Entry]) -> None:
+@pytest.mark.parametrize("text", ["314.159", "314.16", "314.2", "31415.9", "17,314.16"])
+def test_decimal_amounts_match_when_rounded_or_next_to_other_fields(
+    text: str, entries: list[Entry]
+) -> None:
     assert UNITS_LINE in matched_lines(text, entries)
 
 
-@pytest.mark.parametrize("text", ["271827", "314", "2,718"])
+@pytest.mark.parametrize("text", ["271827", "314", "2,718", "£0.27m", "10k"])
 def test_different_or_indistinct_numbers_do_not_match(text: str, entries: list[Entry]) -> None:
     assert matched_lines(text, entries) == set()
+
+
+@pytest.mark.parametrize("text", ["Total 12,346", "Total 12,345", "12,345.67", "£12.3k"])
+def test_amounts_match_when_rounded_to_whole_units_or_abbreviated(text: str) -> None:
+    assert Matcher([denylist.parse_entry(1, "12345.67")]).entries_in(text)
+
+
+@pytest.mark.parametrize(("entry", "year"), [("1987.65", "1988"), ("200800", "2008")])
+def test_rounded_or_rescaled_amounts_never_match_years(entry: str, year: str) -> None:
+    assert Matcher([denylist.parse_entry(1, entry)]).entries_in(f"The crash of {year}") == []
 
 
 @pytest.mark.parametrize(
@@ -118,11 +144,20 @@ def test_iso_dates_match_common_spellings(text: str, entries: list[Entry]) -> No
     assert DATE_LINE in matched_lines(text, entries)
 
 
-def test_amount_variants_drop_figures_too_short_to_be_distinctive() -> None:
-    variants = denylist.amount_variants(Decimal("68.5"))
-    assert Decimal("68.5") in variants
-    assert Decimal(6850) in variants
-    assert Decimal("0.685") not in variants
+def test_amount_forms_include_pence_and_hundredths_when_distinctive() -> None:
+    forms = denylist.amount_forms(Decimal("1234.5"))
+    assert forms.exact == {Decimal("1234.5"), Decimal(123450), Decimal("12.345")}
+    assert Decimal("1235") not in forms.rounded
+
+
+def test_amount_forms_drop_figures_too_short_to_be_distinctive() -> None:
+    forms = denylist.amount_forms(Decimal("68.5"))
+    assert forms.exact == {Decimal("68.5")}
+    assert forms.rounded == set()
+
+
+def test_overlong_digit_runs_are_not_read_as_amounts() -> None:
+    assert denylist.amounts_in("id 1234567890123456789012345") == set()
 
 
 def test_load_denylist_skips_comments_and_blank_lines(entries: list[Entry]) -> None:

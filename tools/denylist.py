@@ -12,8 +12,11 @@ Matching is forgiving, so that small changes of form do not slip through:
   match ``Jane Doe``, while a short entry never matches inside a longer word;
 * a two-word name also matches in reverse order (``Doe, Jane``) and with initials between the
   words (``Jane Q. Doe``);
-* amounts are compared by value, so ``271828`` also matches ``271,828``, ``271828.00``, the same
-  amount in pence and the same amount divided by 100;
+* amounts are compared by value, at the precision they are written. ``271828`` also matches
+  ``271,828``, ``271_828``, ``271 828``, ``271828.37``, ``271,830``, ``£271.8k`` and ``272K``, and
+  the same amount in pence or divided by 100. A figure has to keep four significant digits to
+  count as a rounded or rescaled form, and four-digit whole numbers never do, because they are
+  mostly years;
 * ISO dates such as ``2031-02-17`` also match the common UK, US and long-form spellings.
 """
 
@@ -22,9 +25,9 @@ import subprocess
 import unicodedata
 from collections import defaultdict
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from tools._git import git
@@ -34,7 +37,13 @@ GIT_CONFIG_KEY = "crashmodel.denylist"
 DEFAULT_LOCATION = Path("~/.config/crashmodel/denylist.txt")
 
 MIN_DISTINCTIVE_DIGITS = 4
-"""Rounded or rescaled amounts with fewer digits than this are too common to match safely."""
+"""Rounded or rescaled amounts with fewer significant digits are too common to match safely."""
+ABBREVIATED_DIGITS = 3
+"""Significant digits compared for an abbreviated amount such as ``£272k``."""
+YEAR_LIKE = range(1000, 10000)
+"""Four-digit whole numbers, mostly years, which never count as a rounded or rescaled amount."""
+MAX_NUMBER_DIGITS = 18
+"""Longer runs of digits are identifiers or hashes, not amounts."""
 MIN_DISTINCTIVE_CHARACTERS = 3
 """Word entries shorter than this are matched, but trigger a false-positive warning."""
 MAX_INITIALS = 2
@@ -42,7 +51,9 @@ MAX_INITIALS = 2
 NAME_WORDS = 2
 """Names of exactly this many words also match in reverse order, as in ``Doe, Jane``."""
 PENCE_PER_POUND = Decimal(100)
-DECIMAL_PLACES_TO_ROUND = (1, 2)
+ROUNDINGS = (ROUND_HALF_UP, ROUND_DOWN)
+"""A figure may be rounded to the nearest unit or simply cut short."""
+MULTIPLIERS = {"k": Decimal(10) ** 3, "m": Decimal(10) ** 6, "bn": Decimal(10) ** 9}
 
 MONTH_NAMES = (
     "January",
@@ -65,12 +76,34 @@ _IGNORED_CATEGORIES = frozenset({"Mn", "Cf"})
 _WORD_OR_NUMBER_RUN = re.compile(r"[^\W\d_]+|\d+")
 _CASE_BOUNDARY = re.compile(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 _AMOUNT_ENTRY = re.compile(r"[£$€]?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*p?", re.IGNORECASE)
-_AMOUNT_IN_TEXT = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+_PLAIN_NUMBER = re.compile(r"[0-9]+(?:\.[0-9]+)?")
+_GROUPED_NUMBER = re.compile(
+    r"(?<![0-9.])[0-9]{1,3}(?:[,_' \u00a0\u202f][0-9]{3})+(?:\.[0-9]+)?(?![0-9])"
+)
+"""A number with thousands separators: commas, underscores, apostrophes or spaces."""
+_ABBREVIATED_NUMBER = re.compile(r"([0-9]+(?:\.[0-9]+)?) ?(k|m|bn)\b", re.IGNORECASE)
+_THOUSANDS_SEPARATORS = re.compile(r"[,_' \u00a0\u202f]")
 _ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
 
 class DenylistError(Exception):
     """The denylist is missing, empty or in an unsafe place."""
+
+
+@dataclass(frozen=True)
+class AmountForms:
+    """The values an amount may be written as.
+
+    Attributes:
+        exact: The amount itself, and in pence or divided by 100 when still distinctive.
+        rounded: Those values rounded or cut short to fewer digits, while still distinctive.
+        abbreviated: Those values to three significant digits, matched only against abbreviated
+            text such as ``£272k``.
+    """
+
+    exact: frozenset[Decimal]
+    rounded: frozenset[Decimal] = frozenset()
+    abbreviated: frozenset[Decimal] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -80,13 +113,13 @@ class Entry:
     Attributes:
         line: Line number of the entry in the denylist file, used to report matches.
         sequences: Token sequences that count as a match.
-        amounts: Numeric values that count as a match, for entries that are amounts.
+        amounts: The values that count as a match, for entries that are amounts.
         is_name: Whether the entry is a two-word name, which may have initials between its words.
     """
 
     line: int
     sequences: tuple[tuple[str, ...], ...]
-    amounts: frozenset[Decimal] = field(default_factory=frozenset)
+    amounts: AmountForms | None = None
     is_name: bool = False
 
     @property
@@ -128,38 +161,80 @@ def parse_amount(raw: str) -> Decimal | None:
     return Decimal(whole.replace(",", "") + (fraction or ""))
 
 
-def _digit_count(value: Decimal) -> int:
-    return len(format(value, "f").replace(".", "").replace("-", "").lstrip("0"))
+def significant_digits(value: Decimal) -> int:
+    """Return the number of significant digits, ignoring trailing zeros: 271800 has four."""
+    return len(value.normalize().as_tuple().digits)
 
 
-def _decimal_places(value: Decimal) -> int:
+def is_distinctive(value: Decimal) -> bool:
+    """Whether a rounded or rescaled amount is unusual enough to match without false alarms."""
+    if significant_digits(value) < MIN_DISTINCTIVE_DIGITS:
+        return False
+    return not (value == value.to_integral_value() and int(value) in YEAR_LIKE)
+
+
+def _exponent(value: Decimal) -> int:
     exponent = value.as_tuple().exponent
-    return -exponent if isinstance(exponent, int) and exponent < 0 else 0
+    return exponent if isinstance(exponent, int) else 0
 
 
-def amount_variants(value: Decimal) -> frozenset[Decimal]:
-    """Return the values an amount may appear as: itself, rounded, in pence, or divided by 100.
+def _round(value: Decimal, exponent: int) -> set[Decimal]:
+    quantum = Decimal(1).scaleb(exponent)
+    return {value.quantize(quantum, rounding=rounding) for rounding in ROUNDINGS}
 
-    Variants other than the value itself are kept only when they still have enough digits to be
-    distinctive, so a rounded figure such as ``68`` does not match every 68 in the code base.
+
+def _tidy(value: Decimal) -> Decimal:
+    """Drop zeros after the decimal point, so ``31415.900`` is held at the precision ``31415.9``."""
+    return value.quantize(Decimal(1)) if value == value.to_integral_value() else value.normalize()
+
+
+def amount_forms(value: Decimal) -> AmountForms:
+    """Return the values an amount may be written as: see ``AmountForms``.
+
+    Derived values, such as ``68`` for ``68.50``, are kept only when they are distinctive, so a
+    short figure does not match every number in the code base.
     """
-    variants = {value * PENCE_PER_POUND, value / PENCE_PER_POUND}
-    variants |= {
-        value.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
-        for places in DECIMAL_PLACES_TO_ROUND
-        if _decimal_places(value) > places
+    rescaled = {_tidy(value * PENCE_PER_POUND), _tidy(value / PENCE_PER_POUND)}
+    exact = {value, *filter(is_distinctive, rescaled)}
+    rounded = {
+        form
+        for figure in exact
+        for exponent in range(_exponent(figure) + 1, figure.adjusted() - MIN_DISTINCTIVE_DIGITS + 2)
+        for form in _round(figure, exponent)
+        if is_distinctive(form)
     }
-    distinctive = {
-        variant for variant in variants if _digit_count(variant) >= MIN_DISTINCTIVE_DIGITS
+    abbreviated = {
+        form
+        for figure in exact
+        if significant_digits(figure) > ABBREVIATED_DIGITS
+        for form in _round(figure, figure.adjusted() - ABBREVIATED_DIGITS + 1)
     }
-    return frozenset(variant.normalize() for variant in {value, *distinctive})
+    return AmountForms(frozenset(exact), frozenset(rounded), frozenset(abbreviated))
+
+
+def _number(written: str) -> Decimal | None:
+    digits = _THOUSANDS_SEPARATORS.sub("", written)
+    return Decimal(digits) if len(digits) <= MAX_NUMBER_DIGITS else None
 
 
 def amounts_in(text: str) -> frozenset[Decimal]:
-    """Return every number written in the text, normalised for comparison by value."""
-    return frozenset(
-        Decimal(match.replace(",", "")).normalize() for match in _AMOUNT_IN_TEXT.findall(text)
-    )
+    """Return every number written in the text, with and without reading thousands separators.
+
+    Both readings are kept because a comma may also separate fields: in ``2031,1,314.16`` the
+    numbers are ``2031``, ``1`` and ``314.16``, not ``1,314.16``.
+    """
+    written = [*_PLAIN_NUMBER.findall(text), *_GROUPED_NUMBER.findall(text)]
+    return frozenset(number for number in map(_number, written) if number is not None)
+
+
+def abbreviated_amounts_in(text: str) -> frozenset[Decimal]:
+    """Return every amount written with a suffix for thousands, millions or billions: ``£272k``."""
+    amounts: set[Decimal] = set()
+    for figure, suffix in _ABBREVIATED_NUMBER.findall(text):
+        number = _number(figure)
+        if number is not None:
+            amounts.add(number * MULTIPLIERS[suffix.lower()])
+    return frozenset(amounts)
 
 
 def date_spellings(day: date) -> tuple[str, ...]:
@@ -203,7 +278,7 @@ def parse_entry(line: int, raw: str) -> Entry:
     text = raw.strip()
     if (amount := parse_amount(text)) is not None:
         plain = format(amount.normalize(), "f")
-        return Entry(line, sequences=(tokenise(plain),), amounts=amount_variants(amount))
+        return Entry(line, sequences=(tokenise(plain),), amounts=amount_forms(amount))
     if (iso := _ISO_DATE.fullmatch(text)) is not None:
         day = date(*(int(part) for part in iso.groups()))
         return Entry(line, sequences=tuple(tokenise(spelling) for spelling in date_spellings(day)))
@@ -252,20 +327,30 @@ def configured_denylist_path(repository: Path) -> Path:
 class Matcher:
     """Finds denylist entries in text.
 
-    Entries are indexed by their first token and by their amounts, so a scan costs roughly one
-    dictionary lookup per token and per number, however long the denylist.
+    Entries are indexed by their first token and by their amounts, so a scan costs a few
+    dictionary lookups per token and per number, however long the denylist.
     """
 
     def __init__(self, entries: Sequence[Entry]) -> None:
         """Index the entries for matching."""
         self._by_first_token: defaultdict[str, list[Candidate]] = defaultdict(list)
-        self._by_amount: defaultdict[Decimal, list[Entry]] = defaultdict(list)
+        self._exact: defaultdict[Decimal, list[Entry]] = defaultdict(list)
+        self._rounded: defaultdict[Decimal, list[Entry]] = defaultdict(list)
+        self._abbreviated: defaultdict[Decimal, list[Entry]] = defaultdict(list)
+        self._exponents: set[int] = set()
         for entry in entries:
             for sequence in entry.sequences:
                 if sequence:
                     self._by_first_token[sequence[0]].append((sequence, entry))
-            for amount in entry.amounts:
-                self._by_amount[amount].append(entry)
+            if entry.amounts is not None:
+                for index, values in (
+                    (self._exact, entry.amounts.exact),
+                    (self._rounded, entry.amounts.rounded),
+                    (self._abbreviated, entry.amounts.abbreviated),
+                ):
+                    for value in values:
+                        index[value].append(entry)
+                self._exponents.update(map(_exponent, entry.amounts.exact))
 
     def find(self, text: str) -> list[tuple[int, Entry]]:
         """Return each ``(line number, entry)`` match in the text, in order and without repeats.
@@ -279,9 +364,8 @@ class Matcher:
             line_tokens = tokenise(line)
             tokens.extend(line_tokens)
             token_lines.extend([number] * len(line_tokens))
-            for amount in amounts_in(line):
-                for entry in self._by_amount.get(amount, ()):
-                    matches.setdefault((number, entry.line), entry)
+            for entry in self._amount_matches(line):
+                matches.setdefault((number, entry.line), entry)
         for start, token in enumerate(tokens):
             for sequence, entry in self._by_first_token.get(token, ()):
                 if _occurs_at(tokens, start, sequence, MAX_INITIALS if entry.is_name else 0):
@@ -292,6 +376,25 @@ class Matcher:
         """Return the entries found anywhere in the text, in denylist order, without repeats."""
         found = {entry.line: entry for _, entry in self.find(text)}
         return [found[line] for line in sorted(found)]
+
+    def _amount_matches(self, line: str) -> list[Entry]:
+        """Return the amount entries written in one line of text.
+
+        A number in the text matches when it equals an entry's value, or a rounded form of it,
+        or when the text is more precise than the entry and rounds to the entry's value.
+        """
+        found: list[Entry] = []
+        for amount in amounts_in(line):
+            found += self._exact.get(amount, ())
+            found += self._rounded.get(amount, ())
+            for exponent in self._exponents:
+                if _exponent(amount) < exponent:
+                    for rounded in _round(amount, exponent):
+                        found += self._exact.get(rounded, ())
+        for amount in abbreviated_amounts_in(line):
+            for index in (self._exact, self._rounded, self._abbreviated):
+                found += index.get(amount, ())
+        return found
 
 
 def _occurs_at(tokens: Sequence[str], start: int, sequence: Sequence[str], gap: int) -> bool:
