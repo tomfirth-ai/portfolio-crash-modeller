@@ -66,6 +66,14 @@ def test_scan_fails_closed_without_a_denylist(repo: Path, tmp_path: Path) -> Non
     assert scan.main(["--staged", "--denylist", str(missing)]) == scan.EXIT_CONFIG_ERROR
 
 
+def test_scan_treats_a_malformed_denylist_as_a_configuration_error(
+    repo: Path, tmp_path: Path
+) -> None:
+    malformed = tmp_path / "malformed.txt"
+    malformed.write_text("2031-02-30\n", encoding="utf-8")
+    assert scan.main(["--staged", "--denylist", str(malformed)]) == scan.EXIT_CONFIG_ERROR
+
+
 def test_message_scan_checks_the_commit_message(repo: Path, tmp_path: Path, denylist: Path) -> None:
     message = tmp_path / "COMMIT_EDITMSG"
     message.write_text("Add ZQXW prices\n", encoding="utf-8")

@@ -89,10 +89,14 @@ _GROUPED_NUMBER = re.compile(
 _ABBREVIATED_NUMBER = re.compile(r"([0-9]+(?:\.[0-9]+)?) ?(k|m|bn)\b", re.IGNORECASE)
 _THOUSANDS_SEPARATORS = re.compile(r"[,_' \u00a0\u202f]")
 _ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+_INLINE_COMMENT = re.compile(r"\s#")
 
 
 class DenylistError(Exception):
-    """The denylist is missing, empty or in an unsafe place."""
+    """The denylist is missing, unreadable, malformed or in an unsafe place.
+
+    Messages name the denylist line at fault but never repeat its content.
+    """
 
 
 @dataclass(frozen=True)
@@ -308,16 +312,41 @@ def _word_sequences(tokens: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
 
 
 def parse_entry(line: int, raw: str) -> Entry:
-    """Prepare one denylist line for matching, treating amounts and ISO dates specially."""
+    """Prepare one denylist line for matching, treating amounts and ISO dates specially.
+
+    Raises:
+        DenylistError: If the line has a comment after the entry, looks like an ISO date that does
+            not exist, or has no letters or digits to match.
+    """
     text = raw.strip()
+    if _INLINE_COMMENT.search(text):
+        raise DenylistError(
+            f"denylist line {line} has a comment after the entry; put comments on their own line"
+        )
     if (amount := parse_amount(text)) is not None:
         plain = format(amount.normalize(), "f")
         return Entry(line, sequences=(tokenise(plain),), amounts=amount_forms(amount))
     if (iso := _ISO_DATE.fullmatch(text)) is not None:
-        day = date(*(int(part) for part in iso.groups()))
+        try:
+            day = date(*(int(part) for part in iso.groups()))
+        except ValueError:
+            raise DenylistError(f"denylist line {line} is not a real date") from None
         return Entry(line, sequences=tuple(tokenise(spelling) for spelling in date_spellings(day)))
     tokens = tokenise(text)
+    if not tokens:
+        raise DenylistError(f"denylist line {line} has no letters or digits to match")
     return Entry(line, sequences=_word_sequences(tokens), is_name=_is_name(tokens))
+
+
+def _is_inside(path: Path, directory: Path) -> bool:
+    """Whether ``path`` is ``directory`` or lies beneath it.
+
+    Compares files, not spellings, so a differently cased path on a case-insensitive disk is
+    still recognised.
+    """
+    return directory.exists() and any(
+        candidate.exists() and candidate.samefile(directory) for candidate in (path, *path.parents)
+    )
 
 
 def load_denylist(path: Path, repository: Path) -> list[Entry]:
@@ -328,22 +357,29 @@ def load_denylist(path: Path, repository: Path) -> list[Entry]:
         repository: Root of the repository being protected.
 
     Returns:
-        The prepared entries, one per non-blank, non-comment line.
+        The prepared entries, one per line that is neither blank nor a ``#`` comment.
 
     Raises:
-        DenylistError: If the file is inside the repository, missing, or has no entries.
+        DenylistError: If the file is inside the repository, missing, unreadable, not UTF-8 text,
+            has a malformed line or has no entries.
     """
     resolved = path.expanduser().resolve()
-    if resolved.is_relative_to(repository.resolve()):
+    if _is_inside(resolved, repository.resolve()):
         raise DenylistError("the denylist must live outside the repository")
     if not resolved.is_file():
         raise DenylistError(f"no denylist found at {resolved}")
+    try:
+        # utf-8-sig drops the byte order mark some editors add, which would hide the first entry.
+        text = resolved.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        raise DenylistError("the denylist is not UTF-8 text") from None
+    except OSError as error:
+        raise DenylistError(f"cannot read the denylist: {error.strerror}") from None
     entries = [
         parse_entry(number, line)
-        for number, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), start=1)
+        for number, line in enumerate(text.splitlines(), start=1)
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    entries = [entry for entry in entries if any(entry.sequences)]
     if not entries:
         raise DenylistError("the denylist has no entries")
     return entries

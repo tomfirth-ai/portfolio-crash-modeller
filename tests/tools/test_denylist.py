@@ -187,6 +187,7 @@ def test_amount_forms_drop_figures_too_short_to_be_distinctive() -> None:
 
 def test_overlong_digit_runs_are_not_read_as_amounts() -> None:
     assert denylist.amounts_in("id 1234567890123456789012345") == set()
+    assert denylist.abbreviated_amounts_in("id 1234567890123456789012345k") == set()
 
 
 def test_load_denylist_skips_comments_and_blank_lines(entries: list[Entry]) -> None:
@@ -216,6 +217,63 @@ def test_load_denylist_refuses_a_file_inside_the_repository(repo: Path) -> None:
     path.write_text(SENTINEL_DENYLIST, encoding="utf-8")
     with pytest.raises(DenylistError, match="outside the repository"):
         denylist.load_denylist(path, repository=repo)
+
+
+def test_load_denylist_ignores_a_byte_order_mark(tmp_path: Path) -> None:
+    path = tmp_path / "denylist.txt"
+    path.write_text("\ufeff271828\n", encoding="utf-8")
+
+    assert Matcher(denylist_entries(path, tmp_path)).entries_in("271,828")
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("271828  # a comment\n", "line 1 has a comment after the entry"),
+        ("# fine\n2031-02-30\n", "line 2 is not a real date"),
+        ("£ $\n", "line 1 has no letters or digits"),
+    ],
+)
+def test_load_denylist_names_the_malformed_line_without_repeating_it(
+    tmp_path: Path, content: str, message: str
+) -> None:
+    path = tmp_path / "denylist.txt"
+    path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(DenylistError, match=message) as raised:
+        denylist_entries(path, tmp_path)
+
+    assert content.strip() not in str(raised.value)
+
+
+def test_load_denylist_refuses_text_that_is_not_utf8(tmp_path: Path) -> None:
+    path = tmp_path / "denylist.txt"
+    path.write_bytes(b"Zo\xeb\n")
+
+    with pytest.raises(DenylistError, match="not UTF-8"):
+        denylist_entries(path, tmp_path)
+
+
+def test_load_denylist_reports_a_file_it_cannot_read(tmp_path: Path) -> None:
+    path = tmp_path / "denylist.txt"
+    path.write_text("ZQXW\n", encoding="utf-8")
+    path.chmod(0)
+
+    try:
+        with pytest.raises(DenylistError, match="cannot read the denylist"):
+            denylist_entries(path, tmp_path)
+    finally:
+        path.chmod(0o600)
+
+
+def test_load_denylist_refuses_the_repository_under_another_spelling(repo: Path) -> None:
+    other_case = repo.parent / repo.name.upper() / "denylist.txt"
+    if not other_case.parent.exists():
+        pytest.skip("the file system is case-sensitive")
+    (repo / "denylist.txt").write_text(SENTINEL_DENYLIST, encoding="utf-8")
+
+    with pytest.raises(DenylistError, match="outside the repository"):
+        denylist.load_denylist(other_case, repository=repo)
 
 
 def test_denylist_path_comes_from_git_config_or_the_default(repo: Path, run_git: GitRunner) -> None:
