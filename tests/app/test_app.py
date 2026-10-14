@@ -61,7 +61,7 @@ def rendered_text(app: AppTest) -> list[str]:
     texts = [element.value for kind in kinds for element in getattr(app, kind)]
     texts += [button.label for button in app.button]
     texts += [link.proto.label for link in app.get("page_link")]
-    for table in [*app.table, *app.dataframe]:
+    for table in app.table:
         texts += [str(cell) for cell in [*table.value.columns, *table.value.to_numpy().ravel()]]
     return texts
 
@@ -71,10 +71,10 @@ def test_data_sources_reports_unreachable_sources_without_failing(
 ) -> None:
     app = checked_data_sources_page(monkeypatch)
 
+    sources = len(diagnostics.HOSTED_SOURCES)
     assert not app.exception
-    assert "0 of 2 sources are reachable." in [markdown.value for markdown in app.markdown]
-    statuses = list(app.dataframe[0].value["Status"])
-    assert statuses == ["Unreachable (ConnectError)"] * 2
+    assert f"0 of {sources} sources are reachable." in [markdown.value for markdown in app.markdown]
+    assert list(app.table[0].value["Status"]) == ["Unreachable: could not connect"] * sources
     assert DISCLAIMER in captions(app)
 
 

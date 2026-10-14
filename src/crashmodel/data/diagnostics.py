@@ -9,13 +9,13 @@ shared cloud hosts.
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
+from enum import Enum, auto
 
 import httpx
 
 from crashmodel.project import user_agent
 
 DEFAULT_TIMEOUT_SECONDS = 10.0
-MILLISECONDS_PER_SECOND = 1000
 
 
 @dataclass(frozen=True)
@@ -27,25 +27,41 @@ class DataSource:
     purpose: str
 
 
-@dataclass(frozen=True)
+class Failure(Enum):
+    """Why a source could not be reached."""
+
+    TIMEOUT = auto()
+    """The server took too long to connect or reply."""
+    CONNECTION = auto()
+    """No connection could be made, or it broke off."""
+    ERROR_STATUS = auto()
+    """The server replied with an HTTP error status."""
+    OTHER = auto()
+    """The request failed in some other way, such as too many redirects."""
+
+
+@dataclass(frozen=True, kw_only=True)
 class SourceStatus:
     """The outcome of one connectivity check.
 
     Attributes:
         source: The source that was checked.
-        reachable: Whether a successful HTTP response came back.
+        failure: Why the source could not be reached, or ``None`` if it could.
         status_code: The HTTP status code, if any response came back.
-        elapsed_ms: Time to the full response in milliseconds, if any response came back.
+        elapsed_seconds: Time to the full response, if any response came back.
         size_bytes: Size of the response body, if any response came back.
-        error: A short reason when the source was not reachable.
     """
 
     source: DataSource
-    reachable: bool
+    failure: Failure | None = None
     status_code: int | None = None
-    elapsed_ms: float | None = None
+    elapsed_seconds: float | None = None
     size_bytes: int | None = None
-    error: str | None = None
+
+    @property
+    def reachable(self) -> bool:
+        """Whether a successful response came back."""
+        return self.failure is None
 
 
 HOSTED_SOURCES: tuple[DataSource, ...] = (
@@ -74,16 +90,18 @@ def check_source(client: httpx.Client, source: DataSource) -> SourceStatus:
     started = time.perf_counter()
     try:
         response = client.get(source.url)
-    except httpx.HTTPError as error:
-        return SourceStatus(source, reachable=False, error=type(error).__name__)
-    elapsed_ms = (time.perf_counter() - started) * MILLISECONDS_PER_SECOND
+    except httpx.TimeoutException:
+        return SourceStatus(source=source, failure=Failure.TIMEOUT)
+    except httpx.TransportError:
+        return SourceStatus(source=source, failure=Failure.CONNECTION)
+    except httpx.HTTPError:
+        return SourceStatus(source=source, failure=Failure.OTHER)
     return SourceStatus(
-        source,
-        reachable=response.is_success,
+        source=source,
+        failure=None if response.is_success else Failure.ERROR_STATUS,
         status_code=response.status_code,
-        elapsed_ms=elapsed_ms,
+        elapsed_seconds=time.perf_counter() - started,
         size_bytes=len(response.content),
-        error=None if response.is_success else response.reason_phrase,
     )
 
 

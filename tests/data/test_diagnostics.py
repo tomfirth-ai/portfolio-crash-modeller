@@ -3,7 +3,7 @@ import pytest
 
 from crashmodel import __version__
 from crashmodel.data import diagnostics
-from crashmodel.data.diagnostics import DataSource
+from crashmodel.data.diagnostics import DataSource, Failure
 
 SOURCE = DataSource("Example source", "https://data.example.com/series.csv", "Testing")
 
@@ -24,29 +24,42 @@ def test_a_successful_response_is_reachable_with_its_size_and_timing() -> None:
         result = diagnostics.check_source(client, SOURCE)
 
     assert result.reachable
+    assert result.failure is None
     assert result.status_code == 200
     assert result.size_bytes == 2048
-    assert result.elapsed_ms is not None
-    assert result.elapsed_ms >= 0
-    assert result.error is None
+    assert result.elapsed_seconds is not None
+    assert result.elapsed_seconds >= 0
 
 
-def test_an_error_status_is_unreachable_with_its_reason() -> None:
-    with client_returning(httpx.Response(503)) as client:
+@pytest.mark.parametrize("status_code", [404, 503, 599])
+def test_an_error_status_is_unreachable_and_keeps_the_code(status_code: int) -> None:
+    with client_returning(httpx.Response(status_code)) as client:
         result = diagnostics.check_source(client, SOURCE)
 
     assert not result.reachable
-    assert result.status_code == 503
-    assert result.error == "Service Unavailable"
+    assert result.failure is Failure.ERROR_STATUS
+    assert result.status_code == status_code
 
 
-def test_a_transport_failure_is_unreachable_without_raising() -> None:
-    with client_failing_with(httpx.ConnectError("no route")) as client:
+@pytest.mark.parametrize(
+    ("error", "failure"),
+    [
+        (httpx.ConnectTimeout("slow"), Failure.TIMEOUT),
+        (httpx.ReadTimeout("slow"), Failure.TIMEOUT),
+        (httpx.ConnectError("no route"), Failure.CONNECTION),
+        (httpx.RemoteProtocolError("broken"), Failure.CONNECTION),
+        (httpx.TooManyRedirects("loop"), Failure.OTHER),
+    ],
+)
+def test_a_failed_request_is_unreachable_with_its_kind(
+    error: httpx.HTTPError, failure: Failure
+) -> None:
+    with client_failing_with(error) as client:
         result = diagnostics.check_source(client, SOURCE)
 
-    assert not result.reachable
+    assert result.failure is failure
     assert result.status_code is None
-    assert result.error == "ConnectError"
+    assert result.elapsed_seconds is None
 
 
 def test_check_sources_checks_each_source_in_order() -> None:

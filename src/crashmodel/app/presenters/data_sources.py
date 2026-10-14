@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from crashmodel.data.diagnostics import SourceStatus
+from crashmodel.data.diagnostics import Failure, SourceStatus
 
 TITLE = "Data sources"
 
@@ -16,49 +16,76 @@ INTRODUCTION = (
 CHECK_BUTTON = "Check the sources"
 CHECKING = "Checking each source..."
 
+REACHABLE = "Reachable"
+FAILURE_REASONS = {
+    Failure.TIMEOUT: "timed out",
+    Failure.CONNECTION: "could not connect",
+    Failure.OTHER: "the request failed",
+}
+
 BYTES_PER_KILOBYTE = 1024
+BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE * 1024
 MILLISECONDS_PER_SECOND = 1000
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class StatusRow:
     """One row of the status table, ready to display."""
 
     source: str
-    used_for: str
     status: str
     response_time: str
     size: str
+    used_for: str
 
     def as_table_row(self) -> dict[str, str]:
-        """Return the row keyed by its column headings."""
+        """Return the row keyed by its column headings, with the answer first."""
         return {
             "Source": self.source,
-            "Used for": self.used_for,
             "Status": self.status,
             "Response time": self.response_time,
             "Size": self.size,
+            "Used for": self.used_for,
         }
 
 
+def describe_status(result: SourceStatus) -> str:
+    """Say in words whether a source is reachable and, if not, why, so colour is never needed."""
+    match result.failure:
+        case None:
+            return REACHABLE
+        case Failure.ERROR_STATUS:
+            return f"Unreachable: the server replied with HTTP {result.status_code}"
+        case failure:
+            return f"Unreachable: {FAILURE_REASONS[failure]}"
+
+
+def format_duration(seconds: float) -> str:
+    """Show a duration in milliseconds below one second, and in seconds above."""
+    if seconds < 1:
+        return f"{seconds * MILLISECONDS_PER_SECOND:.0f} ms"
+    return f"{seconds:.1f} s"
+
+
+def format_size(size_bytes: int) -> str:
+    """Show a size in bytes, kilobytes or megabytes, whichever reads best."""
+    if size_bytes < BYTES_PER_KILOBYTE:
+        return f"{size_bytes} byte" if size_bytes == 1 else f"{size_bytes} bytes"
+    if size_bytes < BYTES_PER_MEGABYTE:
+        return f"{size_bytes / BYTES_PER_KILOBYTE:,.0f} KB"
+    return f"{size_bytes / BYTES_PER_MEGABYTE:,.1f} MB"
+
+
 def status_row(result: SourceStatus) -> StatusRow:
-    """Describe one check in words, so the status never depends on colour alone."""
-    if result.reachable:
-        status = "Reachable"
-    elif result.error:
-        status = f"Unreachable ({result.error})"
-    else:
-        status = "Unreachable"
+    """Describe one check, leaving timing and size blank when no response came back."""
     return StatusRow(
         source=result.source.name,
-        used_for=result.source.purpose,
-        status=status,
+        status=describe_status(result),
         response_time=""
-        if result.elapsed_ms is None
-        else f"{result.elapsed_ms / MILLISECONDS_PER_SECOND:.1f} s",
-        size=""
-        if result.size_bytes is None
-        else f"{result.size_bytes / BYTES_PER_KILOBYTE:,.0f} KB",
+        if result.elapsed_seconds is None
+        else format_duration(result.elapsed_seconds),
+        size="" if result.size_bytes is None else format_size(result.size_bytes),
+        used_for=result.source.purpose,
     )
 
 
@@ -69,7 +96,11 @@ def status_table(results: Sequence[SourceStatus]) -> list[dict[str, str]]:
 
 def summary(results: Sequence[SourceStatus]) -> str:
     """Summarise the checks in one sentence."""
+    total = len(results)
     reachable = sum(result.reachable for result in results)
-    if reachable == len(results):
-        return f"All {len(results)} sources are reachable."
-    return f"{reachable} of {len(results)} sources are reachable."
+    if total == 0:
+        return "There are no sources to check."
+    if reachable == total:
+        return "The source is reachable." if total == 1 else f"All {total} sources are reachable."
+    verb = "is" if reachable == 1 else "are"
+    return f"{reachable} of {total} sources {verb} reachable."

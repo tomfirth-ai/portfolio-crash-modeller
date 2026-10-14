@@ -7,9 +7,9 @@ import pytest
 
 from crashmodel.app import presenters
 from crashmodel.app.journey import JOURNEY
-from crashmodel.app.presenters import home
+from crashmodel.app.presenters import data_sources, home
 from crashmodel.app.presenters.copy import page_title
-from crashmodel.data.diagnostics import HOSTED_SOURCES
+from crashmodel.data.diagnostics import HOSTED_SOURCES, Failure, SourceStatus
 from tests.app.copy_rules import copy_problems
 
 
@@ -32,7 +32,23 @@ def generated_copy() -> list[str]:
     journey = [text for spec in JOURNEY for text in (spec.title, spec.summary)]
     purposes = [source.purpose for source in HOSTED_SOURCES]
     headings = [view.eyebrow, view.headline, view.promise, view.status_note]
-    return [*headings, *cards, *journey, *purposes, page_title("Home")]
+    results = [
+        SourceStatus(source=HOSTED_SOURCES[0], failure=failure, status_code=503)
+        for failure in (None, *Failure)
+    ]
+    statuses = [data_sources.describe_status(result) for result in results]
+    summaries = [data_sources.summary(results[:count]) for count in range(len(results) + 1)]
+    columns = list(data_sources.status_row(results[0]).as_table_row())
+    return [
+        *headings,
+        *cards,
+        *journey,
+        *purposes,
+        *statuses,
+        *summaries,
+        *columns,
+        page_title("Home"),
+    ]
 
 
 @pytest.mark.parametrize("text", [*presenter_constants(), *generated_copy()])
