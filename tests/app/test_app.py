@@ -1,9 +1,11 @@
 """Smoke tests that run the real Streamlit app in-process, with the network blocked."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from crashmodel.app.presenters.copy import DISCLAIMER
@@ -55,4 +57,23 @@ def test_data_status_reports_unreachable_sources_without_failing(
     assert "0 of 2 sources are reachable." in [markdown.value for markdown in app.markdown]
     statuses = list(app.dataframe[0].value["Status"])
     assert statuses == ["Unreachable (ConnectError)"] * 2
+    assert DISCLAIMER in captions(app)
+
+
+def fail(*_args: object) -> None:
+    raise RuntimeError("a page bug")
+
+
+def stop(*_args: object) -> None:
+    st.stop()
+
+
+@pytest.mark.parametrize("check_sources", [fail, stop], ids=["error", "stop"])
+def test_the_disclaimer_survives_a_page_that_fails_or_stops(
+    monkeypatch: pytest.MonkeyPatch, check_sources: Callable[..., None]
+) -> None:
+    monkeypatch.setattr(diagnostics, "check_sources", check_sources)
+    app = run_app().switch_page(DATA_STATUS_PAGE).run()
+    app.button[0].click().run()
+
     assert DISCLAIMER in captions(app)

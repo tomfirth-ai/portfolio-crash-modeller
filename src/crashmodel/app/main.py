@@ -11,9 +11,10 @@ PAGES_DIRECTORY = Path(__file__).parent / "pages"
 
 
 def main() -> None:
-    """Configure the app, run the selected page, then draw the shared footer.
+    """Configure the app, then run the selected page above the shared footer.
 
-    Pages never call ``st.stop``, so the footer, and with it the disclaimer, always renders.
+    The footer, and with it the disclaimer, is drawn before the page runs, into the space below
+    the page. It therefore shows even when a page raises an error or stops early with ``st.stop``.
     """
     st.set_page_config(page_title=APP_NAME, page_icon=":material/thunderstorm:", layout="centered")
     home = st.Page(PAGES_DIRECTORY / "home.py", title="Home", icon=":material/home:", default=True)
@@ -23,8 +24,10 @@ def main() -> None:
         icon=":material/database:",
         url_path="data-status",
     )
-    navigation = st.navigation(
+    page = st.navigation(
         {"": [home], "Reference": [data_status]}, position="sidebar", expanded=True
     )
-    navigation.run()
+    body = st.container()
     render_footer(data_status)
+    with body:
+        page.run()
