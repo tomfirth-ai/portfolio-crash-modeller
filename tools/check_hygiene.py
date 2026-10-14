@@ -19,7 +19,7 @@ import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path, PurePosixPath
 
-from tools._git import decode_text, git, repo_root, tracked_files
+from tools._git import StoredFile, decode_text, index_files, read_objects, repo_root
 from tools.policy import (
     BLOCKED_SUFFIXES,
     IMAGE_DIRECTORY,
@@ -71,20 +71,23 @@ def content_problems(path: str, content: bytes) -> Iterator[str]:
         yield "contains an ISIN; config and data hold only asset-class proxies and demo instruments"
 
 
-def check_repository(root: Path, paths: Sequence[str]) -> list[str]:
-    """Check every tracked path, reading content from the git index; return ``path: problem``."""
+def check_repository(root: Path, files: Sequence[StoredFile]) -> list[str]:
+    """Check every tracked file, reading content from the git index; return ``path: problem``."""
+    contents = read_objects((file.object_id for file in files if not file.is_submodule), cwd=root)
     problems: list[str] = []
-    for path in paths:
-        problems.extend(f"{path}: {problem}" for problem in path_problems(path))
-        content = git("show", f":{path}", cwd=root)
-        problems.extend(f"{path}: {problem}" for problem in content_problems(path, content))
+    for file in files:
+        problems.extend(f"{file.path}: {problem}" for problem in path_problems(file.path))
+        content = contents.get(file.object_id, b"")
+        problems.extend(
+            f"{file.path}: {problem}" for problem in content_problems(file.path, content)
+        )
     return problems
 
 
 def main() -> int:
     """Run the check and return a process exit code (0 clean, 1 problems found)."""
     root = repo_root()
-    problems = check_repository(root, tracked_files(root))
+    problems = check_repository(root, index_files(root))
     for problem in problems:
         print(f"hygiene: {problem}", file=sys.stderr)
     return 1 if problems else 0

@@ -132,7 +132,9 @@ def test_staged_scan_checks_file_names(
     run_git("add", "zqxw_prices.csv")
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
-    assert f"file name matches denylist line {TICKER_LINE}" in capsys.readouterr().err
+    output = capsys.readouterr().err
+    assert f"<name hidden>: file name matches denylist line {TICKER_LINE}" in output
+    assert "zqxw" not in output.lower()
 
 
 def test_staged_scan_blocks_binary_data_formats(
@@ -192,7 +194,7 @@ def test_reviewed_images_are_skipped_but_other_binaries_are_refused(
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
     output = capsys.readouterr().err
-    assert "not scanned, review by eye: docs/img/home.png" in output
+    assert "note: docs/img/home.png: image not scanned; review it by eye" in output
     assert "blob.bin: binary file cannot be scanned" in output
 
 
@@ -210,3 +212,146 @@ def test_denylist_path_comes_from_git_config_or_the_default(repo: Path, run_git:
     assert scan.configured_denylist_path(repo) == Path.home() / ".config/crashmodel/denylist.txt"
     run_git("config", scan.GIT_CONFIG_KEY, "/elsewhere/denylist.txt")
     assert scan.configured_denylist_path(repo) == Path("/elsewhere/denylist.txt")
+
+
+def test_staged_scan_reads_a_file_that_replaces_a_symbolic_link(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / "notes.md").symlink_to("elsewhere.md")
+    run_git("add", "notes.md")
+    run_git("commit", "-q", "-m", "Add a link")
+    (repo / "notes.md").unlink()
+    (repo / "notes.md").write_text("Owner: Zebedee Quartermaine\n", encoding="utf-8")
+    run_git("add", "notes.md")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_staged_scan_reads_the_target_of_a_symbolic_link(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / "notes.md").symlink_to("Zebedee Quartermaine.md")
+    run_git("add", "notes.md")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_staged_scan_reads_files_whose_names_look_like_index_stages(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / "notes.md").write_text("clean\n", encoding="utf-8")
+    (repo / "0:notes.md").write_text("Owner: Zebedee Quartermaine\n", encoding="utf-8")
+    run_git("add", "notes.md", "0:notes.md")
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def commit_file(run_git: GitRunner, repo: Path, name: str, content: bytes) -> None:
+    (repo / name).write_bytes(content)
+    run_git("add", "-f", name)
+    run_git("commit", "-q", "--no-verify", "-m", f"Add {name}")
+
+
+@pytest.mark.parametrize(
+    ("attributes_file", "attributes"),
+    [(".gitattributes", "*.csv -diff\n"), (".git/info/attributes", "*.csv binary\n")],
+)
+def test_history_scan_ignores_attributes_that_hide_diffs(
+    repo: Path, run_git: GitRunner, denylist: Path, attributes_file: str, attributes: str
+) -> None:
+    (repo / attributes_file).write_text(attributes, encoding="utf-8")
+    commit_file(run_git, repo, "holdings.csv", b"name,value\nZebedee Quartermaine,1\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_history_scan_ignores_text_conversion_drivers(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    run_git("config", "diff.blank.textconv", "sed d")
+    (repo / ".git" / "info" / "attributes").write_text("*.csv diff=blank\n", encoding="utf-8")
+    commit_file(run_git, repo, "holdings.csv", b"name,value\nZebedee Quartermaine,1\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_history_scan_reads_the_root_commit_whatever_the_log_settings(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    run_git("config", "log.showRoot", "false")
+    commit_file(run_git, repo, "notes.md", b"Owner: Zebedee Quartermaine\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_history_scan_catches_a_workbook_that_a_later_commit_deleted(
+    repo: Path, run_git: GitRunner, denylist: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    commit_file(run_git, repo, "portfolio.xlsx", b"PK\x03\x04\x00binary")
+    run_git("rm", "-q", "portfolio.xlsx")
+    run_git("commit", "-q", "-m", "Remove the workbook")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+    assert "portfolio.xlsx: binary data formats are never committed" in capsys.readouterr().err
+
+
+def test_history_scan_checks_every_name_given_to_the_same_content(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "clean.csv", b"date,price\n")
+    commit_file(run_git, repo, "zqxw_prices.csv", b"date,price\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_history_scan_matches_file_names_that_are_not_ascii(
+    repo: Path, run_git: GitRunner, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    denylist = tmp_path / "accented.txt"
+    denylist.write_text("Zoë\n", encoding="utf-8")
+    commit_file(run_git, repo, "zoë_notes.txt", b"clean\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+    assert "file name matches denylist line 1" in capsys.readouterr().err
+
+
+def test_history_scan_checks_annotated_tag_messages(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"clean\n")
+    run_git("tag", "-a", "v1", "-m", "Release for ZQXW")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_history_scan_checks_branch_names(repo: Path, run_git: GitRunner, denylist: Path) -> None:
+    commit_file(run_git, repo, "a.txt", b"clean\n")
+    run_git("branch", "zqxw-research")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+
+
+def test_commit_ids_are_never_checked_as_file_names() -> None:
+    entries = [scan.parse_entry(1, "AB"), scan.parse_entry(2, "4096")]
+    documents = [scan.Document(b"clean", "commit 3ab12cd04096")]
+
+    assert scan.scan_documents(documents, entries) == []
+
+
+def test_clean_history_passes(repo: Path, run_git: GitRunner, denylist: Path) -> None:
+    commit_file(run_git, repo, "a.txt", b"A demo split of 60% shares.\n")
+    run_git("tag", "-a", "v1", "-m", "First release")
+    run_git("tag", "lightweight")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_CLEAN
+
+
+def test_history_scan_reports_content_that_returns_unchanged_once(
+    repo: Path, run_git: GitRunner, denylist: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    commit_file(run_git, repo, "notes.md", b"Owner: Zebedee Quartermaine\n")
+    commit_file(run_git, repo, "notes.md", b"clean\n")
+    commit_file(run_git, repo, "notes.md", b"Owner: Zebedee Quartermaine\n")
+
+    assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+    assert "1 problem(s) found" in capsys.readouterr().err
