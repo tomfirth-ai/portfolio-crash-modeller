@@ -1,12 +1,11 @@
 """The footer drawn under every page."""
 
 import streamlit as st
-from streamlit.navigation.page import StreamlitPage
 
 from crashmodel.app.presenters.copy import DISCLAIMER
 
 
-def render_footer(data_status_page: StreamlitPage) -> None:
+def render_footer(data_status_page: st.Page) -> None:
     """Draw the disclaimer and a link to the data sources page."""
     st.divider()
     st.caption(DISCLAIMER)
