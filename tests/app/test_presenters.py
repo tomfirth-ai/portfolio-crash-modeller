@@ -1,6 +1,6 @@
 import pytest
 
-from crashmodel.app.journey import JOURNEY, Step
+from crashmodel.app.journey import JOURNEY
 from crashmodel.app.presenters import data_sources, home
 from crashmodel.app.presenters.copy import DISCLAIMER, page_title
 from crashmodel.data.diagnostics import DataSource, Failure, SourceStatus
@@ -9,13 +9,7 @@ SOURCE = DataSource("Example source", "https://data.example.com/", "Testing")
 
 
 def test_the_journey_has_four_steps_in_order() -> None:
-    assert [spec.step for spec in JOURNEY] == [
-        Step.DESIGN,
-        Step.STRESS_TEST,
-        Step.DECIDE,
-        Step.TRACK,
-    ]
-    assert [spec.number for spec in JOURNEY] == [1, 2, 3, 4]
+    assert [spec.title for spec in JOURNEY] == ["Design", "Stress-test", "Decide", "Track"]
 
 
 def test_home_shows_every_step_from_the_journey_registry() -> None:

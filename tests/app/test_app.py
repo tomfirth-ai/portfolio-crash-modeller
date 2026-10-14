@@ -32,9 +32,8 @@ def test_home_explains_the_journey() -> None:
     app = run_app()
 
     assert app.title[0].value == "How would your investments have coped with a crash?"
-    page_text = " ".join(markdown.value for markdown in app.markdown)
-    for step in ("Design", "Stress-test", "Decide", "Track"):
-        assert step in page_text
+    steps = [subheader.value for subheader in app.subheader]
+    assert steps == ["Design", "Stress-test", "Decide", "Track"]
 
 
 def test_home_shows_the_disclaimer() -> None:

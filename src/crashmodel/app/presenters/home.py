@@ -6,7 +6,7 @@ from crashmodel.app.journey import JOURNEY
 from crashmodel.app.presenters.copy import APP_NAME
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class StepCard:
     """One journey step as shown on the Home page."""
 
@@ -16,15 +16,15 @@ class StepCard:
     summary: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class HomeView:
     """Everything the Home page displays."""
 
     eyebrow: str
     headline: str
     promise: str
-    steps: tuple[StepCard, ...]
     status_note: str
+    steps: tuple[StepCard, ...]
 
 
 def home_view() -> HomeView:
@@ -36,8 +36,9 @@ def home_view() -> HomeView:
             "Try out different ways to split your money, see how each would have done in real "
             "crashes such as 2008 and 2020, then track the one you choose."
         ),
+        status_note="Early build: the four steps below are being built now, one at a time.",
         steps=tuple(
-            StepCard(f"Step {spec.number}", spec.title, spec.icon, spec.summary) for spec in JOURNEY
+            StepCard(label=f"Step {number}", title=spec.title, icon=spec.icon, summary=spec.summary)
+            for number, spec in enumerate(JOURNEY, start=1)
         ),
-        status_note="Early build: the four steps are being built now, in this order.",
     )
