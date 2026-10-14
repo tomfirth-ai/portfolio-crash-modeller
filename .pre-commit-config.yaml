@@ -1,5 +1,7 @@
 # Git hooks. Install once with: uv run pre-commit install
 # Every hook runs through uv, so tool versions come from uv.lock rather than a second pin list.
+# That is why each hook's language is "unsupported": pre-commit leaves the environment to uv.
+minimum_pre_commit_version: "4.4.0"
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_stages: [pre-commit]
 
@@ -9,58 +11,58 @@ repos:
       - id: ruff-check
         name: ruff check
         entry: uv run --frozen ruff check --force-exclude
-        language: system
+        language: unsupported
         types: [python]
 
       - id: ruff-format
         name: ruff format
         entry: uv run --frozen ruff format --check --force-exclude
-        language: system
+        language: unsupported
         types: [python]
 
       - id: mypy
         name: mypy (strict)
         entry: uv run --frozen mypy
-        language: system
+        language: unsupported
         types: [python]
         pass_filenames: false
 
       - id: style
         name: no dash lookalikes, British spelling
         entry: uv run --frozen python -m tools.check_style
-        language: system
+        language: unsupported
         types: [text]
 
       - id: hygiene
         name: repository hygiene
         entry: uv run --frozen python -m tools.check_hygiene
-        language: system
+        language: unsupported
         pass_filenames: false
         always_run: true
 
       - id: privacy-staged
         name: privacy scan of staged changes
         entry: uv run --frozen python -m tools.privacy_scan --staged
-        language: system
+        language: unsupported
         pass_filenames: false
         always_run: true
 
       - id: style-message
         name: commit message style
         entry: uv run --frozen python -m tools.check_style --message
-        language: system
+        language: unsupported
         stages: [commit-msg]
 
       - id: privacy-message
         name: privacy scan of the commit message
         entry: uv run --frozen python -m tools.privacy_scan --message
-        language: system
+        language: unsupported
         stages: [commit-msg]
 
       - id: privacy-push
         name: privacy scan of commits being pushed
         entry: uv run --frozen python -m tools.privacy_scan --push
-        language: system
+        language: unsupported
         pass_filenames: false
         always_run: true
         stages: [pre-push]
