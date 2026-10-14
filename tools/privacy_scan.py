@@ -25,7 +25,7 @@ Usage::
 
     python -m tools.privacy_scan --staged          # pre-commit: staged content and file names
     python -m tools.privacy_scan --message FILE    # commit-msg: the commit message
-    python -m tools.privacy_scan --push            # pre-push: commits that no remote has yet
+    python -m tools.privacy_scan --push            # pre-push: commits the remote does not have
     python -m tools.privacy_scan --all-history     # phase gates: every commit, tag and ref name
 """
 
@@ -429,6 +429,17 @@ def configured_denylist_path(repository: Path) -> Path:
     )
 
 
+def push_revisions(remote: str) -> list[str]:
+    """Return the ``git rev-list`` arguments for every commit that ``remote`` does not have yet.
+
+    Every local branch and tag is covered, not only the ref being pushed: pre-commit reports just
+    the first ref of a push, and none at all for a repository's first push. Commits that only
+    another remote has are scanned too, because publishing to one remote says nothing about
+    another.
+    """
+    return ["HEAD", "--branches", "--tags", "--not", f"--remotes={remote}"]
+
+
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Stop personal data from reaching the git history."
@@ -436,14 +447,24 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--staged", action="store_true", help="scan staged files and their names")
     mode.add_argument("--message", type=Path, metavar="FILE", help="scan a commit message file")
-    mode.add_argument("--push", action="store_true", help="scan commits that no remote has yet")
+    mode.add_argument(
+        "--push", action="store_true", help="scan commits that the remote does not have yet"
+    )
     mode.add_argument(
         "--all-history", action="store_true", help="scan every commit, tag and ref name"
     )
     parser.add_argument(
+        "--remote",
+        default=os.environ.get("PRE_COMMIT_REMOTE_NAME"),
+        help="remote being pushed to, with --push (default: $PRE_COMMIT_REMOTE_NAME)",
+    )
+    parser.add_argument(
         "--denylist", type=Path, help="denylist path (default: git config or ~/.config)"
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.push and not args.remote:
+        parser.error("--push needs the remote being pushed to: pre-commit sets it, or use --remote")
+    return args
 
 
 def _documents_for(args: argparse.Namespace, repository: Path) -> list[Document]:
@@ -451,11 +472,7 @@ def _documents_for(args: argparse.Namespace, repository: Path) -> list[Document]
         return staged_documents(repository)
     if args.message is not None:
         return [Document(args.message.read_bytes(), "commit message")]
-    if args.push:
-        target = os.environ.get("PRE_COMMIT_TO_REF") or "HEAD"
-        revisions = [target, "--not", "--remotes"]
-    else:
-        revisions = ["--all"]
+    revisions = push_revisions(args.remote) if args.push else ["--all"]
     return [
         *history_documents(repository, revisions),
         *tag_documents(repository),

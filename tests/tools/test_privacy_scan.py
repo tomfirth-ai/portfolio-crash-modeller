@@ -19,6 +19,16 @@ def matched_lines(text: str, entries: list[scan.Entry]) -> set[int]:
     return {entry.line for entry in scan.matching_entries(text, entries)}
 
 
+def commit_file(run_git: GitRunner, repo: Path, name: str, content: bytes) -> None:
+    (repo / name).write_bytes(content)
+    run_git("add", "-f", name)
+    run_git("commit", "-q", "--no-verify", "-m", f"Add {name}")
+
+
+def push_scan(denylist: Path, remote: str = "origin") -> int:
+    return scan.main(["--push", "--remote", remote, "--denylist", str(denylist)])
+
+
 def test_tokenise_splits_case_snake_case_digits_and_punctuation() -> None:
     assert scan.tokenise("zebedeeQuartermaine_HTTPServer v2.0") == (
         "zebedee",
@@ -174,14 +184,73 @@ def test_history_scan_checks_commit_authors(repo: Path, run_git: GitRunner, deny
     assert scan.main(["--all-history", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
 
 
-def test_push_scan_checks_commits_that_no_remote_has(
+def test_push_scan_checks_commits_that_the_remote_does_not_have(
     repo: Path, run_git: GitRunner, denylist: Path
 ) -> None:
-    (repo / "a.txt").write_text("unit count 314.159\n", encoding="utf-8")
-    run_git("add", "a.txt")
-    run_git("commit", "-q", "-m", "Add a file")
+    commit_file(run_git, repo, "a.txt", b"unit count 314.159\n")
 
-    assert scan.main(["--push", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
+    assert push_scan(denylist) == scan.EXIT_FINDINGS
+
+
+def test_push_scan_skips_commits_the_remote_already_has(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"unit count 314.159\n")
+    run_git("update-ref", "refs/remotes/origin/main", "HEAD")
+
+    assert push_scan(denylist) == scan.EXIT_CLEAN
+
+
+def test_push_scan_covers_branches_other_than_the_one_checked_out(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"Owner: Zebedee Quartermaine\n")
+    run_git("switch", "-q", "--orphan", "tidy")
+    commit_file(run_git, repo, "b.txt", b"clean\n")
+
+    assert push_scan(denylist) == scan.EXIT_FINDINGS
+
+
+def test_push_scan_covers_every_branch_in_a_push_of_several(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"clean\n")
+    run_git("update-ref", "refs/remotes/origin/main", "HEAD")
+    run_git("switch", "-q", "-c", "feature")
+    commit_file(run_git, repo, "b.txt", b"Owner: Zebedee Quartermaine\n")
+    run_git("switch", "-q", "main")
+
+    assert push_scan(denylist) == scan.EXIT_FINDINGS
+
+
+def test_push_scan_rescans_commits_that_only_another_remote_has(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"Owner: Zebedee Quartermaine\n")
+    run_git("update-ref", "refs/remotes/backup/main", "HEAD")
+
+    assert push_scan(denylist, remote="origin") == scan.EXIT_FINDINGS
+    assert push_scan(denylist, remote="backup") == scan.EXIT_CLEAN
+
+
+def test_push_scan_refuses_to_guess_the_remote(
+    repo: Path, denylist: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("PRE_COMMIT_REMOTE_NAME", raising=False)
+
+    with pytest.raises(SystemExit) as raised:
+        scan.main(["--push", "--denylist", str(denylist)])
+
+    assert raised.value.code == scan.EXIT_CONFIG_ERROR
+
+
+def test_push_scan_takes_the_remote_from_pre_commit(
+    repo: Path, run_git: GitRunner, denylist: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commit_file(run_git, repo, "a.txt", b"clean\n")
+    monkeypatch.setenv("PRE_COMMIT_REMOTE_NAME", "origin")
+
+    assert scan.main(["--push", "--denylist", str(denylist)]) == scan.EXIT_CLEAN
 
 
 def test_reviewed_images_are_skipped_but_other_binaries_are_refused(
@@ -244,12 +313,6 @@ def test_staged_scan_reads_files_whose_names_look_like_index_stages(
     run_git("add", "notes.md", "0:notes.md")
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == scan.EXIT_FINDINGS
-
-
-def commit_file(run_git: GitRunner, repo: Path, name: str, content: bytes) -> None:
-    (repo / name).write_bytes(content)
-    run_git("add", "-f", name)
-    run_git("commit", "-q", "--no-verify", "-m", f"Add {name}")
 
 
 @pytest.mark.parametrize(
