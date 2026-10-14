@@ -17,3 +17,73 @@ build-backend = "uv_build"
 [tool.uv]
 # Only resolve releases that are at least two weeks old at lock time.
 exclude-newer = "2026-09-30T00:00:00Z"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-socket>=0.8.1",
+    "ruff>=0.16.9",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import sorting
+    "B",       # bugbear
+    "UP",      # pyupgrade
+    "SIM",     # simplify
+    "N",       # naming
+    "D",       # pydocstyle
+    "PT",      # pytest style
+    "RUF",     # ruff-specific
+    "PL",      # pylint
+    "C4",      # comprehensions
+    "PIE",     # misc lints
+    "RET",     # return statements
+    "PTH",     # prefer pathlib
+    "ERA",     # commented-out code
+    "T20",     # stray print calls
+    "S",       # security
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "S101", "PLR2004"]
+"scripts/**" = ["T201", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--disable-socket",
+    "--allow-unix-socket",
+]
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["crashmodel"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
