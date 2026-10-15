@@ -2,7 +2,7 @@
 # dependencies are at least two weeks old.
 #
 # Python dependencies are not listed: uv.lock only resolves releases older than the exclude-newer
-# date in pyproject.toml, which is moved by hand at each phase gate. The uv and gitleaks versions
+# date in pyproject.toml, which is moved by hand at the end of each slice. The uv and gitleaks versions
 # and checksums in ci.yml are updated by hand too, because Dependabot cannot see them.
 version: 2
 updates:

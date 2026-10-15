@@ -1,6 +1,7 @@
 # 2. Hosted data mode: commit only open data, fetch academic equity history at runtime
 
-Date: 14 October 2026. Status: accepted, and confirmed from the hosted app (see the end).
+Date: 14 October 2026. Status: accepted, and confirmed from the hosted app (see the end). Amended by
+[ADR 0004](0004-vertical-slices.md), which corrects the list of committable data and stages the fallback.
 
 ## Context
 

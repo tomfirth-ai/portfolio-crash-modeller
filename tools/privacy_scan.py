@@ -20,7 +20,7 @@ Usage::
     python -m tools.privacy_scan --staged          # pre-commit: staged content and file names
     python -m tools.privacy_scan --message FILE    # commit-msg: the commit message
     python -m tools.privacy_scan --push            # pre-push: commits the remote does not have
-    python -m tools.privacy_scan --all-history     # phase gates: every commit, tag and ref name
+    python -m tools.privacy_scan --all-history     # slice gates: every commit, tag and ref name
 """
 
 import argparse

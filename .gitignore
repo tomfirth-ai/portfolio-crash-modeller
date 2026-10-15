@@ -55,3 +55,4 @@ data/cache/
 .DS_Store
 .vscode/
 .idea/
+.gstack/

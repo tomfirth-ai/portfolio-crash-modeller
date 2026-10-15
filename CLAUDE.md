@@ -4,14 +4,17 @@ Private context, when present, lives in the git-ignored `CLAUDE.local.md` and `p
 
 ## Hard rules
 - This is a public repository. Never commit personal data: no real holdings, unit counts, amounts, account
-  or provider names, or anyone's portfolio details. Demo portfolios in `config/` use illustrative weights.
+  or provider names, or anyone's portfolio details. Example and demo portfolios use illustrative weights.
 - Commit only freely redistributable data, with its source and licence recorded next to it. Never commit
   proprietary index values (for example MSCI, FTSE Russell or S&P) or data downloaded via FRED or Yahoo.
-  Statistics computed from data that may not be committed never appear in committed files.
+  Statistics computed from data that may not be committed never appear in committed text: code, tests,
+  docs, commit messages or screenshots. That includes any figure read off the live app.
 - Test fixtures and golden values are hand-worked, round-number synthetic data.
 - Small, well-described commits. Stage files by name. Never commit secrets, caches, databases or anything
   under `private/` or `local/`.
-- Work in plan mode for any new phase: propose, wait for approval, then build.
+- Build from the approved roadmap (`docs/roadmap.md`), one slice at a time. Each slice ends with something
+  usable, and the owner tries it on the live app before the next starts. New scope, and any change to data
+  sources, licences, the privacy tools or the method, goes back to the owner as a plan.
 
 ## Product
 - The user journey is the spine: **Design** a split, **Stress-test** it through real crashes, **Decide** and
