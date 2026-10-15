@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from crashmodel.engine.drawdown import CrashResult, crash_result
 from crashmodel.engine.months import Month, MonthlySeries
-from crashmodel.engine.portfolio import rebalanced_values
+from crashmodel.engine.portfolio import PortfolioPath, Rebalancing, portfolio_path
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -66,26 +66,35 @@ def missing_holdings[Key](
 
 
 @dataclass(frozen=True, kw_only=True)
-class EpisodeRun:
+class EpisodeRun[Key]:
     """A split's path through an episode, and how it came through.
 
     Attributes:
-        values: The split's value at each month end, from 100 at the start.
+        path: The split's value at each month end, from 100 at the start, and each holding's
+            gain in each month.
         result: Its worst fall and recovery, and its value at the end.
     """
 
-    values: MonthlySeries
+    path: PortfolioPath[Key]
     result: CrashResult
+
+    @property
+    def values(self) -> MonthlySeries:
+        """The split's value at each month end, from 100 at the start."""
+        return self.path.values
 
 
 def run_episode[Key](
-    episode: Episode, weights: Mapping[Key, float], returns: Mapping[Key, MonthlySeries]
-) -> EpisodeRun:
-    """Run a split, kept at its weights, through an episode and measure how it came through.
+    episode: Episode,
+    weights: Mapping[Key, float],
+    returns: Mapping[Key, MonthlySeries],
+    rebalancing: Rebalancing = Rebalancing.MONTHLY,
+) -> EpisodeRun[Key]:
+    """Run a split through an episode, managed as given, and measure how it came through.
 
     Raises:
         ValueError: If a held holding lacks returns for the episode; check ``missing_holdings``
             first to explain why instead.
     """
-    values = rebalanced_values(weights, returns, episode.start, episode.end)
-    return EpisodeRun(values=values, result=crash_result(values, episode.crash_end))
+    path = portfolio_path(weights, returns, episode.start, episode.end, rebalancing)
+    return EpisodeRun(path=path, result=crash_result(path.values, episode.crash_end))

@@ -2,7 +2,7 @@ import pytest
 
 from crashmodel.engine.currency import to_home_currency
 from crashmodel.engine.months import Month, MonthlySeries
-from crashmodel.engine.portfolio import STARTING_VALUE, rebalanced_values
+from crashmodel.engine.portfolio import STARTING_VALUE, Rebalancing, portfolio_path
 
 START = Month(2020, 1)
 
@@ -14,11 +14,11 @@ def series(*returns: float) -> MonthlySeries:
 def values(
     weights: dict[str, float], returns: dict[str, MonthlySeries], months: int
 ) -> list[float]:
-    return list(rebalanced_values(weights, returns, START, START + months).values)
+    return list(portfolio_path(weights, returns, START, START + months).values.values)
 
 
 def test_a_split_starts_at_100_at_the_end_of_its_first_month() -> None:
-    path = rebalanced_values({"cash": 1.0}, {"cash": series(0.0)}, START, START + 1)
+    path = portfolio_path({"cash": 1.0}, {"cash": series(0.0)}, START, START + 1).values
     assert (path.start, path[START]) == (START, STARTING_VALUE)
 
 
@@ -80,6 +80,36 @@ def test_every_held_holding_needs_returns_for_every_month() -> None:
         values({"bonds": 1.0}, {"shares": series(0.1)}, 1)
 
 
-def test_the_last_month_cannot_come_before_the_first() -> None:
-    with pytest.raises(ValueError, match="before"):
-        rebalanced_values({"cash": 1.0}, {"cash": series(0.0)}, START, START + -1)
+@pytest.mark.parametrize("months", [0, -1])
+def test_the_last_month_must_come_after_the_first(months: int) -> None:
+    with pytest.raises(ValueError, match="is not after"):
+        portfolio_path({"cash": 1.0}, {"cash": series(0.0)}, START, START + months)
+
+
+HALF_AND_HALF = {"shares": 0.5, "cash": 0.5}
+V_SHAPE = {"shares": series(-0.50, 1.00), "cash": series(0.0, 0.0)}
+
+
+def test_a_split_left_alone_lets_its_weights_drift() -> None:
+    """Shares halve and then double: left alone, the split is back where it started.
+
+    Kept at its weights, it would have bought more shares after the fall and ended at 112.5.
+    """
+    path = portfolio_path(HALF_AND_HALF, V_SHAPE, START, START + 2, Rebalancing.NEVER)
+    assert path.values.values == pytest.approx((100, 75, 100))
+    assert path.gains["shares"].values == pytest.approx((-25, 25))
+    assert path.gains["cash"].values == pytest.approx((0, 0))
+
+
+def test_rebalancing_puts_the_split_back_to_its_weights_before_each_month() -> None:
+    path = portfolio_path(HALF_AND_HALF, V_SHAPE, START, START + 2, Rebalancing.MONTHLY)
+    assert path.gains["shares"].values == pytest.approx((-25, 37.5))
+
+
+@pytest.mark.parametrize("rebalancing", list(Rebalancing))
+def test_each_months_gains_add_up_to_the_change_in_value(rebalancing: Rebalancing) -> None:
+    returns = {"shares": series(-0.3, 0.2, 0.05), "bonds": series(0.02, -0.01, 0.03)}
+    path = portfolio_path({"shares": 0.7, "bonds": 0.3}, returns, START, START + 3, rebalancing)
+    for month, value in list(path.values.items())[1:]:
+        gained = sum(gains[month] for gains in path.gains.values())
+        assert gained == pytest.approx(value - path.values[month.previous])

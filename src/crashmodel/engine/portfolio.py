@@ -1,27 +1,59 @@
-"""The value of a split over time.
+"""The value of a split over time, and what each holding gained or lost along the way.
 
-A split is kept at its weights: at every month end it is put back to them, as ready-made multi-asset
-funds do. The results then describe the split as designed, not one that has drifted towards
-whatever did best. Each month's return is the weighted sum of its holdings' returns:
+A split can be managed in two ways:
 
-    r_split = sum of weight_i * r_i
+- **Kept at its weights**: at every month end it is put back to them, as ready-made multi-asset
+  funds do. Each month's return is then the weighted sum of its holdings' returns,
+  ``r_split = sum of weight_i * r_i``, and the results describe the split as designed.
+- **Left alone**: bought once and never touched, so whatever does well grows to a larger share.
 
-Costs, fees and taxes are not included.
+Either way, each month a holding gains its return on the amount in it at the start of the month,
+and the split's value is the sum of its holdings. Recording those gains is what lets a fall be
+explained holding by holding. Costs, fees and taxes are not included.
 """
 
 from collections.abc import Mapping
+from dataclasses import dataclass
+from enum import Enum
 
-from crashmodel.engine.months import Month, MonthlySeries, month_range
+from crashmodel.engine.months import Month, MonthlySeries
 
 STARTING_VALUE = 100.0
 """Every split starts at 100, so its value reads as what £100 would have become."""
 WEIGHT_TOLERANCE = 1e-9
 
 
-def rebalanced_values[Key](
-    weights: Mapping[Key, float], returns: Mapping[Key, MonthlySeries], first: Month, last: Month
-) -> MonthlySeries:
-    """Return the value of a split kept at its weights, from 100 at the end of ``first``.
+class Rebalancing(Enum):
+    """How a split is managed between month ends."""
+
+    MONTHLY = "monthly"
+    """Put back to its weights at every month end."""
+    NEVER = "never"
+    """Bought once and left alone."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class PortfolioPath[Key]:
+    """A split's value at each month end, and what each holding gained in each month.
+
+    Attributes:
+        values: The split's value at each month end, from 100 at the end of the first month.
+        gains: For each holding with a weight, its gain in each later month, in the same units
+            as ``values``; a loss is negative. Each month's gains add up to the change in value.
+    """
+
+    values: MonthlySeries
+    gains: Mapping[Key, MonthlySeries]
+
+
+def portfolio_path[Key](
+    weights: Mapping[Key, float],
+    returns: Mapping[Key, MonthlySeries],
+    first: Month,
+    last: Month,
+    rebalancing: Rebalancing = Rebalancing.MONTHLY,
+) -> PortfolioPath[Key]:
+    """Return the path of a split worth 100 at the end of ``first``, managed as given.
 
     Args:
         weights: Each holding's share of the split as a fraction. They must not be negative and
@@ -29,24 +61,36 @@ def rebalanced_values[Key](
         returns: Each holding's monthly returns, covering every month after ``first`` up to
             ``last``.
         first: The month at whose end the split is worth 100.
-        last: The final month.
+        last: The final month, after ``first``.
+        rebalancing: Whether the split is put back to its weights every month or left alone.
 
     Raises:
-        ValueError: If the weights are invalid, ``last`` is before ``first``, or a holding with
+        ValueError: If the weights are invalid, ``last`` is not after ``first``, or a holding with
             weight lacks returns for any month.
     """
     if any(weight < 0 for weight in weights.values()):
         raise ValueError("weights cannot be negative")
     if abs(sum(weights.values()) - 1) > WEIGHT_TOLERANCE:
         raise ValueError("weights must add up to 1")
-    if last < first:
-        raise ValueError(f"{last} is before {first}")
+    if last <= first:
+        raise ValueError(f"{last} is not after {first}")
     held = {key: weight for key, weight in weights.items() if weight > 0}
     for key in held:
         if key not in returns or not returns[key].covers(first + 1, last):
             raise ValueError(f"{key} has no returns for some months from {first + 1} to {last}")
+    monthly = {key: returns[key].between(first + 1, last).values for key in held}
+    amounts = {key: STARTING_VALUE * weight for key, weight in held.items()}
     values = [STARTING_VALUE]
-    for month in month_range(first + 1, last):
-        split_return = sum(weight * returns[key][month] for key, weight in held.items())
-        values.append(values[-1] * (1 + split_return))
-    return MonthlySeries(first, tuple(values))
+    gains: dict[Key, list[float]] = {key: [] for key in held}
+    for month in range(last - first):
+        if rebalancing is Rebalancing.MONTHLY:
+            amounts = {key: values[-1] * weight for key, weight in held.items()}
+        gained = {key: amount * monthly[key][month] for key, amount in amounts.items()}
+        for key, gain in gained.items():
+            gains[key].append(gain)
+        amounts = {key: amount + gained[key] for key, amount in amounts.items()}
+        values.append(sum(amounts.values()))
+    return PortfolioPath(
+        values=MonthlySeries(first, tuple(values)),
+        gains={key: MonthlySeries(first + 1, tuple(series)) for key, series in gains.items()},
+    )

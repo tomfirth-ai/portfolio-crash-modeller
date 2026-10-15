@@ -97,7 +97,7 @@ class SplitOutcome:
 
     split: Split
     slot: int
-    run: EpisodeRun | None
+    run: EpisodeRun[Block] | None
     missing: tuple[Block, ...]
     fetch_failed: bool = False
 
