@@ -6,5 +6,10 @@ gatherUsageStats = false
 # Pages draw only what they ask for: no bare strings or expressions written to the page by magic.
 magicEnabled = false
 
-[theme]
+# A light and a dark variant, so the app follows the visitor's system setting. The dark variant's
+# teal is lighter, so selected text stays readable on the dark background.
+[theme.light]
 primaryColor = "#0B6E69"
+
+[theme.dark]
+primaryColor = "#14968E"

@@ -18,6 +18,8 @@ SPLIT_DASHES = ((1, 0), (6, 3), (2, 2), (8, 3, 2, 3))
 MONTH_AXIS_FORMAT = "%b %Y"
 MONTH_TOOLTIP_FORMAT = "%B %Y"
 POUNDS_FORMAT = ",.0f"
+LEGEND_COLUMNS = 2
+"""Four splits in one row overflow a phone screen; two rows of two fit at any width."""
 
 
 def value_chart(view: ValueChartView) -> alt.LayerChart:
@@ -46,7 +48,7 @@ def value_chart(view: ValueChartView) -> alt.LayerChart:
                 title=None,
                 sort=names,
                 scale=alt.Scale(domain=names, range=[SPLIT_COLOURS[slot] for slot in view.slots]),
-                legend=alt.Legend(orient="bottom"),
+                legend=alt.Legend(orient="bottom", columns=LEGEND_COLUMNS),
             ),
             strokeDash=alt.StrokeDash(
                 "split:N",

@@ -1,6 +1,6 @@
 from typing import Any
 
-from crashmodel.app.charts import SPLIT_COLOURS, SPLIT_DASHES, value_chart
+from crashmodel.app.charts import LEGEND_COLUMNS, SPLIT_COLOURS, SPLIT_DASHES, value_chart
 from crashmodel.app.presenters.stress_test import ChartPoint, ValueChartView
 
 VIEW = ValueChartView(
@@ -41,3 +41,8 @@ def test_a_faint_line_marks_the_starting_100() -> None:
     start = spec["layer"][0]
     assert start["mark"]["type"] == "rule"
     assert spec["datasets"][start["data"]["name"]] == [{"value": 100.0}]
+
+
+def test_the_legend_wraps_into_rows_that_fit_a_phone() -> None:
+    legend = lines(value_chart(VIEW).to_dict())["encoding"]["color"]["legend"]
+    assert legend == {"orient": "bottom", "columns": LEGEND_COLUMNS}
