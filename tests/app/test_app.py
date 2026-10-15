@@ -15,7 +15,7 @@ from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.app.splits import EXAMPLE_SPLITS
 from crashmodel.app.state import widget_key
 from crashmodel.data import client, diagnostics
-from crashmodel.data.blocks import Block
+from crashmodel.data.blocks import SHARE_BLOCKS, Block
 from crashmodel.data.reference_data import REFERENCE_SERIES
 from crashmodel.engine.episodes import COVID
 from tests.app.copy_rules import copy_problems
@@ -157,8 +157,8 @@ def test_the_stress_test_shows_every_example_through_a_crash(
     app = stress_test_page(monkeypatch, FakeLibrary())
 
     assert [subheader.value for subheader in app.subheader][: len(EXAMPLE_NAMES)] == EXAMPLE_NAMES
-    assert list(column(app, "Worst fall")) == EXAMPLE_NAMES
-    assert "No data" not in column(app, "Worst fall").values()
+    assert list(column(app, "Worst fall in the crash")) == EXAMPLE_NAMES
+    assert "No data" not in column(app, "Worst fall in the crash").values()
     assert len(app.get("vega_lite_chart")) == 1
     assert not app.warning
     assert DISCLAIMER in captions(app)
@@ -176,8 +176,8 @@ def test_without_share_prices_bonds_and_cash_still_have_results(
 ) -> None:
     app = stress_test_page(monkeypatch, FakeLibrary(online=False))
 
-    assert app.warning[0].value == stress_test.OFFLINE_BANNER
-    falls = column(app, "Worst fall")
+    assert app.warning[0].value == stress_test.offline_banner(SHARE_BLOCKS)
+    falls = column(app, "Worst fall in the crash")
     assert [name for name, fall in falls.items() if fall != "No data"] == ["Cash only"]
     assert len(app.get("vega_lite_chart")) == 1
 
@@ -193,7 +193,7 @@ def test_try_again_fetches_share_prices_once_the_library_is_back(
     button(app, stress_test.TRY_AGAIN).click().run()
 
     assert not app.warning
-    assert "No data" not in column(app, "Worst fall").values()
+    assert "No data" not in column(app, "Worst fall in the crash").values()
 
 
 RENDERED_PAGES: dict[str, Callable[[pytest.MonkeyPatch], AppTest]] = {

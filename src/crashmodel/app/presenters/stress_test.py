@@ -4,7 +4,7 @@ Every figure comes from the engine. This module turns the results into sentences
 what each number is measured from, a comparison table and a chart of the value of £100.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from crashmodel.app.journey import STRESS_TEST
@@ -34,12 +34,8 @@ EXAMPLES_NOTE = "These four splits are examples to show how it works. They are n
 CHANGE_SPLITS = "Change the splits"
 NO_SPLITS = "There is no split to test yet. Switch one on, and make it add up to 100%."
 CRASH_PICKER = "Crash"
-OFFLINE_BANNER = (
-    "Share prices could not be fetched just now, so splits holding shares have no results. "
-    "Bonds and cash are stored with the app, so those splits still do."
-)
 TRY_AGAIN = "Try again"
-FETCHING = "Fetching share prices..."
+FETCHING = "Fetching share returns..."
 TABLE_HEADING = "Side by side"
 CHART_HEADING = "What £100 became"
 DATA_HEADING = "Where the data comes from"
@@ -77,7 +73,13 @@ EPISODE_STORIES = {
     ),
 }
 
-COLUMNS = ("Split", "Worst fall", "Months to the bottom", "Months to get back", "£100 became")
+COLUMNS = (
+    "Split",
+    "Worst fall in the crash",
+    "Months to the bottom",
+    "Months to get back",
+    "£100 became",
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -90,12 +92,14 @@ class SplitOutcome:
         run: Its path through the crash and how it came through, or ``None`` if it could not be
             run.
         missing: The blocks it holds that have no data for the crash.
+        fetch_failed: Whether that is because their data could not be fetched just now.
     """
 
     split: Split
     slot: int
     run: EpisodeRun | None
     missing: tuple[Block, ...]
+    fetch_failed: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -103,7 +107,6 @@ class CrashCard:
     """One split's story in words."""
 
     title: str
-    slot: int
     sentences: tuple[str, ...]
 
     @property
@@ -170,17 +173,35 @@ def outcomes(slots: Sequence[Slot], episode: Episode, panel: Panel) -> list[Spli
         weights = split.weights()
         missing = tuple(missing_holdings(episode, weights, panel.returns))
         run = None if missing else run_episode(episode, weights, panel.returns)
-        results.append(SplitOutcome(split=split, slot=position, run=run, missing=missing))
+        fetch_failed = any(block in panel.unavailable for block in missing)
+        results.append(
+            SplitOutcome(
+                split=split, slot=position, run=run, missing=missing, fetch_failed=fetch_failed
+            )
+        )
     return results
+
+
+def offline_banner(unavailable: Collection[Block]) -> str:
+    """Say which share returns could not be fetched, and that other splits are unaffected."""
+    blocks = block_list([block for block in Block if block in unavailable])
+    return (
+        f"Returns on {blocks} could not be fetched just now, so splits holding them have no "
+        "results. Splits without them are not affected."
+    )
 
 
 def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
     """Tell one split's story through a crash in plain sentences, as Markdown."""
     name = markdown_text(outcome.split.name)
     if outcome.run is None:
+        reason = (
+            "that data could not be fetched just now"
+            if outcome.fetch_failed
+            else "there is no data for every month of this crash"
+        )
         sentences: tuple[str, ...] = (
-            f"{name} holds {block_list(list(outcome.missing))}, and that data could not be "
-            "fetched just now.",
+            f"{name} holds {block_list(list(outcome.missing))}, and {reason}.",
         )
     else:
         result = outcome.run.result
@@ -189,10 +210,14 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
         )
         fall = result.fall
         if fall is None:
-            sentences = (f"{name} did not fall at any month end during the crash.", ending)
+            crash_end = month_name(episode.crash_end)
+            sentences = (
+                f"{name} did not fall at any month end in the crash phase, to {crash_end}.",
+                ending,
+            )
         else:
             sentences = (*_fall_sentences(name, fall, episode), ending)
-    return CrashCard(title=name, slot=outcome.slot, sentences=sentences)
+    return CrashCard(title=name, sentences=sentences)
 
 
 def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
@@ -204,14 +229,18 @@ def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
     else:
         recovery = f"took another {months(fall.months_to_recover)} to get back to {back_to}"
     sentences = [
-        f"{name} fell {percent(fall.depth)} at worst.",
+        f"{name} fell {percent(fall.depth)} at worst in the crash phase.",
         f"It hit bottom {months(fall.months_to_bottom)} after {high} and {recovery}.",
     ]
     if fall.still_falling:
         crash_end = month_name(episode.crash_end)
         sentences.append(f"It was still at its lowest when the crash phase ended in {crash_end}.")
     if fall.deeper_later is not None:
-        sentences.append(f"It later fell further, to {percent(fall.deeper_later)} below {high}.")
+        before = "" if fall.recovery is None else ", and before it got back"
+        sentences.append(
+            f"After the crash phase{before}, it fell further, to {percent(fall.deeper_later)} "
+            f"below {high}."
+        )
     return tuple(sentences)
 
 
@@ -221,7 +250,7 @@ def table_row(outcome: SplitOutcome, episode: Episode) -> dict[str, str]:
     if outcome.run is None:
         cells = (name, "No data", "", "", "")
     elif (fall := outcome.run.result.fall) is None:
-        cells = (name, "Did not fall", "", "", pounds(outcome.run.result.end_value))
+        cells = (name, "None", "", "", pounds(outcome.run.result.end_value))
     else:
         back = (
             f"Not by {month_name(episode.end)}"

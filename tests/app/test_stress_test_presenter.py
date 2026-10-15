@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from crashmodel.app.presenters import stress_test
@@ -34,7 +36,7 @@ def card_for(returns: tuple[float, ...], split: Split = ALL_IN) -> stress_test.C
 def test_a_fall_from_the_start_and_back_reads_as_a_story() -> None:
     card = card_for((-0.10, -0.20, 0.50, 0.0))
     assert card.sentences == (
-        "All in fell 28% at worst.",
+        "All in fell 28% at worst in the crash phase.",
         "It hit bottom 2 months after the start and took another 1 month to get back to where "
         "it started.",
         "£100 at the start was worth £108 by October 2007.",
@@ -55,23 +57,57 @@ def test_a_bottom_at_the_end_of_the_crash_phase_and_a_later_low_are_mentioned() 
         in still_falling.sentences[2]
     )
     deeper_later = card_for((-0.05, 0.0, 0.0, -0.20))
-    assert deeper_later.sentences[2] == "It later fell further, to 24% below the start."
+    assert (
+        deeper_later.sentences[2]
+        == "After the crash phase, it fell further, to 24% below the start."
+    )
+
+
+def test_a_later_low_before_a_recovery_is_told_in_order() -> None:
+    """Down 10% in July, down to 72 in September, after the crash phase, then back by November."""
+    long = Episode(key="long", start=Month(2007, 6), crash_end=Month(2007, 8), end=Month(2007, 12))
+    returns = panel(us_shares=(-0.10, 0.0, -0.20, 0.25, 0.20, 0.0))
+    [outcome] = stress_test.outcomes(in_slots(ALL_IN), long, returns)
+    assert stress_test.card(outcome, long).sentences == (
+        "All in fell 10% at worst in the crash phase.",
+        "It hit bottom 1 month after the start and took another 4 months to get back to where "
+        "it started.",
+        "After the crash phase, and before it got back, it fell further, to 28% below the start.",
+        "£100 at the start was worth £108 by December 2007.",
+    )
 
 
 def test_a_split_that_never_fell_says_so() -> None:
     [outcome] = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))
     assert stress_test.card(outcome, EPISODE).sentences[0] == (
-        "Bonds did not fall at any month end during the crash."
+        "Bonds did not fall at any month end in the crash phase, to September 2007."
     )
 
 
-def test_a_split_whose_data_is_unavailable_says_which() -> None:
-    mixed = Split(name="Mixed", percentages={Block.GLOBAL_SHARES: 50, Block.UK_BONDS: 50})
-    [outcome] = stress_test.outcomes(in_slots(mixed), EPISODE, panel(uk_bonds=(0.0,) * 4))
+MIXED = Split(name="Mixed", percentages={Block.GLOBAL_SHARES: 50, Block.UK_BONDS: 50})
+
+
+def test_a_split_whose_data_could_not_be_fetched_says_which() -> None:
+    offline = replace(panel(uk_bonds=(0.0,) * 4), unavailable=frozenset({Block.GLOBAL_SHARES}))
+    [outcome] = stress_test.outcomes(in_slots(MIXED), EPISODE, offline)
     assert outcome.missing == (Block.GLOBAL_SHARES,)
     assert stress_test.card(outcome, EPISODE).sentences == (
         "Mixed holds global shares, and that data could not be fetched just now.",
     )
+
+
+def test_a_split_whose_data_does_not_reach_back_far_enough_says_so() -> None:
+    short = panel(uk_bonds=(0.0,) * 4, global_shares=(0.0,) * 4)
+    late = {**short.returns, Block.GLOBAL_SHARES: MonthlySeries(Month(2007, 9), (0.0, 0.0))}
+    [outcome] = stress_test.outcomes(in_slots(MIXED), EPISODE, replace(short, returns=late))
+    assert stress_test.card(outcome, EPISODE).sentences == (
+        "Mixed holds global shares, and there is no data for every month of this crash.",
+    )
+
+
+def test_the_offline_banner_names_only_the_blocks_that_failed() -> None:
+    banner = stress_test.offline_banner({Block.US_SHARES})
+    assert banner.startswith("Returns on US shares could not be fetched just now")
 
 
 def test_splits_that_do_not_add_up_are_left_out_and_slots_are_kept() -> None:
@@ -88,7 +124,7 @@ def test_table_rows_give_the_figures() -> None:
     )[0]
     assert stress_test.table_row(fell, EPISODE) == {
         "Split": "All in",
-        "Worst fall": "28%",
+        "Worst fall in the crash": "28%",
         "Months to the bottom": "2",
         "Months to get back": "1",
         "£100 became": "£108",
@@ -98,9 +134,9 @@ def test_table_rows_give_the_figures() -> None:
     )[0]
     assert stress_test.table_row(stuck, EPISODE)["Months to get back"] == "Not by October 2007"
     calm = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
-    assert stress_test.table_row(calm, EPISODE)["Worst fall"] == "Did not fall"
+    assert stress_test.table_row(calm, EPISODE)["Worst fall in the crash"] == "None"
     missing = stress_test.outcomes(in_slots(ALL_IN), EPISODE, panel())[0]
-    assert stress_test.table_row(missing, EPISODE)["Worst fall"] == "No data"
+    assert stress_test.table_row(missing, EPISODE)["Worst fall in the crash"] == "No data"
 
 
 def test_the_chart_draws_only_splits_that_could_be_run() -> None:
@@ -148,7 +184,7 @@ def test_blocks_are_listed_as_in_a_sentence() -> None:
 
 
 def test_a_card_reads_as_one_paragraph() -> None:
-    card = stress_test.CrashCard(title="Example", slot=0, sentences=("One.", "Two."))
+    card = stress_test.CrashCard(title="Example", sentences=("One.", "Two."))
     assert card.text == "One. Two."
 
 

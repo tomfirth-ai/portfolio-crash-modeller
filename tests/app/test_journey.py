@@ -12,14 +12,17 @@ from streamlit.testing.v1 import AppTest
 from crashmodel.app import loaders
 from crashmodel.app.charts import SPLIT_COLOURS
 from crashmodel.app.presenters import design, home, stress_test
-from crashmodel.app.state import INCLUDED, NAME, widget_key
+from crashmodel.app.splits import CAUTIOUS, EXAMPLE_SPLITS
+from crashmodel.app.state import INCLUDED, NAME, TEMPLATE, widget_key
 from crashmodel.data.blocks import Block
 from crashmodel.data.panel import Panel
+from crashmodel.engine.episodes import COVID
 from crashmodel.engine.months import Month, MonthlySeries, month_range
 from tests.app.running import (
     DESIGN_PAGE,
     STRESS_TEST_PAGE,
     button,
+    button_groups,
     captions,
     click,
     click_through,
@@ -62,15 +65,16 @@ def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
     assert app.table[0].value.to_dict("records") == [
         {
             "Split": "Half and half",
-            "Worst fall": "20%",
+            "Worst fall in the crash": "20%",
             "Months to the bottom": "1",
             "Months to get back": "Not by June 2012",
             "£100 became": "£80",
         }
     ]
     assert (
-        "Half and half fell 20% at worst. It hit bottom 1 month after its high and had not got "
-        "back to that high by June 2012. £100 at the start was worth £80 by June 2012."
+        "Half and half fell 20% at worst in the crash phase. It hit bottom 1 month after its high "
+        "and had not got back to that high by June 2012. £100 at the start was worth £80 by June "
+        "2012."
     ) in [markdown.value for markdown in app.markdown]
 
 
@@ -129,3 +133,25 @@ def test_a_visitors_splits_survive_a_visit_to_another_page() -> None:
     app.switch_page(DESIGN_PAGE).run()
 
     assert app.text_input(key=widget_key(0, NAME)).value == "Kept"
+
+
+def test_the_chosen_crash_survives_a_visit_to_another_page() -> None:
+    app = run_app(STRESS_TEST_PAGE)
+    button_groups(app)[0].set_value(COVID.key).run()
+    app.switch_page(DESIGN_PAGE).run()
+    app.switch_page(STRESS_TEST_PAGE).run()
+
+    assert button_groups(app)[0].value == COVID.key
+
+
+def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
+    app = click(run_app(DESIGN_PAGE), design.START_OWN)
+    app.selectbox(key=widget_key(0, TEMPLATE)).select(CAUTIOUS.name).run()
+
+    assert app.text_input(key=widget_key(0, NAME)).value == CAUTIOUS.name
+    assert app.number_input(key=widget_key(0, Block.UK_BONDS)).value == 60
+    assert app.selectbox(key=widget_key(0, TEMPLATE)).value is None
+
+    click(app, design.SHOW_EXAMPLES)
+    names = [app.text_input(key=widget_key(index, NAME)).value for index in range(4)]
+    assert names == [split.name for split in EXAMPLE_SPLITS]

@@ -29,6 +29,8 @@ key = st.segmented_control(
     default=EPISODES[0].key,
     required=True,
     format_func=presenter.episode_name,
+    key="crash",
+    persist_state="session",
 )
 episode = EPISODES_BY_KEY[key]
 st.write(presenter.EPISODE_STORIES[episode.key])
@@ -36,7 +38,7 @@ st.write(presenter.EPISODE_STORIES[episode.key])
 with st.spinner(presenter.FETCHING):
     panel = loaders.load_panel()
 if panel.unavailable:
-    st.warning(presenter.OFFLINE_BANNER, icon=":material/cloud_off:")
+    st.warning(presenter.offline_banner(panel.unavailable), icon=":material/cloud_off:")
     st.button(presenter.TRY_AGAIN, icon=":material/refresh:", on_click=loaders.try_again)
 
 results = presenter.outcomes(slots, episode, panel)
