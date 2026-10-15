@@ -389,6 +389,7 @@ name = "crashmodel"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "altair" },
     { name = "httpx" },
     { name = "streamlit" },
 ]
@@ -406,6 +407,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "altair", specifier = ">=6.3.0" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "streamlit", specifier = ">=1.64" },
 ]

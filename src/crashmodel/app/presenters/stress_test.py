@@ -52,6 +52,9 @@ BANK_OF_ENGLAND_CREDIT = (
 )
 CHART_X_TITLE = "Month end"
 CHART_Y_TITLE = "Value of £100 (£)"
+CHART_SPLIT = "Split"
+CHART_MONTH = "Month end"
+CHART_VALUE = "Value (£)"
 
 EPISODE_NAMES = {
     GLOBAL_FINANCIAL_CRISIS.key: "2007-09 financial crisis",
@@ -117,8 +120,11 @@ class ValueChartView:
     points: tuple[ChartPoint, ...]
     splits: tuple[str, ...]
     slots: tuple[int, ...]
-    x_title: str
-    y_title: str
+    x_title: str = CHART_X_TITLE
+    y_title: str = CHART_Y_TITLE
+    split_title: str = CHART_SPLIT
+    month_title: str = CHART_MONTH
+    value_title: str = CHART_VALUE
 
 
 def outcomes(splits: Sequence[Split], episode: Episode, panel: Panel) -> list[SplitOutcome]:
@@ -219,8 +225,6 @@ def chart_view(results: Sequence[SplitOutcome]) -> ValueChartView:
         points=points,
         splits=tuple(outcome.split.name for outcome in drawn),
         slots=tuple(outcome.slot for outcome in drawn),
-        x_title=CHART_X_TITLE,
-        y_title=CHART_Y_TITLE,
     )
 
 
