@@ -1,7 +1,7 @@
 """The four-step journey that every page serves.
 
-This registry is the single source of truth for the steps. The Home cards read from it now, and the
-journey pages, progress bar and Next buttons will too, so their labels cannot drift apart.
+This registry is the single source of truth for the steps. The Home cards and the journey pages
+take their titles and icons from it, so their labels cannot drift apart.
 """
 
 from dataclasses import dataclass

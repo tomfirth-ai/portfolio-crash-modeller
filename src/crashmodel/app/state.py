@@ -60,9 +60,7 @@ def commit(state: SessionState, index: int) -> None:
 
 def use_template(state: SessionState, index: int) -> None:
     """Fill a slot with the example chosen in its menu, then clear the menu."""
-    template = TEMPLATES[state[widget_key(index, TEMPLATE)]]
-    split = Split(name=template.name, percentages=dict(template.percentages))
-    _replace(state, index, Slot(split=split))
+    _replace(state, index, Slot(split=TEMPLATES[state[widget_key(index, TEMPLATE)]]))
     state[widget_key(index, TEMPLATE)] = None
 
 

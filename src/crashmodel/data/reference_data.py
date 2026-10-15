@@ -13,7 +13,7 @@ from importlib.resources.abc import Traversable
 
 from crashmodel.engine.months import Month, MonthlySeries
 
-_NUMBER = re.compile(r"-?\d+(\.\d+)?")
+_NUMBER = re.compile(r"-?\d+(\.\d+)?", re.ASCII)
 
 OPEN_GOVERNMENT_LICENCE = "Open Government Licence v3.0"
 OPEN_GOVERNMENT_LICENCE_URL = (

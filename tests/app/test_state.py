@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 from crashmodel.app import state
 from crashmodel.app.splits import (
     BALANCED,
@@ -74,8 +76,8 @@ def test_starting_your_own_and_going_back_to_the_examples() -> None:
     assert state.slots(session) == example_slots()
 
 
-def test_each_session_gets_its_own_copy_of_the_examples() -> None:
-    first, second = (state.slots(started())[1].split.percentages for _ in range(2))
-    assert first == BALANCED.percentages
-    assert first is not second
-    assert first is not BALANCED.percentages
+def test_a_split_cannot_be_changed_once_made() -> None:
+    percentages: Any = state.slots(started())[1].split.percentages
+    with pytest.raises(TypeError):
+        percentages[Block.CASH] = 50
+    assert BALANCED.total == 100

@@ -29,6 +29,7 @@ from crashmodel.data.reference_data import (
     GILT_YIELD,
     USD_PER_GBP,
     ReferenceSeries,
+    parse_series,
 )
 from crashmodel.engine.cash import monthly_cash_returns
 from crashmodel.engine.currency import month_end_rates
@@ -112,6 +113,15 @@ def last_complete_month(retrieved: date) -> Month:
     return Month.of(retrieved).previous
 
 
+def last_published_month(daily: Sequence[tuple[date, float]]) -> Month:
+    """Return the last month whose final daily rate has been published.
+
+    Daily rates are published a few days late, so the newest month may hold only its first days.
+    A month counts as complete once a day from a later month has been published.
+    """
+    return Month.of(daily[-1][0]).previous
+
+
 def render_series(series: ReferenceSeries, values: MonthlySeries) -> str:
     """Write a series as its header and ``YYYY-MM,<value>`` rows."""
     rows = (f"{month},{value:.{series.decimal_places}f}\n" for month, value in values.items())
@@ -149,7 +159,8 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
     last = last_complete_month(retrieved)
     h10_zip, h10 = _fetch(client, H10_URL)
     with zipfile.ZipFile(io.BytesIO(h10_zip)) as archive:
-        rates = month_end_rates(parse_h10(archive.read(H10_MEMBER), H10_SERIES))
+        daily_rates = parse_h10(archive.read(H10_MEMBER), H10_SERIES)
+    rates = month_end_rates(daily_rates)
     gilt_csv, gilt = _fetch(client, IADB_URL, _iadb_query(GILT_YIELD_CODE))
     yields = month_end_rates(parse_iadb(gilt_csv.decode(), GILT_YIELD_CODE))
     bank_rate_csv, bank_rate = _fetch(client, IADB_URL, _iadb_query(BANK_RATE_CODE))
@@ -157,7 +168,7 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
     outputs = [
         (
             USD_PER_GBP,
-            _up_to(rates, last),
+            _up_to(rates, min(last, last_published_month(daily_rates))),
             [h10],
             f"The last daily rate in each calendar month, from series {H10_SERIES} in the "
             f"release's XML file ({H10_MEMBER}), written to 4 decimal places as published.",
@@ -184,7 +195,9 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
         folder = output / series.folder
         folder.mkdir(parents=True, exist_ok=True)
         data_file, source_file = folder / f"{series.name}.csv", folder / "SOURCE.md"
-        data_file.write_text(render_series(series, values), encoding="ascii")
+        text = render_series(series, values)
+        parse_series(series, text)  # The checks the app makes on loading, made before writing.
+        data_file.write_text(text, encoding="ascii")
         source_file.write_text(
             render_source(series, downloads, retrieved, method), encoding="utf-8"
         )

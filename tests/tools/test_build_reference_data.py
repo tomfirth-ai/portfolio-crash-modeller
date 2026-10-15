@@ -128,3 +128,32 @@ def test_main_reports_a_failed_download(tmp_path: Path, capsys: pytest.CaptureFi
 
     assert build.main(["--output", str(tmp_path)], make_client=make_client) == 1
     assert "build reference data: no route" in capsys.readouterr().err
+
+
+def build_with_h10(xml: bytes, output: Path) -> list[Path]:
+    """Build from the usual publishers, but with this H.10 file."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith(".zip"):
+            return httpx.Response(200, content=zipped("H10_data.xml", xml))
+        return publishers(request)
+
+    with client_for(httpx.MockTransport(handler)) as client:
+        return build.build(client, RETRIEVED, output)
+
+
+def test_a_daily_month_is_kept_only_once_a_later_day_is_published(tmp_path: Path) -> None:
+    """Here the newest rate is from 27 March, so March's month-end rate is not known yet."""
+    april = b'      <frb:Obs OBS_STATUS="A" OBS_VALUE="2.4000" TIME_PERIOD="2020-04-01" />\n'
+    lagging = H10_XML.replace(april, b"").replace(b"2020-03-31", b"2020-03-27")
+    build_with_h10(lagging, tmp_path)
+
+    rates = (tmp_path / "fed-h10/usd_per_gbp.csv").read_text().splitlines()
+    assert rates[-1] == "2020-02,2.2000"
+
+
+def test_a_value_out_of_range_is_caught_before_it_is_written(tmp_path: Path) -> None:
+    implausible = H10_XML.replace(b'OBS_VALUE="2.2000"', b'OBS_VALUE="99.0000"')
+    with pytest.raises(ValueError, match="outside"):
+        build_with_h10(implausible, tmp_path)
+    assert not (tmp_path / "fed-h10/usd_per_gbp.csv").exists()

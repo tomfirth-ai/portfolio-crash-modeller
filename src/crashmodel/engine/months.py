@@ -14,7 +14,7 @@ from typing import Self
 
 MONTHS_IN_YEAR = 12
 
-_MONTH_TEXT = re.compile(r"(\d{4})-(\d{2})")
+_MONTH_TEXT = re.compile(r"(\d{4})-(\d{2})", re.ASCII)
 
 
 @dataclass(frozen=True, order=True)
@@ -74,11 +74,6 @@ class Month:
         """The month's first calendar day."""
         return date(self.year, self.month, 1)
 
-    @property
-    def last_day(self) -> date:
-        """The month's last calendar day."""
-        return date(self.year, self.month, self.days)
-
     def _index(self) -> int:
         return self.year * MONTHS_IN_YEAR + self.month - 1
 
@@ -133,6 +128,11 @@ class MonthlySeries:
         """Return the number of months."""
         return len(self.values)
 
+    def __iter__(self) -> Iterator[Month]:
+        """Yield each month in order, as a mapping yields its keys."""
+        for offset in range(len(self.values)):
+            yield self.start + offset
+
     def __getitem__(self, month: Month) -> float:
         """Return the value for a month.
 
@@ -146,8 +146,7 @@ class MonthlySeries:
 
     def items(self) -> Iterator[tuple[Month, float]]:
         """Yield ``(month, value)`` pairs in order."""
-        for offset, value in enumerate(self.values):
-            yield self.start + offset, value
+        yield from zip(self, self.values, strict=True)
 
     def covers(self, first: Month, last: Month) -> bool:
         """Whether the series has a value for every month from ``first`` to ``last``."""

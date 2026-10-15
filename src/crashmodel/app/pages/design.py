@@ -7,6 +7,7 @@ import streamlit as st
 from crashmodel.app import navigation, state
 from crashmodel.app.presenters import design as presenter
 from crashmodel.app.presenters.blocks import BLOCK_DEFINITIONS
+from crashmodel.app.splits import WHOLE
 from crashmodel.data.blocks import Block
 
 # Two cards a row keep each box wide enough for its label.
@@ -59,7 +60,7 @@ for row in batched(enumerate(slots), CARDS_PER_ROW):
                 st.number_input(
                     presenter.block_label(block),
                     min_value=0,
-                    max_value=100,
+                    max_value=WHOLE,
                     step=presenter.PERCENT_STEP,
                     help=BLOCK_DEFINITIONS[block],
                     key=state.widget_key(index, block),

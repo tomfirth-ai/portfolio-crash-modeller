@@ -6,6 +6,7 @@ show the tool working; they are not advice.
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from crashmodel.data.blocks import Block
 
@@ -23,6 +24,10 @@ class Split:
 
     name: str
     percentages: Mapping[Block, int]
+
+    def __post_init__(self) -> None:
+        """Keep a read-only copy of the percentages, so a split never changes once made."""
+        object.__setattr__(self, "percentages", MappingProxyType(dict(self.percentages)))
 
     @property
     def total(self) -> int:
@@ -67,11 +72,8 @@ class Slot:
 
 
 def example_slots() -> tuple[Slot, ...]:
-    """Return the examples in the four places, as copies that one visitor's session may change."""
-    return tuple(
-        Slot(split=Split(name=split.name, percentages=dict(split.percentages)))
-        for split in EXAMPLE_SPLITS
-    )
+    """Return the examples in the four places."""
+    return tuple(Slot(split=split) for split in EXAMPLE_SPLITS)
 
 
 def empty_slots() -> tuple[Slot, ...]:

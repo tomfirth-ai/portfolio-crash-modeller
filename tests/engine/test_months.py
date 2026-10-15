@@ -51,10 +51,9 @@ def test_the_month_before_crosses_years() -> None:
     assert Month(2008, 1).previous == Month(2007, 12)
 
 
-def test_months_know_their_length_and_last_day() -> None:
+def test_months_know_their_length_and_first_day() -> None:
     assert Month(2020, 2).days == 29
     assert Month(2021, 2).first_day == date(2021, 2, 1)
-    assert Month(2021, 2).last_day == date(2021, 2, 28)
 
 
 def test_month_range_includes_both_ends() -> None:
@@ -108,3 +107,10 @@ def test_a_series_cannot_be_empty() -> None:
         MonthlySeries(JUNE_2007, ())
     with pytest.raises(ValueError, match="at least one value"):
         MonthlySeries.from_pairs([])
+
+
+def test_a_series_iterates_over_its_months_as_a_mapping_does_over_its_keys() -> None:
+    series = MonthlySeries(Month(2020, 12), (1.0, 2.0))
+    assert list(series) == [Month(2020, 12), Month(2021, 1)]
+    assert Month(2021, 1) in series
+    assert Month(2021, 2) not in series
