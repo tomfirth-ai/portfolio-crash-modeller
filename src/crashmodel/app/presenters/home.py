@@ -23,12 +23,13 @@ class HomeView:
     eyebrow: str
     headline: str
     promise: str
+    first_step: str
     status_note: str
     steps: tuple[StepCard, ...]
 
 
 def home_view() -> HomeView:
-    """Return the Home page content: the question, the promise and the four steps."""
+    """Return the Home page content: the question, the promise, the first step and the journey."""
     return HomeView(
         eyebrow=f"{APP_NAME} for UK investors",
         headline="How would your investments have coped with a crash?",
@@ -36,7 +37,11 @@ def home_view() -> HomeView:
             "Try out different ways to split your money, see how each would have done in real "
             "crashes such as 2008 and 2020, then track the one you choose."
         ),
-        status_note="Early build: the four steps below are being built now, one at a time.",
+        first_step="See how the examples coped",
+        status_note=(
+            "Early build: you can stress-test four example splits now. Designing your own, "
+            "deciding and tracking come next."
+        ),
         steps=tuple(
             StepCard(label=f"Step {number}", title=spec.title, icon=spec.icon, summary=spec.summary)
             for number, spec in enumerate(JOURNEY, start=1)

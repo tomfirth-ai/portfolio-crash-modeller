@@ -45,6 +45,15 @@ def test_home_explains_the_journey() -> None:
     assert steps == ["Design", "Stress-test", "Decide", "Track"]
 
 
+def test_the_first_button_on_home_opens_the_stress_test(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(client, "make_client", FakeLibrary().client)
+    app = run_app()
+    app.button[0].click().run()
+
+    assert not app.exception
+    assert app.title[0].value == stress_test.TITLE
+
+
 def test_home_shows_the_disclaimer() -> None:
     assert DISCLAIMER in captions(run_app())
 
