@@ -1,16 +1,38 @@
-"""What the Data sources page says about each source the app fetches when it runs."""
+"""What the Data sources page says: the open data stored with the app, and what it fetches."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from crashmodel.data.diagnostics import Failure, SourceStatus
+from crashmodel.data.french import LIBRARY_URL
+from crashmodel.data.reference_data import REFERENCE_SERIES, ReferenceSeries
 
 TITLE = "Data sources"
 
 INTRODUCTION = (
-    "Some data is fetched when the app runs rather than stored with it, either because its "
-    "publisher allows use but not redistribution, or because it has to be up to date. This page "
-    "checks that each source can be reached from wherever the app is running."
+    "The app uses two kinds of data: open data stored with it, and share returns fetched when "
+    "it runs."
+)
+
+STORED_HEADING = "Stored with the app"
+STORED_INTRODUCTION = (
+    "Open data that its publishers allow anyone to reuse. Each series is stored with its "
+    "source, licence and download date recorded beside it."
+)
+STORED_COLUMNS = ("Data", "Publisher", "Licence", "Attribution")
+BOND_METHOD = (
+    "UK government bond returns are worked out from the gilt yield with the formula of "
+    "[Swinkels' government bond returns dataset](https://doi.org/10.25397/eur.8152748), "
+    "described in [Swinkels (2019)](https://doi.org/10.3390/data4030091). Only the method is "
+    "used; none of that dataset is stored."
+)
+
+FETCHED_HEADING = "Fetched when the app runs"
+FETCHED_INTRODUCTION = (
+    f"Share returns come from the [Kenneth R. French Data Library]({LIBRARY_URL}). They are free "
+    "to download, but no licence is given to pass them on, so the app fetches them when it runs, "
+    "keeps them in memory for up to a day and never stores them. The check below shows whether "
+    "each file can be reached from wherever the app is running."
 )
 
 CHECK_BUTTON = "Check the sources"
@@ -107,3 +129,20 @@ def summary(results: Sequence[SourceStatus]) -> str:
         return "The source is reachable." if total == 1 else f"All {total} sources are reachable."
     verb = "is" if reachable == 1 else "are"
     return f"{reachable} of {total} sources {verb} reachable."
+
+
+def stored_row(series: ReferenceSeries) -> dict[str, str]:
+    """One stored series' credits, linking to its publisher and its licence."""
+    credit = series.credit
+    cells = (
+        series.description,
+        f"[{credit.publisher}]({credit.url})",
+        f"[{credit.licence}]({credit.licence_url})",
+        credit.attribution,
+    )
+    return dict(zip(STORED_COLUMNS, cells, strict=True))
+
+
+def stored_table() -> list[dict[str, str]]:
+    """Every series stored with the app, as table rows keyed by column heading."""
+    return [stored_row(series) for series in REFERENCE_SERIES]

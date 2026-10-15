@@ -22,6 +22,9 @@ Swinkels (2019), *Data* 4(3), 91. Only the method is used; none of that dataset 
 
 ## Data fetched at runtime
 
-Some data is fetched when the app runs and is never stored in this repository, either because its
-publisher allows use but not redistribution, or because it has to be up to date. The app's Data
-sources page lists these sources and checks that each one can be reached.
+Share returns come from the [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html):
+its developed-markets and US market factor files. They are free to download, but no licence is given
+to redistribute them, so the app fetches them when it runs, keeps them in memory for up to a day, and
+never writes them to disk or commits them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)).
+Nothing computed from them appears in this repository. The app's Data sources page checks that each
+file can be reached.

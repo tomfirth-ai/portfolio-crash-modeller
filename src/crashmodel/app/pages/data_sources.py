@@ -1,4 +1,4 @@
-"""Data sources: where runtime data comes from, and whether each source can be reached."""
+"""Data sources: what is stored with the app, what it fetches, and whether that can be reached."""
 
 import streamlit as st
 
@@ -8,6 +8,13 @@ from crashmodel.data import client, diagnostics
 st.title(presenter.TITLE)
 st.write(presenter.INTRODUCTION)
 
+st.subheader(presenter.STORED_HEADING, anchor=False)
+st.write(presenter.STORED_INTRODUCTION)
+st.table(presenter.stored_table(), hide_index=True)
+st.caption(presenter.BOND_METHOD)
+
+st.subheader(presenter.FETCHED_HEADING, anchor=False)
+st.write(presenter.FETCHED_INTRODUCTION)
 if st.button(presenter.CHECK_BUTTON, type="primary", icon=":material/network_check:"):
     with st.spinner(presenter.CHECKING), client.make_client() as http_client:
         results = diagnostics.check_sources(http_client, diagnostics.HOSTED_SOURCES)

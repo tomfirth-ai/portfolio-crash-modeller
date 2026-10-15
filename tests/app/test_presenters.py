@@ -4,6 +4,7 @@ from crashmodel.app.journey import JOURNEY
 from crashmodel.app.presenters import data_sources, home
 from crashmodel.app.presenters.copy import DISCLAIMER, page_title
 from crashmodel.data.diagnostics import DataSource, Failure, SourceStatus
+from crashmodel.data.reference_data import GILT_YIELD, REFERENCE_SERIES
 
 SOURCE = DataSource("Example source", "https://data.example.com/", "Testing")
 
@@ -87,3 +88,14 @@ DOWN = SourceStatus(source=SOURCE, failure=Failure.CONNECTION)
 )
 def test_the_summary_agrees_in_number(results: list[SourceStatus], sentence: str) -> None:
     assert data_sources.summary(results) == sentence
+
+
+def test_each_stored_series_is_credited_with_links_to_its_publisher_and_licence() -> None:
+    row = data_sources.stored_row(GILT_YIELD)
+    assert row == {
+        "Data": GILT_YIELD.description,
+        "Publisher": f"[Bank of England]({GILT_YIELD.credit.url})",
+        "Licence": f"[Open Government Licence v3.0]({GILT_YIELD.credit.licence_url})",
+        "Attribution": GILT_YIELD.credit.attribution,
+    }
+    assert len(data_sources.stored_table()) == len(REFERENCE_SERIES)

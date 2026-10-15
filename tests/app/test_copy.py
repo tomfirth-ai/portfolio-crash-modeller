@@ -52,6 +52,7 @@ def generated_copy() -> list[str]:
     statuses = [data_sources.describe_status(result) for result in results]
     summaries = [data_sources.summary(results[:count]) for count in range(len(results) + 1)]
     columns = list(data_sources.status_row(results[0]).as_table_row())
+    stored = [cell for row in data_sources.stored_table() for cell in (*row, *row.values())]
     return [
         *headings,
         *cards,
@@ -60,6 +61,7 @@ def generated_copy() -> list[str]:
         *statuses,
         *summaries,
         *columns,
+        *stored,
         page_title("Home"),
     ]
 

@@ -15,6 +15,7 @@ from crashmodel.app.presenters import stress_test
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.app.splits import EXAMPLE_SPLITS
 from crashmodel.data import client, diagnostics
+from crashmodel.data.reference_data import REFERENCE_SERIES
 from crashmodel.engine.episodes import COVID
 from tests.app.copy_rules import copy_problems
 from tests.data.french_text import FakeLibrary
@@ -98,8 +99,16 @@ def test_data_sources_reports_unreachable_sources_without_failing(
     sources = len(diagnostics.HOSTED_SOURCES)
     assert not app.exception
     assert f"0 of {sources} sources are reachable." in [markdown.value for markdown in app.markdown]
-    assert list(app.table[0].value["Status"]) == ["Unreachable: could not connect"] * sources
+    assert list(app.table[-1].value["Status"]) == ["Unreachable: could not connect"] * sources
     assert DISCLAIMER in captions(app)
+
+
+def test_data_sources_credits_the_data_stored_with_the_app() -> None:
+    app = run_app().switch_page(DATA_SOURCES_PAGE).run()
+
+    stored = app.table[0].value
+    assert list(stored["Data"]) == [series.description for series in REFERENCE_SERIES]
+    assert not app.exception
 
 
 def fail(*_args: object) -> None:

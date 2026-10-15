@@ -13,6 +13,8 @@ from enum import Enum, auto
 
 import httpx
 
+from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET
+
 
 @dataclass(frozen=True)
 class DataSource:
@@ -62,14 +64,14 @@ class SourceStatus:
 
 HOSTED_SOURCES: tuple[DataSource, ...] = (
     DataSource(
-        name="Kenneth R. French Data Library",
-        url="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip",
-        purpose="Share price history for the crash episodes",
+        name="Kenneth R. French Data Library, developed markets",
+        url=DEVELOPED_MARKETS.url,
+        purpose="Monthly returns on global shares",
     ),
     DataSource(
-        name="Federal Reserve Board H.10",
-        url="https://www.federalreserve.gov/releases/h10/hist/dat00_uk.htm",
-        purpose="Recent exchange rates between the pound and the dollar",
+        name="Kenneth R. French Data Library, US market",
+        url=US_MARKET.url,
+        purpose="Monthly returns on US shares",
     ),
 )
 
