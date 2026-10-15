@@ -375,3 +375,47 @@ def test_numbers_in_any_other_file_are_still_scanned(
     run_git("add", path)
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
+
+
+REFERENCE_CSV = "src/crashmodel/data/reference/fed-h10/usd-per-gbp.csv"
+SERIES_TEXT = "month,usd_per_gbp\n2031-01,3.1416\n2031-02,2718.2800\n"
+"""A monthly series whose values collide with the sentinel amounts by chance."""
+
+
+@pytest.mark.parametrize(
+    ("path", "text", "words_only"),
+    [
+        ("uv.lock", "anything", True),
+        (REFERENCE_CSV, SERIES_TEXT, True),
+        ("notes/usd-per-gbp.csv", SERIES_TEXT, False),
+        (REFERENCE_CSV.replace(".csv", ".txt"), SERIES_TEXT, False),
+        (REFERENCE_CSV, SERIES_TEXT + "total,271828\n", False),
+        (REFERENCE_CSV, "month,usd_per_gbp,note\n2031-01,3.1416,x\n", False),
+        (REFERENCE_CSV, "month,usd_per_gbp\n2031-01-17,3.1416\n", False),
+        (REFERENCE_CSV, "month,usd_per_gbp\n", False),
+    ],
+)
+def test_only_lock_files_and_well_formed_monthly_series_are_scanned_as_words(
+    path: str, text: str, words_only: bool
+) -> None:
+    assert scan.is_words_only(path, text) is words_only
+
+
+def test_a_monthly_series_is_clean_however_its_numbers_collide(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / REFERENCE_CSV).parent.mkdir(parents=True)
+    (repo / REFERENCE_CSV).write_text(SERIES_TEXT, encoding="utf-8")
+    run_git("add", REFERENCE_CSV)
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_CLEAN
+
+
+def test_a_file_in_the_reference_folder_that_is_not_a_series_is_scanned_in_full(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    (repo / REFERENCE_CSV).parent.mkdir(parents=True)
+    (repo / REFERENCE_CSV).write_text(SERIES_TEXT + "total,271828\n", encoding="utf-8")
+    run_git("add", REFERENCE_CSV)
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS

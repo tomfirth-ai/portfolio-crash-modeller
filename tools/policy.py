@@ -37,6 +37,9 @@ IMAGE_SUFFIXES = frozenset({".png"})
 IMAGE_DIRECTORY = "docs/img/"
 """The one directory where reviewed screenshots may live."""
 
+REFERENCE_DATA_DIRECTORY = "src/crashmodel/data/reference/"
+"""Where the committed open data lives: monthly series generated from public publishers' files."""
+
 PRIVATE_DIRECTORIES = frozenset({"private", "local"})
 """Directories, at any depth, that hold private or machine-local files."""
 

@@ -36,6 +36,10 @@ def test_isin_check_digit_is_validated() -> None:
         ("store.sqlite-journal", BLOCKED_FORMAT),
         ("screenshot.png", "images belong in docs/img/ after review"),
         (f"data/{PUBLIC_EXAMPLE_ISIN}.csv", "file name contains an ISIN"),
+        (
+            f"src/crashmodel/data/reference/x/{PUBLIC_EXAMPLE_ISIN}.csv",
+            "file name contains an ISIN",
+        ),
     ],
 )
 def test_private_blocked_misplaced_and_identifying_paths_are_flagged(

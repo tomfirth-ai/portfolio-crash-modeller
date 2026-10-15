@@ -41,7 +41,13 @@ from tools.denylist import (
     configured_denylist_path,
     load_denylist,
 )
-from tools.policy import BLOCKED_FORMAT, is_blocked_format, is_screenshot_path, screenshot_problem
+from tools.policy import (
+    BLOCKED_FORMAT,
+    REFERENCE_DATA_DIRECTORY,
+    is_blocked_format,
+    is_screenshot_path,
+    screenshot_problem,
+)
 
 SHORT_ID_LENGTH = 12
 """Characters of a git object id shown in findings."""
@@ -55,6 +61,23 @@ by chance. Package names are still scanned. The rule covers these exact paths on
 """
 
 _DIGIT = re.compile(r"[0-9]")
+_MONTHLY_SERIES = re.compile(r"month,[a-z_]+\n(?:\d{4}-\d{2},-?\d+(?:\.\d+)?\n)+")
+"""A committed monthly series: a ``month,<name>`` header, then ``YYYY-MM,<number>`` rows only."""
+
+
+def is_words_only(path: str, text: str) -> bool:
+    """Whether only a file's words are scanned, because its numbers come from public publishers.
+
+    Covers ``uv.lock``, and the generated monthly series in the reference data folder. Their
+    exchange rates, yields and returns match denylisted amounts and dates by chance. A file there
+    qualifies only if it has exactly the shape of a monthly series; anything else in the folder is
+    scanned in full, and a test in CI checks every file there against the list of known series and
+    their sources.
+    """
+    if path in WORDS_ONLY_FILES:
+        return True
+    in_reference_data = path.startswith(REFERENCE_DATA_DIRECTORY) and path.endswith(".csv")
+    return in_reference_data and _MONTHLY_SERIES.fullmatch(text) is not None
 
 
 @dataclass(frozen=True)
@@ -117,7 +140,7 @@ def _content_findings(document: Document, location: str, matcher: Matcher) -> li
         return [Finding(location, BLOCKED_FORMAT)]
     text = decode_text(document.content)
     if text is not None:
-        if path in WORDS_ONLY_FILES:
+        if is_words_only(path, text):
             text = _DIGIT.sub(" ", text)
         return scan_text(text, matcher, location)
     if is_screenshot_path(path):

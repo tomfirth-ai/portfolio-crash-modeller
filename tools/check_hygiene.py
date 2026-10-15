@@ -32,6 +32,7 @@ from tools.policy import (
     BLOCKED_FORMAT,
     IMAGE_DIRECTORY,
     IMAGE_SUFFIXES,
+    REFERENCE_DATA_DIRECTORY,
     is_blocked_format,
     is_private_path,
     is_screenshot_path,
@@ -39,7 +40,7 @@ from tools.policy import (
 )
 
 MAX_FILE_BYTES = 1_000_000
-ISIN_DIRECTORIES = ("config/", "data/")
+ISIN_DIRECTORIES = ("config/", "data/", REFERENCE_DATA_DIRECTORY)
 LUHN_DOUBLED_DIGIT_LIMIT = 9
 LUHN_MODULUS = 10
 ALPHANUMERIC_BASE = 36
