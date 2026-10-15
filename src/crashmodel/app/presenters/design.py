@@ -22,6 +22,11 @@ NAME = "Name"
 TEMPLATE = "Fill from an example"
 TEMPLATE_PLACEHOLDER = "Choose an example"
 TEMPLATE_NAMES = tuple(split.name for split in EXAMPLE_SPLITS)
+COMPOSITION_HEADING = "What each split holds"
+COMPOSITION_X_TITLE = "Share of £100 (%)"
+COMPOSITION_SPLIT = "Split"
+COMPOSITION_BLOCK = "Building block"
+COMPOSITION_PERCENT = "Share (%)"
 NEXT = "Stress-test these splits"
 NOTHING_INCLUDED = "Switch on at least one split to stress-test it."
 NAME_MAX_CHARACTERS = 30
@@ -68,3 +73,42 @@ def next_blocker(slots: Sequence[Slot]) -> str | None:
         if slot.included and not slot.split.is_complete
     ]
     return " ".join(unfinished) or None
+
+
+@dataclass(frozen=True, kw_only=True)
+class CompositionPoint:
+    """How much of one split is in one block, for the chart."""
+
+    split: str
+    block: str
+    percent: int
+    order: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class CompositionView:
+    """The chart of what each included split holds, one bar per split."""
+
+    points: tuple[CompositionPoint, ...]
+    splits: tuple[str, ...]
+    blocks: tuple[str, ...] = tuple(BLOCK_LABELS[block] for block in Block)
+    x_title: str = COMPOSITION_X_TITLE
+    split_title: str = COMPOSITION_SPLIT
+    block_title: str = COMPOSITION_BLOCK
+    percent_title: str = COMPOSITION_PERCENT
+
+
+def composition_view(slots: Sequence[Slot]) -> CompositionView:
+    """Show what each included split holds, block by block, in the blocks' usual order."""
+    shown = [
+        (name, slot.split)
+        for slot, name in zip(slots, display_names(slots), strict=True)
+        if slot.included
+    ]
+    points = tuple(
+        CompositionPoint(split=name, block=BLOCK_LABELS[block], percent=percent, order=order)
+        for name, split in shown
+        for order, block in enumerate(Block)
+        if (percent := split.percentages.get(block, 0))
+    )
+    return CompositionView(points=points, splits=tuple(name for name, _ in shown))

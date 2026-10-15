@@ -1,6 +1,14 @@
 from typing import Any
 
-from crashmodel.app.charts import LEGEND_COLUMNS, SPLIT_COLOURS, SPLIT_DASHES, value_chart
+from crashmodel.app.charts import (
+    BLOCK_COLOURS,
+    LEGEND_COLUMNS,
+    SPLIT_COLOURS,
+    SPLIT_DASHES,
+    composition_chart,
+    value_chart,
+)
+from crashmodel.app.presenters.design import CompositionPoint, CompositionView
 from crashmodel.app.presenters.stress_test import ChartPoint, ValueChartView
 
 VIEW = ValueChartView(
@@ -46,3 +54,14 @@ def test_a_faint_line_marks_the_starting_100() -> None:
 def test_the_legend_wraps_into_rows_that_fit_a_phone() -> None:
     legend = lines(value_chart(VIEW).to_dict())["encoding"]["color"]["legend"]
     assert legend == {"orient": "bottom", "columns": LEGEND_COLUMNS}
+
+
+def test_the_composition_chart_stacks_each_splits_blocks_in_order() -> None:
+    view = CompositionView(
+        points=(CompositionPoint(split="Mine", block="Cash", percent=100, order=3),),
+        splits=("Mine",),
+    )
+    encoding = composition_chart(view).to_dict()["encoding"]
+    assert encoding["x"]["stack"] == "zero"
+    assert encoding["order"]["field"] == "order"
+    assert encoding["color"]["scale"]["range"] == list(BLOCK_COLOURS)

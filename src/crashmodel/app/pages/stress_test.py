@@ -6,7 +6,9 @@ import streamlit as st
 
 from crashmodel.app import loaders, navigation, state, stress
 from crashmodel.app.charts import value_chart
+from crashmodel.app.journey import STRESS_TEST
 from crashmodel.app.presenters import stress_test as presenter
+from crashmodel.app.presenters.progress import progress
 from crashmodel.engine.episodes import EPISODES_BY_KEY, GLOBAL_FINANCIAL_CRISIS
 from crashmodel.engine.portfolio import Rebalancing
 
@@ -15,6 +17,8 @@ CARDS_PER_ROW = 2
 
 slots = state.slots(st.session_state)
 
+step = progress(STRESS_TEST)
+st.progress(step.fraction, text=step.text)
 st.title(presenter.TITLE)
 st.write(presenter.INTRODUCTION)
 if note := presenter.examples_note(slots):

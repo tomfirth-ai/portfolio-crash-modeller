@@ -83,6 +83,7 @@ def rendered_text(app: AppTest) -> list[str]:
         texts += [text for widget in getattr(app, kind) for text in (widget.label, widget.help)]
     for menu in app.selectbox:
         texts += [*menu.options, menu.placeholder]
+    texts += [bar.proto.text for bar in app.get("progress")]
     texts += [link.proto.label for link in app.get("page_link")]
     for table in app.table:
         texts += [str(cell) for cell in [*table.value.columns, *table.value.to_numpy().ravel()]]
