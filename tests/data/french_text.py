@@ -8,8 +8,12 @@ section and the footer.
 import io
 import zipfile
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import Literal
 
+import httpx
+
+from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET
 from crashmodel.engine.months import Month
 
 type Layout = Literal["us", "developed"]
@@ -98,3 +102,38 @@ def zipped(text: str, member: str = "F-F_Research_Data_Factors.csv") -> bytes:
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr(member, text)
     return buffer.getvalue()
+
+
+LIBRARY_START = Month(2007, 1)
+LIBRARY_END = Month(2024, 12)
+"""The fake library's files cover both crash windows."""
+
+
+@dataclass
+class FakeLibrary:
+    """A stand-in for the library's server, serving both files as synthetic text.
+
+    Attributes:
+        online: Whether it answers; when ``False``, every connection is refused.
+        requests: The URL of every request it has received, in order.
+    """
+
+    online: bool = True
+    requests: list[str] = field(default_factory=list)
+
+    def client(self) -> httpx.Client:
+        """Return an HTTP client whose requests go to this fake server."""
+        return httpx.Client(transport=httpx.MockTransport(self._answer))
+
+    def _answer(self, request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        self.requests.append(url)
+        if not self.online:
+            raise httpx.ConnectError("the fake library is offline")
+        layouts: dict[str, Layout] = {US_MARKET.url: "us", DEVELOPED_MARKETS.url: "developed"}
+        if url not in layouts:
+            return httpx.Response(404)
+        count = LIBRARY_END - LIBRARY_START + 1
+        rows = [CYCLE[i % len(CYCLE)] for i in range(count)]
+        text = french_text(layouts[url], start=LIBRARY_START, rows=rows)
+        return httpx.Response(200, content=zipped(text))
