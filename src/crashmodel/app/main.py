@@ -15,16 +15,17 @@ def main() -> None:
     """
     # The cards and tables are laid out for the centred column, whatever the screen width.
     st.set_page_config(page_icon=":material/thunderstorm:", layout="centered")
+    sources = navigation.data_sources_page()
     page = st.navigation(
         {
             "": [navigation.home_page()],
             JOURNEY_SECTION: [navigation.stress_test_page()],
-            REFERENCE_SECTION: [navigation.data_sources_page()],
+            REFERENCE_SECTION: [sources],
         }
     )
     # Set after navigation: a title set earlier would replace every page's own tab title.
     st.set_page_config(page_title=page_title(page.title))
     body = st.container()
-    render_footer(navigation.data_sources_page())
+    render_footer(sources)
     with body:
         page.run()

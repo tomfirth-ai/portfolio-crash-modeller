@@ -12,7 +12,7 @@ from crashmodel.engine.months import Month, MonthlySeries
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 9), end=Month(2007, 10))
 ALL_IN = Split(name="All in", percentages={Block.US_SHARES: 100})
-SAFE_AS = Split(name="Bonds", percentages={Block.UK_BONDS: 100})
+BONDS_ONLY = Split(name="Bonds", percentages={Block.UK_BONDS: 100})
 
 
 def panel(**returns: tuple[float, ...]) -> Panel:
@@ -55,7 +55,7 @@ def test_a_bottom_at_the_end_of_the_crash_phase_and_a_later_low_are_mentioned() 
 
 
 def test_a_split_that_never_fell_says_so() -> None:
-    [outcome] = stress_test.outcomes([SAFE_AS], EPISODE, panel(uk_bonds=(0.01,) * 4))
+    [outcome] = stress_test.outcomes([BONDS_ONLY], EPISODE, panel(uk_bonds=(0.01,) * 4))
     assert stress_test.card(outcome, EPISODE).sentences[0] == (
         "Bonds did not fall at any month end during the crash."
     )
@@ -72,7 +72,7 @@ def test_a_split_whose_data_is_unavailable_says_which() -> None:
 
 def test_splits_that_do_not_add_up_are_left_out_and_slots_are_kept() -> None:
     unfinished = Split(name="Unfinished", percentages={Block.UK_BONDS: 90})
-    results = stress_test.outcomes([unfinished, SAFE_AS], EPISODE, panel(uk_bonds=(0.0,) * 4))
+    results = stress_test.outcomes([unfinished, BONDS_ONLY], EPISODE, panel(uk_bonds=(0.0,) * 4))
     assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
 
 
@@ -87,14 +87,14 @@ def test_table_rows_give_the_figures() -> None:
     }
     stuck = stress_test.outcomes([ALL_IN], EPISODE, panel(us_shares=(0.25, -0.2, -0.25, 0.0)))[0]
     assert stress_test.table_row(stuck, EPISODE)["Months to get back"] == "Not by October 2007"
-    calm = stress_test.outcomes([SAFE_AS], EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
+    calm = stress_test.outcomes([BONDS_ONLY], EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
     assert stress_test.table_row(calm, EPISODE)["Worst fall"] == "Did not fall"
     missing = stress_test.outcomes([ALL_IN], EPISODE, panel())[0]
     assert stress_test.table_row(missing, EPISODE)["Worst fall"] == "No data"
 
 
 def test_the_chart_draws_only_splits_that_could_be_run() -> None:
-    results = stress_test.outcomes([ALL_IN, SAFE_AS], EPISODE, panel(uk_bonds=(0.0,) * 4))
+    results = stress_test.outcomes([ALL_IN, BONDS_ONLY], EPISODE, panel(uk_bonds=(0.0,) * 4))
     view = stress_test.chart_view(results)
     assert (view.splits, view.slots) == (("Bonds",), (1,))
     assert view.points[0] == stress_test.ChartPoint(split="Bonds", month="2007-06-01", value=100)

@@ -1,7 +1,7 @@
 """Splits of money between the building blocks, and the illustrative examples.
 
 A split's percentages are whole numbers, so "adds up to 100" is exact. The examples are there to
-show the tool working; they are not recommendations.
+show the tool working; they are not advice.
 """
 
 from collections.abc import Mapping

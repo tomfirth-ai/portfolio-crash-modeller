@@ -14,15 +14,15 @@ from crashmodel.app.splits import Split
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
 from crashmodel.data.panel import Panel
-from crashmodel.engine.drawdown import CrashResult, Fall
+from crashmodel.engine.drawdown import Fall
 from crashmodel.engine.episodes import (
     COVID,
     GLOBAL_FINANCIAL_CRISIS,
     Episode,
+    EpisodeRun,
     missing_holdings,
     run_episode,
 )
-from crashmodel.engine.months import MonthlySeries
 
 TITLE = STRESS_TEST.title
 INTRODUCTION = (
@@ -84,15 +84,14 @@ class SplitOutcome:
     Attributes:
         split: The split.
         slot: Its position, which fixes its colour.
-        values: Its value at each month end, or ``None`` if it could not be run.
-        result: Its fall and recovery, or ``None`` if it could not be run.
+        run: Its path through the crash and how it came through, or ``None`` if it could not be
+            run.
         missing: The blocks it holds that have no data for the crash.
     """
 
     split: Split
     slot: int
-    values: MonthlySeries | None
-    result: CrashResult | None
+    run: EpisodeRun | None
     missing: tuple[Block, ...]
 
 
@@ -146,32 +145,25 @@ def outcomes(splits: Sequence[Split], episode: Episode, panel: Panel) -> list[Sp
             continue
         weights = split.weights()
         missing = tuple(missing_holdings(episode, weights, panel.returns))
-        if missing:
-            results.append(
-                SplitOutcome(split=split, slot=slot, values=None, result=None, missing=missing)
-            )
-            continue
-        run = run_episode(episode, weights, panel.returns)
-        results.append(
-            SplitOutcome(split=split, slot=slot, values=run.values, result=run.result, missing=())
-        )
+        run = None if missing else run_episode(episode, weights, panel.returns)
+        results.append(SplitOutcome(split=split, slot=slot, run=run, missing=missing))
     return results
 
 
 def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
     """Tell one split's story through a crash in plain sentences."""
     name = outcome.split.name
-    if outcome.result is None:
+    if outcome.run is None:
         sentences: tuple[str, ...] = (
             f"{name} holds {block_list(list(outcome.missing))}, and that data could not be "
             "fetched just now.",
         )
     else:
+        result = outcome.run.result
         ending = (
-            f"£100 at the start was worth {pounds(outcome.result.end_value)} by "
-            f"{month_name(episode.end)}."
+            f"£100 at the start was worth {pounds(result.end_value)} by {month_name(episode.end)}."
         )
-        fall = outcome.result.fall
+        fall = result.fall
         if fall is None:
             sentences = (f"{name} did not fall at any month end during the crash.", ending)
         else:
@@ -202,12 +194,11 @@ def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
 def table_row(outcome: SplitOutcome, episode: Episode) -> dict[str, str]:
     """One split's figures for the comparison table, keyed by column heading."""
     name = outcome.split.name
-    if outcome.result is None:
+    if outcome.run is None:
         cells = (name, "No data", "", "", "")
-    elif outcome.result.fall is None:
-        cells = (name, "Did not fall", "", "", pounds(outcome.result.end_value))
+    elif (fall := outcome.run.result.fall) is None:
+        cells = (name, "Did not fall", "", "", pounds(outcome.run.result.end_value))
     else:
-        fall = outcome.result.fall
         back = (
             f"Not by {month_name(episode.end)}"
             if fall.months_to_recover is None
@@ -218,24 +209,23 @@ def table_row(outcome: SplitOutcome, episode: Episode) -> dict[str, str]:
             percent(fall.depth),
             str(fall.months_to_bottom),
             back,
-            pounds(outcome.result.end_value),
+            pounds(outcome.run.result.end_value),
         )
     return dict(zip(COLUMNS, cells, strict=True))
 
 
 def chart_view(results: Sequence[SplitOutcome]) -> ValueChartView:
     """The value of £100 in each split that could be run, month by month."""
-    drawn = [outcome for outcome in results if outcome.values is not None]
+    drawn = [(outcome, outcome.run) for outcome in results if outcome.run is not None]
     points = tuple(
         ChartPoint(split=outcome.split.name, month=f"{month}-01", value=value)
-        for outcome in drawn
-        if outcome.values is not None
-        for month, value in outcome.values.items()
+        for outcome, run in drawn
+        for month, value in run.values.items()
     )
     return ValueChartView(
         points=points,
-        splits=tuple(outcome.split.name for outcome in drawn),
-        slots=tuple(outcome.slot for outcome in drawn),
+        splits=tuple(outcome.split.name for outcome, _ in drawn),
+        slots=tuple(outcome.slot for outcome, _ in drawn),
     )
 
 
