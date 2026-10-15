@@ -60,6 +60,11 @@ class Month:
         return self._index() - other._index()
 
     @property
+    def previous(self) -> "Month":
+        """The month before."""
+        return self + -1
+
+    @property
     def days(self) -> int:
         """The number of calendar days in the month."""
         return calendar.monthrange(self.year, self.month)[1]

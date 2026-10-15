@@ -47,6 +47,10 @@ def test_subtracting_months_counts_the_months_between(
     assert later - earlier == months
 
 
+def test_the_month_before_crosses_years() -> None:
+    assert Month(2008, 1).previous == Month(2007, 12)
+
+
 def test_months_know_their_length_and_last_day() -> None:
     assert Month(2020, 2).days == 29
     assert Month(2021, 2).last_day == date(2021, 2, 28)
