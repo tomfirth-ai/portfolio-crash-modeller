@@ -11,7 +11,7 @@ from streamlit.testing.v1 import AppTest
 
 from crashmodel.app.components import footer
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
-from crashmodel.data import diagnostics
+from crashmodel.data import client, diagnostics
 from tests.app.copy_rules import copy_problems
 
 ENTRY_POINT = Path(__file__).parents[2] / "streamlit_app.py"
@@ -52,7 +52,7 @@ def offline_client() -> httpx.Client:
 
 def checked_data_sources_page(monkeypatch: pytest.MonkeyPatch) -> AppTest:
     """The Data sources page after its check has run, with the network refused."""
-    monkeypatch.setattr(diagnostics, "make_client", offline_client)
+    monkeypatch.setattr(client, "make_client", offline_client)
     app = run_app().switch_page(DATA_SOURCES_PAGE).run()
     return app.button[0].click().run()
 

@@ -1,7 +1,6 @@
 import httpx
 import pytest
 
-from crashmodel import __version__
 from crashmodel.data import diagnostics
 from crashmodel.data.diagnostics import DataSource, Failure
 
@@ -68,14 +67,6 @@ def test_check_sources_checks_each_source_in_order() -> None:
         results = diagnostics.check_sources(client, [SOURCE, other])
 
     assert [result.source for result in results] == [SOURCE, other]
-
-
-def test_the_client_identifies_the_project_without_personal_details() -> None:
-    with diagnostics.make_client() as client:
-        agent = client.headers["User-Agent"]
-
-    assert agent.startswith(f"crashmodel/{__version__}")
-    assert "@" not in agent
 
 
 @pytest.mark.parametrize("source", diagnostics.HOSTED_SOURCES)

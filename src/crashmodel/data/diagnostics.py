@@ -13,10 +13,6 @@ from enum import Enum, auto
 
 import httpx
 
-from crashmodel.project import user_agent
-
-DEFAULT_TIMEOUT_SECONDS = 10.0
-
 
 @dataclass(frozen=True)
 class DataSource:
@@ -76,13 +72,6 @@ HOSTED_SOURCES: tuple[DataSource, ...] = (
         purpose="Recent exchange rates between the pound and the dollar",
     ),
 )
-
-
-def make_client(timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS) -> httpx.Client:
-    """Return an HTTP client that identifies the project and follows redirects."""
-    return httpx.Client(
-        timeout=timeout_seconds, follow_redirects=True, headers={"User-Agent": user_agent()}
-    )
 
 
 def check_source(client: httpx.Client, source: DataSource) -> SourceStatus:
