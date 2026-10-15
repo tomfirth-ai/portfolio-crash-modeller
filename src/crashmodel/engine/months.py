@@ -70,6 +70,11 @@ class Month:
         return calendar.monthrange(self.year, self.month)[1]
 
     @property
+    def first_day(self) -> date:
+        """The month's first calendar day."""
+        return date(self.year, self.month, 1)
+
+    @property
     def last_day(self) -> date:
         """The month's last calendar day."""
         return date(self.year, self.month, self.days)

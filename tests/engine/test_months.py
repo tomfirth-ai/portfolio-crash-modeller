@@ -53,6 +53,7 @@ def test_the_month_before_crosses_years() -> None:
 
 def test_months_know_their_length_and_last_day() -> None:
     assert Month(2020, 2).days == 29
+    assert Month(2021, 2).first_day == date(2021, 2, 1)
     assert Month(2021, 2).last_day == date(2021, 2, 28)
 
 
