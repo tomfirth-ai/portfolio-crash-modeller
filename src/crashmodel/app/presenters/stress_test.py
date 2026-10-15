@@ -18,6 +18,7 @@ from crashmodel.data.panel import Panel
 from crashmodel.engine.drawdown import Fall
 from crashmodel.engine.episodes import (
     COVID,
+    DOT_COM,
     GLOBAL_FINANCIAL_CRISIS,
     Episode,
     EpisodeRun,
@@ -57,10 +58,17 @@ CHART_MONTH = "Month end"
 CHART_VALUE = "Value (£)"
 
 EPISODE_NAMES = {
+    DOT_COM.key: "2000-03 dot-com crash",
     GLOBAL_FINANCIAL_CRISIS.key: "2007-09 financial crisis",
     COVID.key: "2020 Covid crash",
 }
 EPISODE_STORIES = {
+    DOT_COM.key: (
+        "Technology shares had soared in the late 1990s. The bubble burst in March 2000, and the "
+        "fall deepened through the 2001 recession and the September 2001 attacks. Measured from "
+        "February 2000, the crash phase runs to March 2003, when the Iraq war began, and recovery "
+        "is judged by February 2005."
+    ),
     GLOBAL_FINANCIAL_CRISIS.key: (
         "Banks' losses on US mortgage debt froze lending in August 2007 and turned into a global "
         "crisis after Lehman Brothers failed in September 2008. Measured from June 2007, the "

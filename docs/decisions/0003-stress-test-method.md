@@ -1,6 +1,7 @@
 # 3. Stress-test method: monthly, in pounds, through fixed crash windows
 
-Date: 15 October 2026. Status: accepted.
+Date: 15 October 2026. Status: accepted. Extended in Slice 2 with a second way of managing a split,
+an explanation of each fall and a third crash (see the end).
 
 ## Context
 
@@ -41,11 +42,14 @@ project may use, and explainable in plain words.
 
   | Crash | Worth 100 at the end of | Crash phase ends | Window ends |
   |---|---|---|---|
+  | 2000-03 dot-com crash | February 2000 | March 2003 | February 2005 |
   | 2007-09 financial crisis | June 2007 | June 2009 | June 2012 |
   | 2020 Covid crash | December 2019 | June 2020 | December 2024 |
 
-  The starts come before each crash broke (the credit crunch in August 2007; the first reported
-  cases at the end of 2019). The crash phases end with the recessions' troughs. The windows are not
+  The starts come before each crash broke (the technology bubble bursting in March 2000; the credit
+  crunch in August 2007; the first reported cases at the end of 2019). The 2007-09 and 2020 crash
+  phases end with the recessions' troughs; the dot-com crash phase ends with the start of the Iraq
+  war in March 2003, after the 2001 recession and the September 2001 attacks. The windows are not
   anchored on any index's peak, so nothing about them depends on data that may change or may not be
   committed.
 - **A split gets a result only if every block it holds covers the whole window.** Otherwise it says
@@ -71,3 +75,21 @@ project may use, and explainable in plain words.
   history with each update. The app shows the data vintage.
 - No figure derived from the French data appears in any committed file. Tests, docs and examples use
   synthetic numbers.
+
+## Slice 2 additions
+
+- **Left alone, as well as kept at its weights.** A visitor can also see a split bought once and
+  never rebalanced, so that whatever does well grows to a larger share. The engine values each
+  holding separately in both cases: every month a holding gains its return on the amount in it at
+  the start of the month, and the split is the sum of its holdings.
+- **What drove a fall.** From the high to the bottom, the change in a split's value is exactly the
+  sum of its holdings' gains over the months in between, so each holding's share of the fall is its
+  own gains as a fraction of the value at the high. The shares add up to the fall, with no
+  remainder to explain away.
+- **What the pound did.** For a split holding dollar shares, the same split is also run with those
+  shares' returns left in dollars, as if the pound had held steady against the dollar. The
+  difference is what the exchange rate did to a sterling investor. It is a what-if, not a hedged
+  return: hedging would also earn or pay the interest-rate gap between the two currencies.
+- **A third crash.** The dot-com crash joins the two windows above, measured the same way. Every
+  block covers it: the developed-markets returns start in July 1990 and the gilt yield in December
+  1993.

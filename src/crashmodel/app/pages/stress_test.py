@@ -7,7 +7,7 @@ import streamlit as st
 from crashmodel.app import loaders, navigation, state
 from crashmodel.app.charts import value_chart
 from crashmodel.app.presenters import stress_test as presenter
-from crashmodel.engine.episodes import EPISODES, EPISODES_BY_KEY
+from crashmodel.engine.episodes import EPISODES_BY_KEY, GLOBAL_FINANCIAL_CRISIS
 
 # Two cards a row leave room for each story.
 CARDS_PER_ROW = 2
@@ -26,7 +26,7 @@ if note := presenter.left_out_note(slots):
 key = st.segmented_control(
     presenter.CRASH_PICKER,
     list(EPISODES_BY_KEY),
-    default=EPISODES[0].key,
+    default=GLOBAL_FINANCIAL_CRISIS.key,
     required=True,
     format_func=presenter.episode_name,
     key="crash",

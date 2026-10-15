@@ -39,6 +39,10 @@ class Episode:
             raise ValueError(f"episode {self.key} needs start < crash end <= end")
 
 
+DOT_COM = Episode(key="2000-03", start=Month(2000, 2), crash_end=Month(2003, 3), end=Month(2005, 2))
+"""Starts before the technology bubble burst in March 2000; the crash phase ends as the Iraq war
+began in March 2003, after the 2001 recession and the September 2001 attacks."""
+
 GLOBAL_FINANCIAL_CRISIS = Episode(
     key="2007-09", start=Month(2007, 6), crash_end=Month(2009, 6), end=Month(2012, 6)
 )
@@ -49,7 +53,8 @@ COVID = Episode(key="2020", start=Month(2019, 12), crash_end=Month(2020, 6), end
 """Starts as the first cases were reported at the end of 2019; the crash phase ends with the record
 fall in output in the second quarter of 2020."""
 
-EPISODES = (GLOBAL_FINANCIAL_CRISIS, COVID)
+EPISODES = (DOT_COM, GLOBAL_FINANCIAL_CRISIS, COVID)
+"""Every crash, oldest first."""
 EPISODES_BY_KEY = {episode.key: episode for episode in EPISODES}
 
 
