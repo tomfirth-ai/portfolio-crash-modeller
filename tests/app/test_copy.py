@@ -84,3 +84,8 @@ def test_copy_follows_the_rules(text: str) -> None:
 )
 def test_copy_rules_catch_each_kind_of_problem(text: str, problem: str) -> None:
     assert copy_problems(text) == [problem]
+
+
+def test_streamlit_icons_and_colours_are_not_read_as_words() -> None:
+    assert copy_problems(":gray-badge[:material/check: Left out]") == []
+    assert copy_problems(":gray-badge[Gray area]") == ["American spelling 'Gray'; use grey"]

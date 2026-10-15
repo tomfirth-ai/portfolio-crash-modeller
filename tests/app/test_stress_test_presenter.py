@@ -3,7 +3,7 @@ import pytest
 from crashmodel.app.presenters import stress_test
 from crashmodel.app.presenters.blocks import block_list
 from crashmodel.app.presenters.format import month_name, months, percent, pounds
-from crashmodel.app.splits import Split
+from crashmodel.app.splits import Slot, Split, example_slots
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
 from crashmodel.data.panel import Panel
@@ -15,6 +15,10 @@ ALL_IN = Split(name="All in", percentages={Block.US_SHARES: 100})
 BONDS_ONLY = Split(name="Bonds", percentages={Block.UK_BONDS: 100})
 
 
+def in_slots(*splits: Split) -> list[Slot]:
+    return [Slot(split=split) for split in splits]
+
+
 def panel(**returns: tuple[float, ...]) -> Panel:
     series = {
         Block(name): MonthlySeries(Month(2007, 7), values) for name, values in returns.items()
@@ -23,7 +27,7 @@ def panel(**returns: tuple[float, ...]) -> Panel:
 
 
 def card_for(returns: tuple[float, ...], split: Split = ALL_IN) -> stress_test.CrashCard:
-    [outcome] = stress_test.outcomes([split], EPISODE, panel(us_shares=returns))
+    [outcome] = stress_test.outcomes(in_slots(split), EPISODE, panel(us_shares=returns))
     return stress_test.card(outcome, EPISODE)
 
 
@@ -55,7 +59,7 @@ def test_a_bottom_at_the_end_of_the_crash_phase_and_a_later_low_are_mentioned() 
 
 
 def test_a_split_that_never_fell_says_so() -> None:
-    [outcome] = stress_test.outcomes([BONDS_ONLY], EPISODE, panel(uk_bonds=(0.01,) * 4))
+    [outcome] = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))
     assert stress_test.card(outcome, EPISODE).sentences[0] == (
         "Bonds did not fall at any month end during the crash."
     )
@@ -63,7 +67,7 @@ def test_a_split_that_never_fell_says_so() -> None:
 
 def test_a_split_whose_data_is_unavailable_says_which() -> None:
     mixed = Split(name="Mixed", percentages={Block.GLOBAL_SHARES: 50, Block.UK_BONDS: 50})
-    [outcome] = stress_test.outcomes([mixed], EPISODE, panel(uk_bonds=(0.0,) * 4))
+    [outcome] = stress_test.outcomes(in_slots(mixed), EPISODE, panel(uk_bonds=(0.0,) * 4))
     assert outcome.missing == (Block.GLOBAL_SHARES,)
     assert stress_test.card(outcome, EPISODE).sentences == (
         "Mixed holds global shares, and that data could not be fetched just now.",
@@ -72,12 +76,16 @@ def test_a_split_whose_data_is_unavailable_says_which() -> None:
 
 def test_splits_that_do_not_add_up_are_left_out_and_slots_are_kept() -> None:
     unfinished = Split(name="Unfinished", percentages={Block.UK_BONDS: 90})
-    results = stress_test.outcomes([unfinished, BONDS_ONLY], EPISODE, panel(uk_bonds=(0.0,) * 4))
+    results = stress_test.outcomes(
+        in_slots(unfinished, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4)
+    )
     assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
 
 
 def test_table_rows_give_the_figures() -> None:
-    fell = stress_test.outcomes([ALL_IN], EPISODE, panel(us_shares=(-0.10, -0.20, 0.50, 0.0)))[0]
+    fell = stress_test.outcomes(
+        in_slots(ALL_IN), EPISODE, panel(us_shares=(-0.10, -0.20, 0.50, 0.0))
+    )[0]
     assert stress_test.table_row(fell, EPISODE) == {
         "Split": "All in",
         "Worst fall": "28%",
@@ -85,16 +93,20 @@ def test_table_rows_give_the_figures() -> None:
         "Months to get back": "1",
         "£100 became": "£108",
     }
-    stuck = stress_test.outcomes([ALL_IN], EPISODE, panel(us_shares=(0.25, -0.2, -0.25, 0.0)))[0]
+    stuck = stress_test.outcomes(
+        in_slots(ALL_IN), EPISODE, panel(us_shares=(0.25, -0.2, -0.25, 0.0))
+    )[0]
     assert stress_test.table_row(stuck, EPISODE)["Months to get back"] == "Not by October 2007"
-    calm = stress_test.outcomes([BONDS_ONLY], EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
+    calm = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
     assert stress_test.table_row(calm, EPISODE)["Worst fall"] == "Did not fall"
-    missing = stress_test.outcomes([ALL_IN], EPISODE, panel())[0]
+    missing = stress_test.outcomes(in_slots(ALL_IN), EPISODE, panel())[0]
     assert stress_test.table_row(missing, EPISODE)["Worst fall"] == "No data"
 
 
 def test_the_chart_draws_only_splits_that_could_be_run() -> None:
-    results = stress_test.outcomes([ALL_IN, BONDS_ONLY], EPISODE, panel(uk_bonds=(0.0,) * 4))
+    results = stress_test.outcomes(
+        in_slots(ALL_IN, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4)
+    )
     view = stress_test.chart_view(results)
     assert (view.splits, view.slots) == (("Bonds",), (1,))
     assert view.points[0] == stress_test.ChartPoint(split="Bonds", month="2007-06-01", value=100)
@@ -147,3 +159,31 @@ def test_every_crash_has_a_name_and_a_story() -> None:
         == stress_test.EPISODE_STORIES.keys()
         == EPISODES_BY_KEY.keys()
     )
+
+
+def test_the_examples_note_shows_only_while_the_splits_are_the_examples() -> None:
+    assert stress_test.examples_note(example_slots()) == stress_test.EXAMPLES_NOTE
+    assert stress_test.examples_note(in_slots(ALL_IN)) is None
+
+
+def test_included_splits_that_do_not_add_up_are_named_as_left_out() -> None:
+    over = Split(name="Over", percentages={Block.CASH: 105})
+    slots = [Slot(split=over), Slot(split=over, included=False), Slot(split=BONDS_ONLY)]
+    assert stress_test.left_out_note(slots) == (
+        "Over is left out, because it adds up to 105%, not 100%."
+    )
+    assert stress_test.left_out_note(in_slots(BONDS_ONLY)) is None
+
+
+def test_splits_switched_off_are_not_run() -> None:
+    slots = [Slot(split=ALL_IN, included=False), Slot(split=BONDS_ONLY)]
+    results = stress_test.outcomes(slots, EPISODE, panel(uk_bonds=(0.0,) * 4))
+    assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
+
+
+def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> None:
+    starred = Split(name="*Mine*", percentages={Block.UK_BONDS: 100})
+    [outcome] = stress_test.outcomes(in_slots(starred), EPISODE, panel(uk_bonds=(0.0,) * 4))
+    assert stress_test.card(outcome, EPISODE).title == r"\*Mine\*"
+    assert stress_test.table_row(outcome, EPISODE)["Split"] == r"\*Mine\*"
+    assert stress_test.chart_view([outcome]).splits == ("*Mine*",)

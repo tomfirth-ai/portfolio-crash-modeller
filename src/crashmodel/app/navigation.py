@@ -8,7 +8,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from crashmodel.app.journey import STRESS_TEST
+from crashmodel.app.journey import DESIGN, STRESS_TEST
 from crashmodel.app.presenters import data_sources
 from crashmodel.app.presenters.copy import HOME_TITLE
 
@@ -19,6 +19,13 @@ def home_page() -> st.Page:
     """The front page, which asks the question the tool answers."""
     return st.Page(
         PAGES_DIRECTORY / "home.py", title=HOME_TITLE, icon=":material/home:", default=True
+    )
+
+
+def design_page() -> st.Page:
+    """The Design step."""
+    return st.Page(
+        PAGES_DIRECTORY / "design.py", title=DESIGN.title, icon=DESIGN.icon, url_path="design"
     )
 
 

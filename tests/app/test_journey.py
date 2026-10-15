@@ -1,0 +1,131 @@
+"""The journey end to end, through the real app: design splits, then stress-test them.
+
+Every return here is made up, so each figure the page shows can be worked out by hand.
+"""
+
+import json
+from typing import Any
+
+import pytest
+from streamlit.testing.v1 import AppTest
+
+from crashmodel.app import loaders
+from crashmodel.app.charts import SPLIT_COLOURS
+from crashmodel.app.presenters import design, home, stress_test
+from crashmodel.app.state import INCLUDED, NAME, widget_key
+from crashmodel.data.blocks import Block
+from crashmodel.data.panel import Panel
+from crashmodel.engine.months import Month, MonthlySeries, month_range
+from tests.app.running import (
+    DESIGN_PAGE,
+    STRESS_TEST_PAGE,
+    button,
+    captions,
+    click,
+    click_through,
+    run_app,
+)
+
+FIRST, LAST = Month(2007, 7), Month(2024, 12)
+CRASH = Month(2008, 10)
+"""Global shares lose 40% in this month; nothing else ever moves."""
+
+
+def synthetic_panel() -> Panel:
+    months = list(month_range(FIRST, LAST))
+    still = MonthlySeries(FIRST, (0.0,) * len(months))
+    shares = MonthlySeries(FIRST, tuple(-0.40 if month == CRASH else 0.0 for month in months))
+    returns = {Block.GLOBAL_SHARES: shares, Block.US_SHARES: still}
+    returns |= {Block.UK_BONDS: still, Block.CASH: still}
+    return Panel(returns=returns, unavailable=frozenset(), vintages={})
+
+
+@pytest.fixture(autouse=True)
+def synthetic_returns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(loaders, "load_panel", synthetic_panel)
+
+
+def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
+    """Half in global shares, half in cash, through the 2007-09 window.
+
+    The split is worth 100 until September 2008. In October it loses half of 40%, so it falls 20%
+    one month after that high, and nothing brings it back: £100 became £80.
+    """
+    app = click_through(run_app(), home.home_view().second_step, DESIGN_PAGE)
+    click(app, design.START_OWN)
+    app.text_input(key=widget_key(0, NAME)).input("Half and half").run()
+    app.number_input(key=widget_key(0, Block.GLOBAL_SHARES)).set_value(50).run()
+    app.number_input(key=widget_key(0, Block.CASH)).set_value(50).run()
+    click(app, design.NEXT)
+
+    assert app.title[0].value == stress_test.TITLE
+    assert app.table[0].value.to_dict("records") == [
+        {
+            "Split": "Half and half",
+            "Worst fall": "20%",
+            "Months to the bottom": "1",
+            "Months to get back": "Not by June 2012",
+            "£100 became": "£80",
+        }
+    ]
+    assert (
+        "Half and half fell 20% at worst. It hit bottom 1 month after its high and had not got "
+        "back to that high by June 2012. £100 at the start was worth £80 by June 2012."
+    ) in [markdown.value for markdown in app.markdown]
+
+
+def test_a_split_that_does_not_add_up_holds_back_the_next_step() -> None:
+    app = run_app(DESIGN_PAGE)
+    app.number_input(key=widget_key(1, Block.UK_BONDS)).set_value(45).run()
+
+    assert button(app, design.NEXT).disabled
+    assert "Balanced adds up to 105%, not 100%." in captions(app)
+
+    app.switch_page(STRESS_TEST_PAGE).run()
+    assert app.warning[0].value == "Balanced is left out, because it adds up to 105%, not 100%."
+    assert "Balanced" not in list(app.table[0].value["Split"])
+
+
+def chart_colours(app: AppTest) -> list[str]:
+    [chart] = app.get("vega_lite_chart")
+    spec: dict[str, Any] = json.loads(chart.proto.spec)
+    colours: list[str] = spec["layer"][1]["encoding"]["color"]["scale"]["range"]
+    return colours
+
+
+def test_switching_a_split_off_leaves_the_others_their_colours() -> None:
+    app = run_app(DESIGN_PAGE)
+    app.toggle(key=widget_key(0, INCLUDED)).set_value(False).run()
+    app.switch_page(STRESS_TEST_PAGE).run()
+
+    assert chart_colours(app) == list(SPLIT_COLOURS[1:])
+
+
+def test_with_every_split_switched_off_the_stress_test_says_what_to_do() -> None:
+    app = run_app(DESIGN_PAGE)
+    for index in range(len(SPLIT_COLOURS)):
+        app.toggle(key=widget_key(index, INCLUDED)).set_value(False).run()
+
+    assert button(app, design.NEXT).disabled
+    app.switch_page(STRESS_TEST_PAGE).run()
+    assert app.info[0].value == stress_test.NO_SPLITS
+    assert not app.table
+
+
+def test_one_visitors_changes_never_reach_another() -> None:
+    first = run_app(DESIGN_PAGE)
+    first.text_input(key=widget_key(0, NAME)).input("Changed").run()
+    first.number_input(key=widget_key(0, Block.CASH)).set_value(0).run()
+
+    second = run_app(DESIGN_PAGE)
+    assert second.text_input(key=widget_key(0, NAME)).value == "Cautious"
+    assert second.number_input(key=widget_key(0, Block.CASH)).value == 20
+
+
+def test_a_visitors_splits_survive_a_visit_to_another_page() -> None:
+    app = run_app(DESIGN_PAGE)
+    app.text_input(key=widget_key(0, NAME)).input("Kept").run()
+    app.switch_page(STRESS_TEST_PAGE).run()
+    app.switch_page(DESIGN_PAGE).run()
+
+    assert app.text_input(key=widget_key(0, NAME)).value == "Kept"

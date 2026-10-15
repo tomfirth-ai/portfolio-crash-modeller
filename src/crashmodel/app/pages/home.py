@@ -5,7 +5,7 @@ from itertools import batched
 import streamlit as st
 
 from crashmodel.app import navigation
-from crashmodel.app.journey import STRESS_TEST
+from crashmodel.app.journey import DESIGN, STRESS_TEST
 from crashmodel.app.presenters.home import home_view
 
 # Two cards a row leave room for each summary; four in a row squeeze the titles.
@@ -16,8 +16,11 @@ view = home_view()
 st.caption(view.eyebrow)
 st.title(view.headline)
 st.write(view.promise)
-if st.button(view.first_step, type="primary", icon=STRESS_TEST.icon):
-    st.switch_page(navigation.stress_test_page())
+with st.container(horizontal=True):
+    if st.button(view.first_step, type="primary", icon=STRESS_TEST.icon):
+        st.switch_page(navigation.stress_test_page())
+    if st.button(view.second_step, icon=DESIGN.icon):
+        st.switch_page(navigation.design_page())
 st.info(view.status_note, icon=":material/construction:")
 
 for row in batched(view.steps, CARDS_PER_ROW):

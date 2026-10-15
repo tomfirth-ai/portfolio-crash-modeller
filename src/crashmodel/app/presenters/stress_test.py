@@ -5,12 +5,13 @@ what each number is measured from, a comparison table and a chart of the value o
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from crashmodel.app.journey import STRESS_TEST
 from crashmodel.app.presenters.blocks import BLOCK_NAMES_IN_TEXT, block_list
 from crashmodel.app.presenters.format import month_name, months, percent, pounds
-from crashmodel.app.splits import Split
+from crashmodel.app.presenters.names import display_names, markdown_text
+from crashmodel.app.splits import Slot, Split, example_slots
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
 from crashmodel.data.panel import Panel
@@ -30,6 +31,8 @@ INTRODUCTION = (
     "weights every month. Every split starts with £100."
 )
 EXAMPLES_NOTE = "These four splits are examples to show how it works. They are not advice."
+CHANGE_SPLITS = "Change the splits"
+NO_SPLITS = "There is no split to test yet. Switch one on, and make it add up to 100%."
 CRASH_PICKER = "Crash"
 OFFLINE_BANNER = (
     "Share prices could not be fetched just now, so splits holding shares have no results. "
@@ -137,22 +140,43 @@ def episode_name(key: str) -> str:
     return EPISODE_NAMES[key]
 
 
-def outcomes(splits: Sequence[Split], episode: Episode, panel: Panel) -> list[SplitOutcome]:
-    """Run each split that adds up to 100 through a crash, noting any that lack data."""
+def examples_note(slots: Sequence[Slot]) -> str | None:
+    """Point out that the splits are only examples, while they still are."""
+    return EXAMPLES_NOTE if tuple(slots) == example_slots() else None
+
+
+def left_out_note(slots: Sequence[Slot]) -> str | None:
+    """Say which included splits are left out because they do not add up to 100, if any."""
+    names = display_names(slots)
+    sentences = [
+        f"{markdown_text(name)} is left out, because it adds up to {slot.split.total}%, not 100%."
+        for slot, name in zip(slots, names, strict=True)
+        if slot.included and not slot.split.is_complete
+    ]
+    return " ".join(sentences) or None
+
+
+def outcomes(slots: Sequence[Slot], episode: Episode, panel: Panel) -> list[SplitOutcome]:
+    """Run each included split that adds up to 100 through a crash, noting any that lack data.
+
+    Each split is shown under a name that is not blank and not shared with another split.
+    """
+    names = display_names(slots)
     results: list[SplitOutcome] = []
-    for slot, split in enumerate(splits):
-        if not split.is_complete:
+    for position, (slot, name) in enumerate(zip(slots, names, strict=True)):
+        if not (slot.included and slot.split.is_complete):
             continue
+        split = replace(slot.split, name=name)
         weights = split.weights()
         missing = tuple(missing_holdings(episode, weights, panel.returns))
         run = None if missing else run_episode(episode, weights, panel.returns)
-        results.append(SplitOutcome(split=split, slot=slot, run=run, missing=missing))
+        results.append(SplitOutcome(split=split, slot=position, run=run, missing=missing))
     return results
 
 
 def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
-    """Tell one split's story through a crash in plain sentences."""
-    name = outcome.split.name
+    """Tell one split's story through a crash in plain sentences, as Markdown."""
+    name = markdown_text(outcome.split.name)
     if outcome.run is None:
         sentences: tuple[str, ...] = (
             f"{name} holds {block_list(list(outcome.missing))}, and that data could not be "
@@ -192,8 +216,8 @@ def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
 
 
 def table_row(outcome: SplitOutcome, episode: Episode) -> dict[str, str]:
-    """One split's figures for the comparison table, keyed by column heading."""
-    name = outcome.split.name
+    """One split's figures for the comparison table, as Markdown keyed by column heading."""
+    name = markdown_text(outcome.split.name)
     if outcome.run is None:
         cells = (name, "No data", "", "", "")
     elif (fall := outcome.run.result.fall) is None:

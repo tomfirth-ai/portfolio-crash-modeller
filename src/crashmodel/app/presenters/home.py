@@ -24,6 +24,7 @@ class HomeView:
     headline: str
     promise: str
     first_step: str
+    second_step: str
     status_note: str
     steps: tuple[StepCard, ...]
 
@@ -38,9 +39,10 @@ def home_view() -> HomeView:
             "crashes such as 2008 and 2020, then track the one you choose."
         ),
         first_step="See how the examples coped",
+        second_step="Design your own",
         status_note=(
-            "Early build: you can stress-test four example splits now. Designing your own, "
-            "deciding and tracking come next."
+            "Early build: you can design splits and stress-test them now. Deciding and tracking "
+            "come next."
         ),
         steps=tuple(
             StepCard(label=f"Step {number}", title=spec.title, icon=spec.icon, summary=spec.summary)

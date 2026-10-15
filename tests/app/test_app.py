@@ -8,34 +8,29 @@ import httpx
 import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
-from streamlit.testing.v1.element_tree import ButtonGroup
 
 from crashmodel.app.components import footer
-from crashmodel.app.presenters import stress_test
+from crashmodel.app.presenters import data_sources, design, home, stress_test
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.app.splits import EXAMPLE_SPLITS
+from crashmodel.app.state import widget_key
 from crashmodel.data import client, diagnostics
+from crashmodel.data.blocks import Block
 from crashmodel.data.reference_data import REFERENCE_SERIES
 from crashmodel.engine.episodes import COVID
 from tests.app.copy_rules import copy_problems
+from tests.app.running import (
+    DATA_SOURCES_PAGE,
+    DESIGN_PAGE,
+    PAGES,
+    STRESS_TEST_PAGE,
+    button,
+    button_groups,
+    captions,
+    click,
+    run_app,
+)
 from tests.data.french_text import FakeLibrary
-
-ENTRY_POINT = Path(__file__).parents[2] / "streamlit_app.py"
-PAGES = sorted((Path(__file__).parents[2] / "src/crashmodel/app/pages").glob("[!_]*.py"))
-DATA_SOURCES_PAGE = "src/crashmodel/app/pages/data_sources.py"
-STRESS_TEST_PAGE = "src/crashmodel/app/pages/stress_test.py"
-RUN_TIMEOUT_SECONDS = 30
-"""Generous, because the first run imports the dataframe stack."""
-
-
-def run_app() -> AppTest:
-    app = AppTest.from_file(ENTRY_POINT, default_timeout=RUN_TIMEOUT_SECONDS).run()
-    assert not app.exception
-    return app
-
-
-def captions(app: AppTest) -> list[str]:
-    return [caption.value for caption in app.caption]
 
 
 def test_home_explains_the_journey() -> None:
@@ -48,11 +43,15 @@ def test_home_explains_the_journey() -> None:
 
 def test_the_first_button_on_home_opens_the_stress_test(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(client, "make_client", FakeLibrary().client)
-    app = run_app()
-    app.button[0].click().run()
+    app = click(run_app(), home.home_view().first_step)
 
-    assert not app.exception
     assert app.title[0].value == stress_test.TITLE
+
+
+def test_the_second_button_on_home_opens_the_design() -> None:
+    app = click(run_app(), home.home_view().second_step)
+
+    assert app.title[0].value == design.TITLE
 
 
 def test_home_shows_the_disclaimer() -> None:
@@ -69,13 +68,8 @@ def offline_client() -> httpx.Client:
 def checked_data_sources_page(monkeypatch: pytest.MonkeyPatch) -> AppTest:
     """The Data sources page after its check has run, with the network refused."""
     monkeypatch.setattr(client, "make_client", offline_client)
-    app = run_app().switch_page(DATA_SOURCES_PAGE).run()
-    return app.button[0].click().run()
-
-
-def button_groups(app: AppTest) -> list[ButtonGroup[str]]:
-    """The segmented controls on the page."""
-    return [group for group in app.get("button_group") if isinstance(group, ButtonGroup)]
+    app = run_app(DATA_SOURCES_PAGE)
+    return button(app, data_sources.CHECK_BUTTON).click().run()
 
 
 def rendered_text(app: AppTest) -> list[str]:
@@ -85,6 +79,10 @@ def rendered_text(app: AppTest) -> list[str]:
     texts += [button.label for button in app.button]
     for group in button_groups(app):
         texts += [group.proto.label, *group.options]
+    for kind in ("text_input", "number_input", "toggle", "selectbox"):
+        texts += [text for widget in getattr(app, kind) for text in (widget.label, widget.help)]
+    for menu in app.selectbox:
+        texts += [*menu.options, menu.placeholder]
     texts += [link.proto.label for link in app.get("page_link")]
     for table in app.table:
         texts += [str(cell) for cell in [*table.value.columns, *table.value.to_numpy().ravel()]]
@@ -104,7 +102,7 @@ def test_data_sources_reports_unreachable_sources_without_failing(
 
 
 def test_data_sources_credits_the_data_stored_with_the_app() -> None:
-    app = run_app().switch_page(DATA_SOURCES_PAGE).run()
+    app = run_app(DATA_SOURCES_PAGE)
 
     stored = app.table[0].value
     assert list(stored["Data"]) == [series.description for series in REFERENCE_SERIES]
@@ -124,8 +122,8 @@ def test_the_disclaimer_survives_a_page_that_fails_or_stops(
     monkeypatch: pytest.MonkeyPatch, check_sources: Callable[..., None]
 ) -> None:
     monkeypatch.setattr(diagnostics, "check_sources", check_sources)
-    app = run_app().switch_page(DATA_SOURCES_PAGE).run()
-    app.button[0].click().run()
+    app = run_app(DATA_SOURCES_PAGE)
+    button(app, data_sources.CHECK_BUTTON).click().run()
 
     assert DISCLAIMER in captions(app)
 
@@ -133,8 +131,14 @@ def test_the_disclaimer_survives_a_page_that_fails_or_stops(
 def stress_test_page(monkeypatch: pytest.MonkeyPatch, library: FakeLibrary) -> AppTest:
     """The Stress-test page, with share prices served by a fake library."""
     monkeypatch.setattr(client, "make_client", library.client)
-    app = run_app().switch_page(STRESS_TEST_PAGE).run()
-    assert not app.exception
+    return run_app(STRESS_TEST_PAGE)
+
+
+def design_page_with_a_problem() -> AppTest:
+    """The Design page with one split that does not add up, so every message shows."""
+    app = run_app(DESIGN_PAGE)
+    app.number_input(key=widget_key(1, Block.UK_BONDS)).set_value(45).run()
+    app.toggle(key=widget_key(3, "included")).set_value(False).run()
     return app
 
 
@@ -186,7 +190,7 @@ def test_try_again_fetches_share_prices_once_the_library_is_back(
     library.online = True
 
     assert app.run().warning, "a recent failure is not retried on its own"
-    app.button[0].click().run()
+    button(app, stress_test.TRY_AGAIN).click().run()
 
     assert not app.warning
     assert "No data" not in column(app, "Worst fall").values()
@@ -199,6 +203,8 @@ RENDERED_PAGES: dict[str, Callable[[pytest.MonkeyPatch], AppTest]] = {
     "stress test offline": lambda monkeypatch: stress_test_page(
         monkeypatch, FakeLibrary(online=False)
     ),
+    "design": lambda _monkeypatch: run_app(DESIGN_PAGE),
+    "design with a problem": lambda _monkeypatch: design_page_with_a_problem(),
 }
 
 

@@ -12,9 +12,13 @@ ADVICE = re.compile(
 )
 """Words that would present a split as advice, in any of their forms."""
 
+STREAMLIT_DIRECTIVES = re.compile(r":material/\w+:|:[a-z]+(?:-badge|-background)?(?=\[)")
+"""Streamlit's own Markdown for icons and colours, such as ``:gray-badge[``, which no one reads."""
+
 
 def copy_problems(text: str) -> list[str]:
-    """Return every way the text breaks the copy rules, or an empty list."""
+    """Return every way the visible text breaks the copy rules, or an empty list."""
+    text = STREAMLIT_DIRECTIVES.sub("", text)
     problems = [
         f"dash lookalike U+{ord(character):04X}" for character in set(text) & DASH_LOOKALIKES
     ]
