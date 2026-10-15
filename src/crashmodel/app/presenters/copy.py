@@ -11,6 +11,8 @@ SOURCE_CODE = "Source code and design notes"
 """Label of the footer link to the repository, where the code, tests and decisions live."""
 
 HOME_TITLE = "Home"
+JOURNEY_SECTION = "Your journey"
+"""The navigation section for the steps of the journey."""
 REFERENCE_SECTION = "Reference"
 """The navigation section for pages that support the journey rather than form part of it."""
 

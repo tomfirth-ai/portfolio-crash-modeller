@@ -7,6 +7,7 @@ what each number is measured from, a comparison table and a chart of the value o
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from crashmodel.app.journey import STRESS_TEST
 from crashmodel.app.presenters.blocks import BLOCK_NAMES_IN_TEXT, block_list
 from crashmodel.app.presenters.format import month_name, months, percent, pounds
 from crashmodel.app.splits import Split
@@ -23,7 +24,7 @@ from crashmodel.engine.episodes import (
 )
 from crashmodel.engine.months import MonthlySeries
 
-TITLE = "Stress-test"
+TITLE = STRESS_TEST.title
 INTRODUCTION = (
     "How each split would have come through real crashes, in pounds, if it had been kept at its "
     "weights every month. Every split starts with £100."
@@ -103,6 +104,11 @@ class CrashCard:
     slot: int
     sentences: tuple[str, ...]
 
+    @property
+    def text(self) -> str:
+        """The sentences as one paragraph."""
+        return " ".join(self.sentences)
+
 
 @dataclass(frozen=True, kw_only=True)
 class ChartPoint:
@@ -125,6 +131,11 @@ class ValueChartView:
     split_title: str = CHART_SPLIT
     month_title: str = CHART_MONTH
     value_title: str = CHART_VALUE
+
+
+def episode_name(key: str) -> str:
+    """What the crash with this key is called, such as "2020 Covid crash"."""
+    return EPISODE_NAMES[key]
 
 
 def outcomes(splits: Sequence[Split], episode: Episode, panel: Panel) -> list[SplitOutcome]:

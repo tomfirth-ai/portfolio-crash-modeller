@@ -7,7 +7,7 @@ from crashmodel.app.splits import Split
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
 from crashmodel.data.panel import Panel
-from crashmodel.engine.episodes import Episode
+from crashmodel.engine.episodes import COVID, EPISODES_BY_KEY, Episode
 from crashmodel.engine.months import Month, MonthlySeries
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 9), end=Month(2007, 10))
@@ -132,4 +132,18 @@ def test_blocks_are_listed_as_in_a_sentence() -> None:
     assert block_list([Block.CASH]) == "cash"
     assert block_list([Block.GLOBAL_SHARES, Block.US_SHARES, Block.UK_BONDS]) == (
         "global shares, US shares and UK government bonds"
+    )
+
+
+def test_a_card_reads_as_one_paragraph() -> None:
+    card = stress_test.CrashCard(title="Example", slot=0, sentences=("One.", "Two."))
+    assert card.text == "One. Two."
+
+
+def test_every_crash_has_a_name_and_a_story() -> None:
+    assert stress_test.episode_name(COVID.key) == "2020 Covid crash"
+    assert (
+        stress_test.EPISODE_NAMES.keys()
+        == stress_test.EPISODE_STORIES.keys()
+        == EPISODES_BY_KEY.keys()
     )

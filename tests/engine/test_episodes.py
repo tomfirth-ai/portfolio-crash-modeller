@@ -3,6 +3,7 @@ import pytest
 from crashmodel.engine.episodes import (
     COVID,
     EPISODES,
+    EPISODES_BY_KEY,
     GLOBAL_FINANCIAL_CRISIS,
     Episode,
     missing_holdings,
@@ -52,3 +53,7 @@ def test_a_split_is_run_through_the_episode() -> None:
     assert result.fall is not None
     assert result.fall.depth == pytest.approx(0.40)
     assert result.end_value == pytest.approx(90)
+
+
+def test_each_episode_can_be_found_by_its_key() -> None:
+    assert [EPISODES_BY_KEY[episode.key] for episode in EPISODES] == list(EPISODES)

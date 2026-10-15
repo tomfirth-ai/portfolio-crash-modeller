@@ -22,26 +22,26 @@ class StepSpec:
     summary: str
 
 
-JOURNEY: tuple[StepSpec, ...] = (
-    StepSpec(
-        title="Design",
-        icon=":material/pie_chart:",
-        summary="Split your money between shares, bonds and cash, or start from an example.",
-    ),
-    StepSpec(
-        title="Stress-test",
-        icon=":material/thunderstorm:",
-        summary="See how each split would have coped in real crashes, side by side.",
-    ),
-    StepSpec(
-        title="Decide",
-        icon=":material/lock:",
-        summary="Pick the split you are happy with and lock it in with a start date and an amount.",
-    ),
-    StepSpec(
-        title="Track",
-        icon=":material/monitoring:",
-        summary="Follow how it is doing against inflation, cash and the splits you did not choose.",
-    ),
+DESIGN = StepSpec(
+    title="Design",
+    icon=":material/pie_chart:",
+    summary="Split your money between shares, bonds and cash, or start from an example.",
 )
+STRESS_TEST = StepSpec(
+    title="Stress-test",
+    icon=":material/thunderstorm:",
+    summary="See how each split would have coped in real crashes, side by side.",
+)
+DECIDE = StepSpec(
+    title="Decide",
+    icon=":material/lock:",
+    summary="Pick the split you are happy with and lock it in with a start date and an amount.",
+)
+TRACK = StepSpec(
+    title="Track",
+    icon=":material/monitoring:",
+    summary="Follow how it is doing against inflation, cash and the splits you did not choose.",
+)
+
+JOURNEY: tuple[StepSpec, ...] = (DESIGN, STRESS_TEST, DECIDE, TRACK)
 """The steps, in the order a visitor takes them."""

@@ -50,6 +50,7 @@ COVID = Episode(key="2020", start=Month(2019, 12), crash_end=Month(2020, 6), end
 fall in output in the second quarter of 2020."""
 
 EPISODES = (GLOBAL_FINANCIAL_CRISIS, COVID)
+EPISODES_BY_KEY = {episode.key: episode for episode in EPISODES}
 
 
 def missing_holdings[Key](
