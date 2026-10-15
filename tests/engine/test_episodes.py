@@ -22,7 +22,7 @@ def test_the_financial_crisis_needs_returns_from_july_2007_to_june_2012() -> Non
     one_short = {"shares": MonthlySeries(Month(2007, 7), (0.0,) * 59)}
     assert missing_holdings(GLOBAL_FINANCIAL_CRISIS, weights, exact) == []
     assert missing_holdings(GLOBAL_FINANCIAL_CRISIS, weights, one_short) == ["shares"]
-    assert run_episode(GLOBAL_FINANCIAL_CRISIS, weights, exact).end_value == 100
+    assert run_episode(GLOBAL_FINANCIAL_CRISIS, weights, exact).result.end_value == 100
 
 
 def test_the_covid_crash_phase_ends_mid_2020() -> None:
@@ -46,7 +46,9 @@ def test_holdings_without_returns_for_the_whole_episode_are_named() -> None:
 
 
 def test_a_split_is_run_through_the_episode() -> None:
-    result = run_episode(EPISODE, {"shares": 1.0}, {"shares": SHARES})
+    run = run_episode(EPISODE, {"shares": 1.0}, {"shares": SHARES})
+    assert run.values.values == pytest.approx((100, 80, 60, 90))
+    result = run.result
     assert result.fall is not None
     assert result.fall.depth == pytest.approx(0.40)
     assert result.end_value == pytest.approx(90)

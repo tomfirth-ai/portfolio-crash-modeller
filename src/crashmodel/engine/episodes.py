@@ -64,9 +64,22 @@ def missing_holdings[Key](
     ]
 
 
+@dataclass(frozen=True, kw_only=True)
+class EpisodeRun:
+    """A split's path through an episode, and how it came through.
+
+    Attributes:
+        values: The split's value at each month end, from 100 at the start.
+        result: Its worst fall and recovery, and its value at the end.
+    """
+
+    values: MonthlySeries
+    result: CrashResult
+
+
 def run_episode[Key](
     episode: Episode, weights: Mapping[Key, float], returns: Mapping[Key, MonthlySeries]
-) -> CrashResult:
+) -> EpisodeRun:
     """Run a split, kept at its weights, through an episode and measure how it came through.
 
     Raises:
@@ -74,4 +87,4 @@ def run_episode[Key](
             first to explain why instead.
     """
     values = rebalanced_values(weights, returns, episode.start, episode.end)
-    return crash_result(values, episode.crash_end)
+    return EpisodeRun(values=values, result=crash_result(values, episode.crash_end))

@@ -2,6 +2,7 @@
 
 import importlib
 import pkgutil
+from collections.abc import Mapping
 
 import pytest
 
@@ -13,15 +14,27 @@ from crashmodel.data.diagnostics import HOSTED_SOURCES, Failure, SourceStatus
 from tests.app.copy_rules import copy_problems
 
 
+def texts_in(value: object) -> list[str]:
+    """The text inside a constant: a string, or the strings in a mapping's values or a tuple."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, Mapping):
+        return [text for item in value.values() for text in texts_in(item)]
+    if isinstance(value, tuple):
+        return [text for item in value for text in texts_in(item)]
+    return []
+
+
 def presenter_constants() -> list[str]:
     """Every module-level text constant in the presenters, so new copy cannot dodge the rules."""
     texts: list[str] = []
     for module_info in pkgutil.iter_modules(presenters.__path__):
         module = importlib.import_module(f"{presenters.__name__}.{module_info.name}")
         texts += [
-            value
+            text
             for name, value in vars(module).items()
-            if name.isupper() and isinstance(value, str)
+            if name.isupper()
+            for text in texts_in(value)
         ]
     return texts
 
