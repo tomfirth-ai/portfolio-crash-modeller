@@ -227,7 +227,9 @@ def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
     if fall.months_to_recover is None:
         recovery = f"had not got back to {back_to} by {month_name(episode.end)}"
     else:
-        recovery = f"took another {months(fall.months_to_recover)} to get back to {back_to}"
+        wait = fall.months_to_recover
+        another = "another month" if wait == 1 else f"another {months(wait)}"
+        recovery = f"took {another} to get back to {back_to}"
     sentences = [
         f"{name} fell {percent(fall.depth)} at worst in the crash phase.",
         f"It hit bottom {months(fall.months_to_bottom)} after {high} and {recovery}.",

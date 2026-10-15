@@ -37,8 +37,8 @@ def test_a_fall_from_the_start_and_back_reads_as_a_story() -> None:
     card = card_for((-0.10, -0.20, 0.50, 0.0))
     assert card.sentences == (
         "All in fell 28% at worst in the crash phase.",
-        "It hit bottom 2 months after the start and took another 1 month to get back to where "
-        "it started.",
+        "It hit bottom 2 months after the start and took another month to get back to where it "
+        "started.",
         "£100 at the start was worth £108 by October 2007.",
     )
 
