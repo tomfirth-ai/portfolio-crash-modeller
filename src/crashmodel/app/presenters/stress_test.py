@@ -9,7 +9,14 @@ from dataclasses import dataclass
 
 from crashmodel.app.journey import STRESS_TEST
 from crashmodel.app.presenters.blocks import BLOCK_NAMES_IN_TEXT, block_list
-from crashmodel.app.presenters.format import listed, month_name, months, percent, pounds
+from crashmodel.app.presenters.format import (
+    listed,
+    month_name,
+    months,
+    percent,
+    pounds,
+    pounds_and_pence,
+)
 from crashmodel.app.presenters.names import display_names, markdown_text
 from crashmodel.app.splits import Slot, example_slots
 from crashmodel.app.stress import SplitOutcome
@@ -85,7 +92,7 @@ EPISODE_STORIES = {
 
 MINIMUM_HOLDINGS_TO_EXPLAIN = 2
 """A split in one holding needs no breakdown of its fall."""
-NOTHING = pounds(0)
+NOTHING = pounds_and_pence(0)
 
 COLUMNS = (
     "Split",
@@ -210,7 +217,9 @@ def _drivers_sentence(drivers: Mapping[Block, float]) -> str | None:
     if len(drivers) < MINIMUM_HOLDINGS_TO_EXPLAIN:
         return None
     ordered = sorted(drivers.items(), key=lambda item: abs(item[1]), reverse=True)
-    amounts = [(block, share, pounds(abs(share) * STARTING_VALUE)) for block, share in ordered]
+    amounts = [
+        (block, share, pounds_and_pence(abs(share) * STARTING_VALUE)) for block, share in ordered
+    ]
     lost = [
         f"{BLOCK_NAMES_IN_TEXT[block]} lost {amount}"
         for block, share, amount in amounts

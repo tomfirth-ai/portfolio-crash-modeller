@@ -84,7 +84,7 @@ def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
         "and took another 5 months to get back to that high. £100 at the start was worth £100 by "
         "June 2012."
     ) in paragraphs
-    assert "Of every £100 at its high, global shares lost £20." in paragraphs
+    assert "Of every £100 at its high, global shares lost £20.00." in paragraphs
 
 
 def test_a_split_left_alone_ends_where_its_drifted_weights_take_it() -> None:

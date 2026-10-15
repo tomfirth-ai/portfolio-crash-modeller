@@ -36,6 +36,12 @@ def month_name(month: Month) -> str:
     return f"{calendar.month_name[month.month]} {month.year}"
 
 
+def pounds_and_pence(value: float) -> str:
+    """Write an amount to the penny: "£3.40"."""
+    rounded = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return f"£{rounded:,}"
+
+
 def pounds(value: float) -> str:
     """Write an amount in whole pounds: "£1,234"."""
     rounded = Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP)

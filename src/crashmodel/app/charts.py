@@ -91,7 +91,7 @@ def composition_chart(view: CompositionView) -> alt.Chart:
     )
     blocks = list(view.blocks)
     chart: alt.Chart = (
-        alt.Chart(data, height=BAR_HEIGHT * max(len(view.splits), 1))
+        alt.Chart(data, height=alt.Step(BAR_HEIGHT))
         .mark_bar()
         .encode(
             y=alt.Y("split:N", sort=list(view.splits), title=None),

@@ -38,6 +38,7 @@ with st.container(horizontal=True):
         format_func=presenter.episode_name,
         key="crash",
         persist_state="session",
+        wrap=True,
     )
     management = st.segmented_control(
         presenter.MANAGEMENT_PICKER,
@@ -48,6 +49,7 @@ with st.container(horizontal=True):
         help=presenter.MANAGEMENT_HELP,
         key="management",
         persist_state="session",
+        wrap=True,
     )
 episode = EPISODES_BY_KEY[key]
 st.write(presenter.EPISODE_STORIES[episode.key])

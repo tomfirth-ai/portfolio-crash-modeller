@@ -5,7 +5,13 @@ import pytest
 from crashmodel.app import stress
 from crashmodel.app.presenters import stress_test
 from crashmodel.app.presenters.blocks import block_list
-from crashmodel.app.presenters.format import month_name, months, percent, pounds
+from crashmodel.app.presenters.format import (
+    month_name,
+    months,
+    percent,
+    pounds,
+    pounds_and_pence,
+)
 from crashmodel.app.splits import Slot, Split, example_slots
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
@@ -168,6 +174,7 @@ def test_months_money_and_month_names_are_written_in_words() -> None:
     assert (months(1), months(17)) == ("1 month", "17 months")
     assert month_name(Month(2007, 6)) == "June 2007"
     assert (pounds(108.4), pounds(1234.5)) == ("£108", "£1,235")
+    assert (pounds_and_pence(3.405), pounds_and_pence(0)) == ("£3.41", "£0.00")
 
 
 def test_blocks_are_listed_as_in_a_sentence() -> None:
@@ -224,7 +231,7 @@ def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_high() 
     returns = panel(us_shares=(-0.40, 0.0, 0.0, 0.0), uk_bonds=(0.10, 0.0, 0.0, 0.0))
     [outcome] = stress.outcomes(in_slots(mixed), EPISODE, returns)
     assert stress_test.card(outcome, EPISODE).why == (
-        "Of every £100 at its high, US shares lost £24 and UK government bonds made back £4.",
+        "Of every £100 at its high, US shares lost £24.00 and UK government bonds made back £4.00.",
     )
 
 
@@ -290,3 +297,12 @@ def test_the_pound_is_not_mentioned_when_it_made_no_visible_difference() -> None
 def test_each_way_of_managing_a_split_has_a_name() -> None:
     assert stress_test.management_name(Rebalancing.NEVER.value) == "Left alone"
     assert set(stress_test.MANAGEMENT_NAMES) == {rebalancing.value for rebalancing in Rebalancing}
+
+
+def test_a_fall_too_small_to_show_in_pence_needs_no_breakdown() -> None:
+    tiny = Split(name="Tiny", percentages={Block.US_SHARES: 50, Block.UK_BONDS: 50})
+    returns = panel(us_shares=(-0.00002, 0.0, 0.0, 0.0), uk_bonds=(0.0,) * 4)
+    [outcome] = stress.outcomes(in_slots(tiny), EPISODE, returns)
+    assert outcome.run is not None
+    assert outcome.run.result.fall is not None
+    assert stress_test.card(outcome, EPISODE).why == ()
