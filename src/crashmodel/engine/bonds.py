@@ -13,10 +13,11 @@ Swinkels' international government bond returns dataset (2023), https://doi.org/
 whose method is described in Swinkels (2019), Data 4(3), 91, https://doi.org/10.3390/data4030091.
 """
 
-from crashmodel.engine.months import MonthlySeries, month_range
+from itertools import pairwise, starmap
+
+from crashmodel.engine.months import MONTHS_IN_YEAR, MonthlySeries
 
 MATURITY_YEARS = 10
-MONTHS_IN_YEAR = 12
 COUPONS_PER_YEAR = 2
 PERCENT = 100
 HALF_YEARS_TO_RUN = COUPONS_PER_YEAR * (MATURITY_YEARS - 1 / MONTHS_IN_YEAR)
@@ -38,9 +39,9 @@ def par_bond_returns(yields_percent: MonthlySeries) -> MonthlySeries:
         raise ValueError("returns need yields for at least two months")
     if any(yield_percent <= 0 for yield_percent in yields_percent.values):
         raise ValueError("yields must be positive")
-    return MonthlySeries.from_pairs(
-        (month, _par_bond_return(yields_percent[month.previous], yields_percent[month]))
-        for month in month_range(yields_percent.start + 1, yields_percent.end)
+    return MonthlySeries(
+        yields_percent.start + 1,
+        tuple(starmap(_par_bond_return, pairwise(yields_percent.values))),
     )
 
 

@@ -13,8 +13,9 @@ dollars while the pound halves leaves a sterling investor exactly where they sta
 
 from collections.abc import Iterable
 from datetime import date
+from itertools import pairwise
 
-from crashmodel.engine.months import Month, MonthlySeries, month_range
+from crashmodel.engine.months import Month, MonthlySeries
 
 
 def month_end_rates(observations: Iterable[tuple[date, float]]) -> MonthlySeries:
@@ -53,10 +54,11 @@ def to_home_currency(returns: MonthlySeries, foreign_per_home: MonthlySeries) ->
     last = min(returns.end, foreign_per_home.end)
     if first > last:
         raise ValueError("the returns and the exchange rates have no month in common")
-    return MonthlySeries.from_pairs(
-        (
-            month,
-            (1 + returns[month]) * foreign_per_home[month.previous] / foreign_per_home[month] - 1,
-        )
-        for month in month_range(first, last)
+    foreign = returns.between(first, last).values
+    rates = pairwise(foreign_per_home.between(first.previous, last).values)
+    return MonthlySeries(
+        first,
+        tuple(
+            (1 + r) * before / after - 1 for r, (before, after) in zip(foreign, rates, strict=True)
+        ),
     )
