@@ -4,10 +4,11 @@ from itertools import batched
 
 import streamlit as st
 
-from crashmodel.app import loaders, navigation, state
+from crashmodel.app import loaders, navigation, state, stress
 from crashmodel.app.charts import value_chart
 from crashmodel.app.presenters import stress_test as presenter
 from crashmodel.engine.episodes import EPISODES_BY_KEY, GLOBAL_FINANCIAL_CRISIS
+from crashmodel.engine.portfolio import Rebalancing
 
 # Two cards a row leave room for each story.
 CARDS_PER_ROW = 2
@@ -22,16 +23,28 @@ st.page_link(navigation.design_page(), label=presenter.CHANGE_SPLITS, icon=":mat
 if note := presenter.left_out_note(slots):
     st.warning(note, icon=":material/rule:")
 
-# Keys rather than episodes are the options, because Streamlit reads a dataclass as a mapping.
-key = st.segmented_control(
-    presenter.CRASH_PICKER,
-    list(EPISODES_BY_KEY),
-    default=GLOBAL_FINANCIAL_CRISIS.key,
-    required=True,
-    format_func=presenter.episode_name,
-    key="crash",
-    persist_state="session",
-)
+# Strings are the options, because Streamlit reads a dataclass as a mapping. Both choices are kept
+# for the session, so they survive a visit to another page.
+with st.container(horizontal=True):
+    key = st.segmented_control(
+        presenter.CRASH_PICKER,
+        list(EPISODES_BY_KEY),
+        default=GLOBAL_FINANCIAL_CRISIS.key,
+        required=True,
+        format_func=presenter.episode_name,
+        key="crash",
+        persist_state="session",
+    )
+    management = st.segmented_control(
+        presenter.MANAGEMENT_PICKER,
+        list(presenter.MANAGEMENT_NAMES),
+        default=Rebalancing.MONTHLY.value,
+        required=True,
+        format_func=presenter.management_name,
+        help=presenter.MANAGEMENT_HELP,
+        key="management",
+        persist_state="session",
+    )
 episode = EPISODES_BY_KEY[key]
 st.write(presenter.EPISODE_STORIES[episode.key])
 
@@ -41,7 +54,7 @@ if panel.unavailable:
     st.warning(presenter.offline_banner(panel.unavailable), icon=":material/cloud_off:")
     st.button(presenter.TRY_AGAIN, icon=":material/refresh:", on_click=loaders.try_again)
 
-results = presenter.outcomes(slots, episode, panel)
+results = stress.outcomes(slots, episode, panel, Rebalancing(management))
 if not results:
     st.info(presenter.NO_SPLITS, icon=":material/info:")
     st.stop()
@@ -51,6 +64,8 @@ for row in batched(results, CARDS_PER_ROW):
         with column:
             st.subheader(card.title, anchor=False)
             st.write(card.text)
+            if card.why:
+                st.write(card.why_text)
 
 st.subheader(presenter.TABLE_HEADING, anchor=False)
 st.table([presenter.table_row(outcome, episode) for outcome in results], hide_index=True)

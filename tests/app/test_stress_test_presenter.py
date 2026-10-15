@@ -2,6 +2,7 @@ from dataclasses import replace
 
 import pytest
 
+from crashmodel.app import stress
 from crashmodel.app.presenters import stress_test
 from crashmodel.app.presenters.blocks import block_list
 from crashmodel.app.presenters.format import month_name, months, percent, pounds
@@ -11,6 +12,7 @@ from crashmodel.data.french import Vintage
 from crashmodel.data.panel import Panel
 from crashmodel.engine.episodes import COVID, EPISODES_BY_KEY, Episode
 from crashmodel.engine.months import Month, MonthlySeries
+from crashmodel.engine.portfolio import Rebalancing
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 9), end=Month(2007, 10))
 ALL_IN = Split(name="All in", percentages={Block.US_SHARES: 100})
@@ -29,7 +31,7 @@ def panel(**returns: tuple[float, ...]) -> Panel:
 
 
 def card_for(returns: tuple[float, ...], split: Split = ALL_IN) -> stress_test.CrashCard:
-    [outcome] = stress_test.outcomes(in_slots(split), EPISODE, panel(us_shares=returns))
+    [outcome] = stress.outcomes(in_slots(split), EPISODE, panel(us_shares=returns))
     return stress_test.card(outcome, EPISODE)
 
 
@@ -67,7 +69,7 @@ def test_a_later_low_before_a_recovery_is_told_in_order() -> None:
     """Down 10% in July, down to 72 in September, after the crash phase, then back by November."""
     long = Episode(key="long", start=Month(2007, 6), crash_end=Month(2007, 8), end=Month(2007, 12))
     returns = panel(us_shares=(-0.10, 0.0, -0.20, 0.25, 0.20, 0.0))
-    [outcome] = stress_test.outcomes(in_slots(ALL_IN), long, returns)
+    [outcome] = stress.outcomes(in_slots(ALL_IN), long, returns)
     assert stress_test.card(outcome, long).sentences == (
         "All in fell 10% at worst in the crash phase.",
         "It hit bottom 1 month after the start and took another 4 months to get back to where "
@@ -78,7 +80,7 @@ def test_a_later_low_before_a_recovery_is_told_in_order() -> None:
 
 
 def test_a_split_that_never_fell_says_so() -> None:
-    [outcome] = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))
+    [outcome] = stress.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))
     assert stress_test.card(outcome, EPISODE).sentences[0] == (
         "Bonds did not fall at any month end in the crash phase, to September 2007."
     )
@@ -89,7 +91,7 @@ MIXED = Split(name="Mixed", percentages={Block.GLOBAL_SHARES: 50, Block.UK_BONDS
 
 def test_a_split_whose_data_could_not_be_fetched_says_which() -> None:
     offline = replace(panel(uk_bonds=(0.0,) * 4), unavailable=frozenset({Block.GLOBAL_SHARES}))
-    [outcome] = stress_test.outcomes(in_slots(MIXED), EPISODE, offline)
+    [outcome] = stress.outcomes(in_slots(MIXED), EPISODE, offline)
     assert outcome.missing == (Block.GLOBAL_SHARES,)
     assert stress_test.card(outcome, EPISODE).sentences == (
         "Mixed holds global shares, and that data could not be fetched just now.",
@@ -99,7 +101,7 @@ def test_a_split_whose_data_could_not_be_fetched_says_which() -> None:
 def test_a_split_whose_data_does_not_reach_back_far_enough_says_so() -> None:
     short = panel(uk_bonds=(0.0,) * 4, global_shares=(0.0,) * 4)
     late = {**short.returns, Block.GLOBAL_SHARES: MonthlySeries(Month(2007, 9), (0.0, 0.0))}
-    [outcome] = stress_test.outcomes(in_slots(MIXED), EPISODE, replace(short, returns=late))
+    [outcome] = stress.outcomes(in_slots(MIXED), EPISODE, replace(short, returns=late))
     assert stress_test.card(outcome, EPISODE).sentences == (
         "Mixed holds global shares, and there is no data for every month of this crash.",
     )
@@ -112,16 +114,12 @@ def test_the_offline_banner_names_only_the_blocks_that_failed() -> None:
 
 def test_splits_that_do_not_add_up_are_left_out_and_slots_are_kept() -> None:
     unfinished = Split(name="Unfinished", percentages={Block.UK_BONDS: 90})
-    results = stress_test.outcomes(
-        in_slots(unfinished, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4)
-    )
+    results = stress.outcomes(in_slots(unfinished, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4))
     assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
 
 
 def test_table_rows_give_the_figures() -> None:
-    fell = stress_test.outcomes(
-        in_slots(ALL_IN), EPISODE, panel(us_shares=(-0.10, -0.20, 0.50, 0.0))
-    )[0]
+    fell = stress.outcomes(in_slots(ALL_IN), EPISODE, panel(us_shares=(-0.10, -0.20, 0.50, 0.0)))[0]
     assert stress_test.table_row(fell, EPISODE) == {
         "Split": "All in",
         "Worst fall in the crash": "28%",
@@ -129,20 +127,16 @@ def test_table_rows_give_the_figures() -> None:
         "Months to get back": "1",
         "£100 became": "£108",
     }
-    stuck = stress_test.outcomes(
-        in_slots(ALL_IN), EPISODE, panel(us_shares=(0.25, -0.2, -0.25, 0.0))
-    )[0]
+    stuck = stress.outcomes(in_slots(ALL_IN), EPISODE, panel(us_shares=(0.25, -0.2, -0.25, 0.0)))[0]
     assert stress_test.table_row(stuck, EPISODE)["Months to get back"] == "Not by October 2007"
-    calm = stress_test.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
+    calm = stress.outcomes(in_slots(BONDS_ONLY), EPISODE, panel(uk_bonds=(0.01,) * 4))[0]
     assert stress_test.table_row(calm, EPISODE)["Worst fall in the crash"] == "None"
-    missing = stress_test.outcomes(in_slots(ALL_IN), EPISODE, panel())[0]
+    missing = stress.outcomes(in_slots(ALL_IN), EPISODE, panel())[0]
     assert stress_test.table_row(missing, EPISODE)["Worst fall in the crash"] == "No data"
 
 
 def test_the_chart_draws_only_splits_that_could_be_run() -> None:
-    results = stress_test.outcomes(
-        in_slots(ALL_IN, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4)
-    )
+    results = stress.outcomes(in_slots(ALL_IN, BONDS_ONLY), EPISODE, panel(uk_bonds=(0.0,) * 4))
     view = stress_test.chart_view(results)
     assert (view.splits, view.slots) == (("Bonds",), (1,))
     assert view.points[0] == stress_test.ChartPoint(split="Bonds", month="2007-06-01", value=100)
@@ -213,13 +207,86 @@ def test_included_splits_that_do_not_add_up_are_named_as_left_out() -> None:
 
 def test_splits_switched_off_are_not_run() -> None:
     slots = [Slot(split=ALL_IN, included=False), Slot(split=BONDS_ONLY)]
-    results = stress_test.outcomes(slots, EPISODE, panel(uk_bonds=(0.0,) * 4))
+    results = stress.outcomes(slots, EPISODE, panel(uk_bonds=(0.0,) * 4))
     assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
 
 
 def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> None:
     starred = Split(name="*Mine*", percentages={Block.UK_BONDS: 100})
-    [outcome] = stress_test.outcomes(in_slots(starred), EPISODE, panel(uk_bonds=(0.0,) * 4))
+    [outcome] = stress.outcomes(in_slots(starred), EPISODE, panel(uk_bonds=(0.0,) * 4))
     assert stress_test.card(outcome, EPISODE).title == r"\*Mine\*"
     assert stress_test.table_row(outcome, EPISODE)["Split"] == r"\*Mine\*"
     assert stress_test.chart_view([outcome]).splits == ("*Mine*",)
+
+
+def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_high() -> None:
+    mixed = Split(name="Mixed", percentages={Block.US_SHARES: 60, Block.UK_BONDS: 40})
+    returns = panel(us_shares=(-0.40, 0.0, 0.0, 0.0), uk_bonds=(0.10, 0.0, 0.0, 0.0))
+    [outcome] = stress.outcomes(in_slots(mixed), EPISODE, returns)
+    assert stress_test.card(outcome, EPISODE).why == (
+        "Of every £100 at its high, US shares lost £24 and UK government bonds made back £4.",
+    )
+
+
+def test_a_split_of_one_holding_needs_no_breakdown_of_its_fall() -> None:
+    assert card_for((-0.10, -0.20, 0.50, 0.0)).why == ()
+
+
+def with_dollars(pounds: tuple[float, ...], dollars: tuple[float, ...]) -> Panel:
+    start = Month(2007, 7)
+    return Panel(
+        returns={Block.US_SHARES: MonthlySeries(start, pounds)},
+        unavailable=frozenset(),
+        vintages={},
+        dollar_returns={Block.US_SHARES: MonthlySeries(start, dollars)},
+    )
+
+
+STEADY = "Had the pound held steady against the dollar, it would"
+
+
+@pytest.mark.parametrize(
+    ("in_pounds", "in_dollars", "sentence"),
+    [
+        (
+            -0.10,
+            -0.25,
+            f"{STEADY} have fallen 25% at worst in the crash phase rather than 10%: "
+            "the pound's moves cushioned it.",
+        ),
+        (
+            -0.25,
+            -0.10,
+            f"{STEADY} have fallen 10% at worst in the crash phase rather than 25%: "
+            "the pound's moves made it worse.",
+        ),
+        (
+            -0.10,
+            0.00,
+            f"{STEADY} not have fallen in the crash phase: the pound's moves made it worse.",
+        ),
+        (
+            0.01,
+            -0.10,
+            f"{STEADY} have fallen 10% at worst in the crash phase: the pound's moves "
+            "cushioned it.",
+        ),
+    ],
+)
+def test_the_why_says_what_the_pound_did(
+    in_pounds: float, in_dollars: float, sentence: str
+) -> None:
+    returns = with_dollars((in_pounds, 0.0, 0.0, 0.0), (in_dollars, 0.0, 0.0, 0.0))
+    [outcome] = stress.outcomes(in_slots(ALL_IN), EPISODE, returns)
+    assert stress_test.card(outcome, EPISODE).why == (sentence,)
+
+
+def test_the_pound_is_not_mentioned_when_it_made_no_visible_difference() -> None:
+    returns = with_dollars((-0.100, 0.0, 0.0, 0.0), (-0.101, 0.0, 0.0, 0.0))
+    [outcome] = stress.outcomes(in_slots(ALL_IN), EPISODE, returns)
+    assert stress_test.card(outcome, EPISODE).why == ()
+
+
+def test_each_way_of_managing_a_split_has_a_name() -> None:
+    assert stress_test.management_name(Rebalancing.NEVER.value) == "Left alone"
+    assert set(stress_test.MANAGEMENT_NAMES) == {rebalancing.value for rebalancing in Rebalancing}

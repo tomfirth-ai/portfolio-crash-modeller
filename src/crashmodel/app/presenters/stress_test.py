@@ -5,36 +5,38 @@ what each number is measured from, a comparison table and a chart of the value o
 """
 
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from crashmodel.app.journey import STRESS_TEST
 from crashmodel.app.presenters.blocks import BLOCK_NAMES_IN_TEXT, block_list
-from crashmodel.app.presenters.format import month_name, months, percent, pounds
+from crashmodel.app.presenters.format import listed, month_name, months, percent, pounds
 from crashmodel.app.presenters.names import display_names, markdown_text
-from crashmodel.app.splits import Slot, Split, example_slots
+from crashmodel.app.splits import Slot, example_slots
+from crashmodel.app.stress import SplitOutcome
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
-from crashmodel.data.panel import Panel
-from crashmodel.engine.drawdown import Fall
-from crashmodel.engine.episodes import (
-    COVID,
-    DOT_COM,
-    GLOBAL_FINANCIAL_CRISIS,
-    Episode,
-    EpisodeRun,
-    missing_holdings,
-    run_episode,
-)
+from crashmodel.engine.drawdown import CrashResult, Fall
+from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
+from crashmodel.engine.portfolio import STARTING_VALUE, Rebalancing
 
 TITLE = STRESS_TEST.title
 INTRODUCTION = (
-    "How each split would have come through real crashes, in pounds, if it had been kept at its "
-    "weights every month. Every split starts with £100."
+    "How each split would have come through real crashes, in pounds. Every split starts with £100."
 )
 EXAMPLES_NOTE = "These four splits are examples to show how it works. They are not advice."
 CHANGE_SPLITS = "Change the splits"
 NO_SPLITS = "There is no split to test yet. Switch one on, and make it add up to 100%."
 CRASH_PICKER = "Crash"
+MANAGEMENT_PICKER = "How each split is managed"
+MANAGEMENT_NAMES = {
+    Rebalancing.MONTHLY.value: "Kept at its weights",
+    Rebalancing.NEVER.value: "Left alone",
+}
+MANAGEMENT_HELP = (
+    "Kept at its weights: put back to its percentages at the end of every month, as ready-made "
+    "multi-asset funds do. Left alone: bought once and never changed, so whatever does well grows "
+    "to a larger share."
+)
 TRY_AGAIN = "Try again"
 FETCHING = "Fetching share returns..."
 TABLE_HEADING = "Side by side"
@@ -81,6 +83,10 @@ EPISODE_STORIES = {
     ),
 }
 
+MINIMUM_HOLDINGS_TO_EXPLAIN = 2
+"""A split in one holding needs no breakdown of its fall."""
+NOTHING = pounds(0)
+
 COLUMNS = (
     "Split",
     "Worst fall in the crash",
@@ -91,36 +97,22 @@ COLUMNS = (
 
 
 @dataclass(frozen=True, kw_only=True)
-class SplitOutcome:
-    """How one split came through one crash, or why it could not be run.
-
-    Attributes:
-        split: The split.
-        slot: Its position, which fixes its colour.
-        run: Its path through the crash and how it came through, or ``None`` if it could not be
-            run.
-        missing: The blocks it holds that have no data for the crash.
-        fetch_failed: Whether that is because their data could not be fetched just now.
-    """
-
-    split: Split
-    slot: int
-    run: EpisodeRun[Block] | None
-    missing: tuple[Block, ...]
-    fetch_failed: bool = False
-
-
-@dataclass(frozen=True, kw_only=True)
 class CrashCard:
-    """One split's story in words."""
+    """One split's story in words: what happened, then why."""
 
     title: str
     sentences: tuple[str, ...]
+    why: tuple[str, ...] = ()
 
     @property
     def text(self) -> str:
-        """The sentences as one paragraph."""
+        """What happened, as one paragraph."""
         return " ".join(self.sentences)
+
+    @property
+    def why_text(self) -> str:
+        """Why it happened, as one paragraph, which may be empty."""
+        return " ".join(self.why)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -146,6 +138,11 @@ class ValueChartView:
     value_title: str = CHART_VALUE
 
 
+def management_name(value: str) -> str:
+    """What a way of managing a split is called, such as "Left alone"."""
+    return MANAGEMENT_NAMES[value]
+
+
 def episode_name(key: str) -> str:
     """What the crash with this key is called, such as "2020 Covid crash"."""
     return EPISODE_NAMES[key]
@@ -167,29 +164,6 @@ def left_out_note(slots: Sequence[Slot]) -> str | None:
     return " ".join(sentences) or None
 
 
-def outcomes(slots: Sequence[Slot], episode: Episode, panel: Panel) -> list[SplitOutcome]:
-    """Run each included split that adds up to 100 through a crash, noting any that lack data.
-
-    Each split is shown under a name that is not blank and not shared with another split.
-    """
-    names = display_names(slots)
-    results: list[SplitOutcome] = []
-    for position, (slot, name) in enumerate(zip(slots, names, strict=True)):
-        if not (slot.included and slot.split.is_complete):
-            continue
-        split = replace(slot.split, name=name)
-        weights = split.weights()
-        missing = tuple(missing_holdings(episode, weights, panel.returns))
-        run = None if missing else run_episode(episode, weights, panel.returns)
-        fetch_failed = any(block in panel.unavailable for block in missing)
-        results.append(
-            SplitOutcome(
-                split=split, slot=position, run=run, missing=missing, fetch_failed=fetch_failed
-            )
-        )
-    return results
-
-
 def offline_banner(unavailable: Collection[Block]) -> str:
     """Say which share returns could not be fetched, and that other splits are unaffected."""
     blocks = block_list([block for block in Block if block in unavailable])
@@ -208,9 +182,7 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
             if outcome.fetch_failed
             else "there is no data for every month of this crash"
         )
-        sentences: tuple[str, ...] = (
-            f"{name} holds {block_list(list(outcome.missing))}, and {reason}.",
-        )
+        sentences: tuple[str, ...] = (f"{name} holds {block_list(outcome.missing)}, and {reason}.",)
     else:
         result = outcome.run.result
         ending = (
@@ -225,7 +197,55 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
             )
         else:
             sentences = (*_fall_sentences(name, fall, episode), ending)
-    return CrashCard(title=name, sentences=sentences)
+    return CrashCard(title=name, sentences=sentences, why=_why(outcome))
+
+
+def _why(outcome: SplitOutcome) -> tuple[str, ...]:
+    reasons = (_drivers_sentence(outcome.drivers), _pound_sentence(outcome))
+    return tuple(reason for reason in reasons if reason is not None)
+
+
+def _drivers_sentence(drivers: Mapping[Block, float]) -> str | None:
+    """Say how much each holding lost or made back, out of every £100 at the high."""
+    if len(drivers) < MINIMUM_HOLDINGS_TO_EXPLAIN:
+        return None
+    ordered = sorted(drivers.items(), key=lambda item: abs(item[1]), reverse=True)
+    amounts = [(block, share, pounds(abs(share) * STARTING_VALUE)) for block, share in ordered]
+    lost = [
+        f"{BLOCK_NAMES_IN_TEXT[block]} lost {amount}"
+        for block, share, amount in amounts
+        if share < 0 and amount != NOTHING
+    ]
+    made_back = [
+        f"{BLOCK_NAMES_IN_TEXT[block]} made back {amount}"
+        for block, share, amount in amounts
+        if share > 0 and amount != NOTHING
+    ]
+    if not lost + made_back:
+        return None
+    return f"Of every £100 at its high, {listed(lost + made_back)}."
+
+
+def _pound_sentence(outcome: SplitOutcome) -> str | None:
+    """Say how the fall would have differed had the pound held steady against the dollar."""
+    if outcome.run is None or outcome.steady_pound is None:
+        return None
+    actual, steady = _depth(outcome.run.result), _depth(outcome.steady_pound)
+    if percent(actual) == percent(steady):
+        return None
+    start = "Had the pound held steady against the dollar, it would"
+    effect = "cushioned it" if steady > actual else "made it worse"
+    if not steady:
+        return f"{start} not have fallen in the crash phase: the pound's moves made it worse."
+    rather = f" rather than {percent(actual)}" if actual else ""
+    return (
+        f"{start} have fallen {percent(steady)} at worst in the crash phase{rather}: the pound's "
+        f"moves {effect}."
+    )
+
+
+def _depth(result: CrashResult) -> float:
+    return 0.0 if result.fall is None else result.fall.depth
 
 
 def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:

@@ -1,6 +1,7 @@
 """How numbers, months and money are written, the same way on every page."""
 
 import calendar
+from collections.abc import Sequence
 from decimal import ROUND_HALF_UP, Decimal
 
 from crashmodel.engine.months import Month
@@ -16,6 +17,13 @@ def percent(fraction: float) -> str:
     if 0 < value < SMALLEST_SHOWN_PERCENT:
         return "less than 1%"
     return f"{value.quantize(Decimal(1), rounding=ROUND_HALF_UP)}%"
+
+
+def listed(items: Sequence[str]) -> str:
+    """Join items as in a sentence: "a", "a and b", "a, b and c"."""
+    if len(items) <= 1:
+        return "".join(items)
+    return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 def months(count: int) -> str:

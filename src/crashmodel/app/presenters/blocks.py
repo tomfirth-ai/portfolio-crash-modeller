@@ -1,5 +1,8 @@
 """What each building block is called, and what it is, in plain words."""
 
+from collections.abc import Iterable
+
+from crashmodel.app.presenters.format import listed
 from crashmodel.data.blocks import Block
 
 BLOCK_LABELS = {
@@ -37,9 +40,6 @@ BLOCK_NAMES_IN_TEXT = {
 """How each block is named inside a sentence."""
 
 
-def block_list(blocks: list[Block]) -> str:
+def block_list(blocks: Iterable[Block]) -> str:
     """Name blocks in a sentence, such as "global shares and UK government bonds"."""
-    names = [BLOCK_NAMES_IN_TEXT[block] for block in blocks]
-    if len(names) <= 1:
-        return "".join(names)
-    return f"{', '.join(names[:-1])} and {names[-1]}"
+    return listed([BLOCK_NAMES_IN_TEXT[block] for block in blocks])
