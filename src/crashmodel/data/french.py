@@ -13,6 +13,7 @@ import io
 import math
 import re
 import zipfile
+import zlib
 from dataclasses import dataclass
 
 import httpx
@@ -36,6 +37,9 @@ MAX_CSV_BYTES = 5_000_000
 BYTE_ORDER_MARK = "\ufeff"
 """Some editors start a text file with this invisible character."""
 
+_UNREADABLE_ZIP = (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError, RuntimeError)
+"""What the zipfile module raises for a damaged, cut short, encrypted or unsupported archive."""
+
 _VINTAGE = re.compile(r"\busing the (\d{4})(\d{2}) (\w+) database\b", re.ASCII)
 _MONTH_KEY = re.compile(r"(\d{4})(\d{2})", re.ASCII)
 _NUMBER = re.compile(r"-?\d+(\.\d+)?", re.ASCII)
@@ -57,7 +61,6 @@ US_MARKET = FrenchFile(market="US", url=f"{_FILES_URL}F-F_Research_Data_Factors_
 DEVELOPED_MARKETS = FrenchFile(
     market="Developed markets", url=f"{_FILES_URL}Developed_3_Factors_CSV.zip"
 )
-FRENCH_FILES = (US_MARKET, DEVELOPED_MARKETS)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -100,8 +103,8 @@ def read_zipped_csv(content: bytes) -> str:
     """Return the text of the single CSV file inside a zip, without touching the disk.
 
     Raises:
-        ValueError: If the content is too large, not a zip, has other than one CSV file, or is
-            not plain ASCII text.
+        ValueError: If the content is too large, not a readable zip, has other than one CSV file,
+            or is not plain ASCII text.
     """
     if len(content) > MAX_DOWNLOAD_BYTES:
         raise ValueError("the download is too large")
@@ -115,8 +118,8 @@ def read_zipped_csv(content: bytes) -> str:
             if members[0].file_size > MAX_CSV_BYTES:
                 raise ValueError("the CSV file is too large")
             raw = archive.read(members[0])
-    except zipfile.BadZipFile as error:
-        raise ValueError("the download is not a zip file") from error
+    except _UNREADABLE_ZIP as error:
+        raise ValueError("the download is not a readable zip file") from error
     try:
         return raw.decode("ascii")
     except UnicodeDecodeError as error:

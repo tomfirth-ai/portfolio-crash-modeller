@@ -1,3 +1,6 @@
+import io
+import zipfile
+
 import httpx
 import pytest
 
@@ -13,6 +16,8 @@ from crashmodel.engine.months import Month
 from tests.data.french_text import CYCLE, Layout, Row, french_text, zipped
 
 START = Month(2007, 1)
+LOCAL_HEADER_BYTES = 30
+"""The fixed part of a zip member's header; its name follows, then its compressed data."""
 
 
 @pytest.mark.parametrize("layout", ["us", "developed"])
@@ -72,6 +77,18 @@ def test_anything_unexpected_is_refused(text: str, message: str) -> None:
         parse_market_returns(text)
 
 
+def damaged_zip() -> bytes:
+    """A compressed zip with a few bytes of its compressed data flipped, as a bad download has."""
+    member = "F-F_Research_Data_Factors.csv"
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(member, french_text("us"))
+    content = bytearray(buffer.getvalue())
+    data = LOCAL_HEADER_BYTES + len(member)
+    content[data + 10 : data + 16] = bytes(byte ^ 0xFF for byte in content[data + 10 : data + 16])
+    return bytes(content)
+
+
 def test_the_csv_is_read_from_the_zip_in_memory() -> None:
     assert read_zipped_csv(zipped("text")) == "text"
 
@@ -79,7 +96,8 @@ def test_the_csv_is_read_from_the_zip_in_memory() -> None:
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        (b"<html>Not found</html>", "not a zip"),
+        (b"<html>Not found</html>", "not a readable zip"),
+        (damaged_zip(), "not a readable zip"),
         (b"x" * (french.MAX_DOWNLOAD_BYTES + 1), "too large"),
         (zipped("text", member="notes.txt"), "exactly one CSV"),
         (zipped("café"), "not plain text"),
