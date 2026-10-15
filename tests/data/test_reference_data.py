@@ -8,6 +8,7 @@ from crashmodel.data.reference_data import (
     load,
     parse_series,
     reference_folder,
+    stored,
 )
 from crashmodel.engine.months import Month, MonthlySeries
 
@@ -49,3 +50,8 @@ def test_each_series_names_its_file_and_header() -> None:
 
 def test_the_stored_series_live_in_the_packages_reference_folder() -> None:
     assert reference_folder().name == "reference"
+
+
+def test_the_packaged_copy_of_a_series_is_read_once() -> None:
+    assert stored(CASH_RETURN) is stored(CASH_RETURN)
+    assert stored(CASH_RETURN) == load(CASH_RETURN)

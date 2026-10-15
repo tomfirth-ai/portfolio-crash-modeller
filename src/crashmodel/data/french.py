@@ -33,6 +33,8 @@ MINIMUM_MONTHS = 12
 MAX_DOWNLOAD_BYTES = 1_000_000
 """The zips are tens of kilobytes; anything far larger is not the expected file."""
 MAX_CSV_BYTES = 5_000_000
+BYTE_ORDER_MARK = "\ufeff"
+"""Some editors start a text file with this invisible character."""
 
 _VINTAGE = re.compile(r"\busing the (\d{4})(\d{2}) (\w+) database\b", re.ASCII)
 _MONTH_KEY = re.compile(r"(\d{4})(\d{2})", re.ASCII)
@@ -131,7 +133,7 @@ def parse_market_returns(text: str) -> MarketReturns:
         ValueError: If the vintage, header or rows are not as expected, or a value is missing or
             implausible.
     """
-    lines = text.lstrip("﻿").splitlines()
+    lines = text.removeprefix(BYTE_ORDER_MARK).splitlines()
     vintage = _VINTAGE.search(lines[0]) if lines else None
     if vintage is None:
         raise ValueError("the first line does not give the data vintage")

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from crashmodel.data.blocks import SHARE_BLOCKS, Block
 from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET, FrenchFile, MarketReturns, Vintage
-from crashmodel.data.reference_data import CASH_RETURN, GILT_YIELD, USD_PER_GBP, load
+from crashmodel.data.reference_data import CASH_RETURN, GILT_YIELD, USD_PER_GBP, stored
 from crashmodel.engine.bonds import par_bond_returns
 from crashmodel.engine.currency import to_home_currency
 from crashmodel.engine.months import MonthlySeries
@@ -39,7 +39,7 @@ class Panel:
 
 def stored_returns() -> dict[Block, MonthlySeries]:
     """Return the blocks built only from data stored with the app: UK bonds and cash."""
-    return {Block.UK_BONDS: par_bond_returns(load(GILT_YIELD)), Block.CASH: load(CASH_RETURN)}
+    return {Block.UK_BONDS: par_bond_returns(stored(GILT_YIELD)), Block.CASH: stored(CASH_RETURN)}
 
 
 def build_panel(markets: Mapping[Block, MarketReturns | None]) -> Panel:
@@ -49,7 +49,7 @@ def build_panel(markets: Mapping[Block, MarketReturns | None]) -> Panel:
         markets: For each share block, its fetched returns in dollars, or ``None`` if the
             file could not be fetched.
     """
-    usd_per_gbp = load(USD_PER_GBP)
+    usd_per_gbp = stored(USD_PER_GBP)
     returns = stored_returns()
     vintages: dict[Block, Vintage] = {}
     for block in SHARE_BLOCKS:

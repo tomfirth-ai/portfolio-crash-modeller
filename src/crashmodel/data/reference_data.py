@@ -7,6 +7,7 @@ Each series is a small CSV file in the ``reference`` folder beside this module, 
 
 import re
 from dataclasses import dataclass
+from functools import cache
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 
@@ -152,3 +153,13 @@ def load(series: ReferenceSeries, folder: Traversable | None = None) -> MonthlyS
     """Read a stored series, from the package's reference folder unless another is given."""
     resource = (folder or reference_folder()).joinpath(series.folder, f"{series.name}.csv")
     return parse_series(series, resource.read_text(encoding="utf-8"))
+
+
+@cache
+def stored(series: ReferenceSeries) -> MonthlySeries:
+    """Return the package's own copy of a series, read once.
+
+    The files are part of the installed package and never change while the app runs, so each is
+    read and checked on first use only.
+    """
+    return load(series)

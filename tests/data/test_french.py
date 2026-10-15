@@ -32,7 +32,7 @@ def test_the_annual_section_is_never_read_as_months() -> None:
 @pytest.mark.parametrize(
     "text",
     [
-        "﻿" + french_text("us"),
+        french.BYTE_ORDER_MARK + french_text("us"),
         french_text("us").replace("\r\n", "\n"),
         french_text("developed").replace("\r\n", "\r"),
     ],
