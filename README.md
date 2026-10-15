@@ -17,9 +17,10 @@ choose.
 ## Status
 
 Early build. You can design up to four splits, or start from four examples, and stress-test them
-through the 2007-09 financial crisis and the 2020 Covid crash, in pounds and with real data.
-Deciding and tracking come next: see the [roadmap](docs/roadmap.md). A live demo link will appear
-here.
+through the 2000-03 dot-com crash, the 2007-09 financial crisis and the 2020 Covid crash, in pounds
+and with real data. Each split's story says what drove its fall, how far the pound's moves helped
+or hurt, and how it would have done if left alone rather than rebalanced. Deciding and tracking come
+next: see the [roadmap](docs/roadmap.md). A live demo link will appear here.
 
 ## How it is built
 
