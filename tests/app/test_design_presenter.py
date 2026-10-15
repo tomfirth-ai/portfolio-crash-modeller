@@ -1,10 +1,8 @@
 import pytest
 
-from crashmodel.app.journey import DESIGN
 from crashmodel.app.presenters import design
-from crashmodel.app.presenters.names import display_names, markdown_text
-from crashmodel.app.presenters.progress import progress
-from crashmodel.app.splits import Slot, Split, empty_slots, example_slots
+from crashmodel.app.presenters.names import markdown_text
+from crashmodel.app.splits import Slot, Split, display_names, empty_slots, example_slots
 from crashmodel.data.blocks import Block
 
 
@@ -83,13 +81,8 @@ def test_typed_names_are_shown_exactly_as_typed(typed: str, escaped: str) -> Non
 def test_the_composition_shows_each_included_splits_blocks_in_their_usual_order() -> None:
     slots = [slot("Mine", cash=40, bonds=60), slot("Off", included=False, cash=100)]
     view = design.composition_view(slots)
-    assert view.splits == ("Mine",)
+    assert (view.splits, view.x_max) == (("Mine",), 100)
     assert [(point.block, point.percent, point.order) for point in view.points] == [
         ("UK government bonds", 60, 2),
         ("Cash", 40, 3),
     ]
-
-
-def test_each_journey_page_says_which_step_it_is() -> None:
-    step = progress(DESIGN)
-    assert (step.fraction, step.text) == (0.25, "Step 1 of 4: Design")

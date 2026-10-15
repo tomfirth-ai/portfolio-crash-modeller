@@ -2,9 +2,9 @@
 
 A split can be managed in two ways:
 
-- **Kept at its weights**: at every month end it is put back to them, as ready-made multi-asset
-  funds do. Each month's return is then the weighted sum of its holdings' returns,
-  ``r_split = sum of weight_i * r_i``, and the results describe the split as designed.
+- **Kept at its weights**: at every month end it is put back to them, much as ready-made
+  multi-asset funds keep a fixed mix. Each month's return is then the weighted sum of its holdings'
+  returns, ``r_split = sum of weight_i * r_i``, and the results describe the split as designed.
 - **Left alone**: bought once and never touched, so whatever does well grows to a larger share.
 
 Either way, each month a holding gains its return on the amount in it at the start of the month,
@@ -82,10 +82,10 @@ def portfolio_path[Key](
     amounts = {key: STARTING_VALUE * weight for key, weight in held.items()}
     values = [STARTING_VALUE]
     gains: dict[Key, list[float]] = {key: [] for key in held}
-    for month in range(last - first):
+    for offset in range(last - first):
         if rebalancing is Rebalancing.MONTHLY:
             amounts = {key: values[-1] * weight for key, weight in held.items()}
-        gained = {key: amount * monthly[key][month] for key, amount in amounts.items()}
+        gained = {key: amount * monthly[key][offset] for key, amount in amounts.items()}
         for key, gain in gained.items():
             gains[key].append(gain)
         amounts = {key: amount + gained[key] for key, amount in amounts.items()}

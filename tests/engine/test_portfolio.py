@@ -12,9 +12,12 @@ def series(*returns: float) -> MonthlySeries:
 
 
 def values(
-    weights: dict[str, float], returns: dict[str, MonthlySeries], months: int
+    weights: dict[str, float],
+    returns: dict[str, MonthlySeries],
+    months: int,
+    rebalancing: Rebalancing = Rebalancing.MONTHLY,
 ) -> list[float]:
-    return list(portfolio_path(weights, returns, START, START + months).values.values)
+    return list(portfolio_path(weights, returns, START, START + months, rebalancing).values.values)
 
 
 def test_a_split_starts_at_100_at_the_end_of_its_first_month() -> None:
@@ -41,16 +44,16 @@ def test_sixty_forty_falls_by_the_weighted_return() -> None:
     assert values({"shares": 0.6, "bonds": 0.4}, returns, 1) == pytest.approx([100, 76])
 
 
-def test_a_split_of_one_holding_follows_that_holding() -> None:
-    assert values({"shares": 1.0}, {"shares": series(0.10, -0.50)}, 2) == pytest.approx(
-        [100, 110, 55]
-    )
+@pytest.mark.parametrize("rebalancing", list(Rebalancing))
+def test_a_split_of_one_holding_follows_that_holding(rebalancing: Rebalancing) -> None:
+    returns = {"shares": series(0.10, -0.50)}
+    assert values({"shares": 1.0}, returns, 2, rebalancing) == pytest.approx([100, 110, 55])
 
 
-def test_holdings_with_no_weight_need_no_returns() -> None:
-    assert values({"shares": 1.0, "bonds": 0.0}, {"shares": series(0.10)}, 1) == pytest.approx(
-        [100, 110]
-    )
+@pytest.mark.parametrize("rebalancing", list(Rebalancing))
+def test_holdings_with_no_weight_need_no_returns(rebalancing: Rebalancing) -> None:
+    weights, returns = {"shares": 1.0, "bonds": 0.0}, {"shares": series(0.10)}
+    assert values(weights, returns, 1, rebalancing) == pytest.approx([100, 110])
 
 
 def test_sterling_shares_and_cash_through_a_crash_and_a_falling_pound() -> None:
@@ -113,3 +116,22 @@ def test_each_months_gains_add_up_to_the_change_in_value(rebalancing: Rebalancin
     for month, value in list(path.values.items())[1:]:
         gained = sum(gains[month] for gains in path.gains.values())
         assert gained == pytest.approx(value - path.values[month.previous])
+
+
+def test_three_holdings_left_alone_each_grow_on_their_own() -> None:
+    """50 in shares, 30 in bonds and 20 in cash, never touched.
+
+    Each amount just compounds: shares 50 x 0.8 x 1.25 x 1.1 = 55, bonds 30 x 1.1 x 0.9 x 1.0
+    = 29.7 and cash 20 x 1.05 x 1.05 x 1.05 = 23.1525, so the split ends at 107.8525.
+    """
+    returns = {
+        "shares": series(-0.20, 0.25, 0.10),
+        "bonds": series(0.10, -0.10, 0.00),
+        "cash": series(0.05, 0.05, 0.05),
+    }
+    weights = {"shares": 0.5, "bonds": 0.3, "cash": 0.2}
+    path = portfolio_path(weights, returns, START, START + 3, Rebalancing.NEVER)
+    assert path.values.values == pytest.approx((100, 94, 101.75, 107.8525))
+    assert sum(path.gains["shares"].values) == pytest.approx(5)
+    assert sum(path.gains["bonds"].values) == pytest.approx(-0.3)
+    assert sum(path.gains["cash"].values) == pytest.approx(3.1525)

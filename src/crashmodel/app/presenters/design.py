@@ -6,8 +6,8 @@ from typing import Literal
 
 from crashmodel.app.journey import DESIGN
 from crashmodel.app.presenters.blocks import BLOCK_LABELS
-from crashmodel.app.presenters.names import display_names, markdown_text
-from crashmodel.app.splits import EXAMPLE_SPLITS, WHOLE, Slot
+from crashmodel.app.presenters.names import markdown_text
+from crashmodel.app.splits import EXAMPLE_SPLITS, WHOLE, Slot, display_names
 from crashmodel.data.blocks import Block
 
 TITLE = DESIGN.title
@@ -91,6 +91,8 @@ class CompositionView:
 
     points: tuple[CompositionPoint, ...]
     splits: tuple[str, ...]
+    x_max: int = WHOLE
+    """The axis always reaches 100, so a split that adds up to less shows its gap."""
     blocks: tuple[str, ...] = tuple(BLOCK_LABELS[block] for block in Block)
     x_title: str = COMPOSITION_X_TITLE
     split_title: str = COMPOSITION_SPLIT
@@ -111,4 +113,7 @@ def composition_view(slots: Sequence[Slot]) -> CompositionView:
         for order, block in enumerate(Block)
         if (percent := split.percentages.get(block, 0))
     )
-    return CompositionView(points=points, splits=tuple(name for name, _ in shown))
+    largest = max((split.total for _, split in shown), default=WHOLE)
+    return CompositionView(
+        points=points, splits=tuple(name for name, _ in shown), x_max=max(WHOLE, largest)
+    )

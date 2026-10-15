@@ -18,17 +18,17 @@ choose.
 
 Early build. You can design up to four splits, or start from four examples, and stress-test them
 through the 2000-03 dot-com crash, the 2007-09 financial crisis and the 2020 Covid crash, in pounds
-and with real data. Each split's story says what drove its fall, how far the pound's moves helped
-or hurt, and how it would have done if left alone rather than rebalanced. Deciding and tracking come
+and with real data. Each split's story says what drove its fall, how far the pound's moves against
+the dollar helped or hurt, and how it would have done if left alone rather than rebalanced. Deciding and tracking come
 next: see the [roadmap](docs/roadmap.md). A live demo link will appear here.
 
 ## How it is built
 
 | Folder | What is there |
 |---|---|
-| [`src/crashmodel/engine/`](src/crashmodel/engine/) | The financial calculations, as pure, typed functions with no I/O: calendar months, currency conversion, cash and bond returns, rebalancing, worst fall and recovery, and the crash windows. Each is tested against hand-worked figures. |
+| [`src/crashmodel/engine/`](src/crashmodel/engine/) | The financial calculations, as pure, typed functions with no I/O: calendar months, currency conversion, cash and bond returns, rebalancing or leaving a split alone, worst fall and recovery, which holdings drove a fall, and the crash windows. Each is tested against hand-worked figures. |
 | [`src/crashmodel/data/`](src/crashmodel/data/) | The open data stored with the app, the runtime fetch of share returns, and every building block's monthly returns in pounds. Sources and licences are in [DATA_LICENCES.md](DATA_LICENCES.md). |
-| [`src/crashmodel/app/`](src/crashmodel/app/) | The Streamlit app. Presenters turn results into words and are unit tested; pages only lay them out. |
+| [`src/crashmodel/app/`](src/crashmodel/app/) | The Streamlit app. `stress.py` runs the visitor's splits through the engine; presenters turn the results into words and are unit tested; pages only lay them out. |
 | [`docs/decisions/`](docs/decisions/) | Why the method and the data are as they are. |
 | [`tools/`](tools/) | The build tool for the stored data, and the style, hygiene and privacy checks the hooks run. |
 

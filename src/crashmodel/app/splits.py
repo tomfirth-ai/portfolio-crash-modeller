@@ -4,7 +4,7 @@ A split's percentages are whole numbers, so "adds up to 100" is exact. The examp
 show the tool working; they are not advice.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -82,3 +82,23 @@ def empty_slots() -> tuple[Slot, ...]:
         Slot(split=Split(name=f"Split {number}", percentages={}), included=number == 1)
         for number in range(1, SLOT_COUNT + 1)
     )
+
+
+def display_names(slots: Sequence[Slot]) -> tuple[str, ...]:
+    """Return a name for each slot's split, in order, that is never blank.
+
+    A blank name becomes "Split 2" after its place. Among included splits a repeated name gets a
+    number, such as "Balanced (2)", so that a chart or table never mixes two splits up.
+    """
+    shown: list[str] = []
+    taken: set[str] = set()
+    for number, slot in enumerate(slots, start=1):
+        name = slot.split.name.strip() or f"Split {number}"
+        if slot.included:
+            base, copy = name, 1
+            while name in taken:
+                copy += 1
+                name = f"{base} ({copy})"
+            taken.add(name)
+        shown.append(name)
+    return tuple(shown)

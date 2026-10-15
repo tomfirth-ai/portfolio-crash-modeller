@@ -31,7 +31,7 @@ class Panel:
         unavailable: Blocks whose data could not be fetched.
         vintages: For share blocks with data, which monthly update of the library it comes from.
         dollar_returns: For share blocks with data, their returns in US dollars, before
-            conversion: what a sterling investor would have earned had the pound held steady.
+            conversion into pounds.
     """
 
     returns: Mapping[Block, MonthlySeries]

@@ -36,7 +36,7 @@ with st.container(horizontal=True):
         default=GLOBAL_FINANCIAL_CRISIS.key,
         required=True,
         format_func=presenter.episode_name,
-        key="crash",
+        key=state.CRASH,
         persist_state="session",
         wrap=True,
     )
@@ -47,7 +47,7 @@ with st.container(horizontal=True):
         required=True,
         format_func=presenter.management_name,
         help=presenter.MANAGEMENT_HELP,
-        key="management",
+        key=state.MANAGEMENT,
         persist_state="session",
         wrap=True,
     )

@@ -44,17 +44,18 @@ def test_a_split_that_fell_records_which_holdings_drove_the_fall() -> None:
     assert outcome.drivers == {Block.US_SHARES: -0.25, Block.CASH: 0.0}
 
 
-def test_a_split_with_dollar_shares_is_also_run_with_a_steady_pound() -> None:
+def test_a_split_holding_shares_is_also_run_with_their_returns_in_dollars() -> None:
     [outcome] = stress.outcomes([US_ONLY], EPISODE, panel(series(-0.2, 0.0, 0.0)))
-    assert outcome.steady_pound is not None
-    assert outcome.steady_pound.fall is not None
-    assert outcome.steady_pound.fall.depth == pytest.approx(0.2)
+    assert outcome.shares_in_dollars is not None
+    assert outcome.shares_in_dollars.fall is not None
+    assert outcome.shares_in_dollars.fall.depth == pytest.approx(0.2)
 
 
-def test_no_steady_pound_what_if_without_dollar_shares_or_their_full_history() -> None:
+def test_no_dollar_what_if_without_shares_or_their_full_dollar_history() -> None:
     cash_only = Slot(split=Split(name="Cash", percentages={Block.CASH: 100}))
     short = MonthlySeries(Month(2007, 8), (0.0, 0.0))
     assert (
-        stress.outcomes([cash_only], EPISODE, panel(series(0.0, 0.0, 0.0)))[0].steady_pound is None
+        stress.outcomes([cash_only], EPISODE, panel(series(0.0, 0.0, 0.0)))[0].shares_in_dollars
+        is None
     )
-    assert stress.outcomes([US_ONLY], EPISODE, panel(short))[0].steady_pound is None
+    assert stress.outcomes([US_ONLY], EPISODE, panel(short))[0].shares_in_dollars is None

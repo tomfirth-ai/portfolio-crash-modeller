@@ -54,3 +54,9 @@ def click_through(app: AppTest, label: str, page: str) -> AppTest:
     """
     click(app, label)
     return app.switch_page(page)
+
+
+def button_group(app: AppTest, key: str) -> ButtonGroup[str]:
+    """The segmented control with this widget key."""
+    [match] = [group for group in button_groups(app) if group.key == key]
+    return match

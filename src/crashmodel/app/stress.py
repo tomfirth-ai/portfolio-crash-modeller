@@ -2,14 +2,13 @@
 
 It decides which splits can be run, runs each one through the engine, and gathers what the
 Stress-test page explains: the path and the fall, which holdings drove the fall, and what the fall
-would have been had the pound held steady against the dollar.
+would have been with the share returns counted in dollars rather than pounds.
 """
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
-from crashmodel.app.presenters.names import display_names
-from crashmodel.app.splits import Slot, Split
+from crashmodel.app.splits import Slot, Split, display_names
 from crashmodel.data.blocks import Block
 from crashmodel.data.panel import Panel
 from crashmodel.engine.attribution import fall_contributions
@@ -31,8 +30,10 @@ class SplitOutcome:
         fetch_failed: Whether that is because their data could not be fetched just now.
         drivers: For a split that fell, each holding's gain from the high to the bottom, as a
             fraction of the high; they add up to minus the fall.
-        steady_pound: For a split holding dollar shares, how it would have come through had the
-            pound held steady against the dollar; otherwise ``None``.
+        shares_in_dollars: For a split holding shares, how it would have come through with their
+            returns counted in US dollars rather than pounds, which shows what the pound's moves
+            against the dollar did; otherwise ``None``. Global shares are priced in dollars but
+            include UK and other non-US companies, so for them this is approximate.
     """
 
     split: Split
@@ -41,7 +42,7 @@ class SplitOutcome:
     missing: tuple[Block, ...] = ()
     fetch_failed: bool = False
     drivers: Mapping[Block, float] = field(default_factory=dict)
-    steady_pound: CrashResult | None = None
+    shares_in_dollars: CrashResult | None = None
 
 
 def outcomes(
@@ -79,11 +80,11 @@ def _outcome(
         slot=slot,
         run=run,
         drivers={} if fall is None else fall_contributions(run.path, fall),
-        steady_pound=_with_a_steady_pound(weights, episode, panel, rebalancing),
+        shares_in_dollars=_with_shares_in_dollars(weights, episode, panel, rebalancing),
     )
 
 
-def _with_a_steady_pound(
+def _with_shares_in_dollars(
     weights: Mapping[Block, float], episode: Episode, panel: Panel, rebalancing: Rebalancing
 ) -> CrashResult | None:
     if not panel.dollar_returns.keys() & weights.keys():

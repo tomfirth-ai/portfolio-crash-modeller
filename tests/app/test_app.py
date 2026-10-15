@@ -9,6 +9,7 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
+from crashmodel.app import state
 from crashmodel.app.components import footer
 from crashmodel.app.presenters import data_sources, design, home, stress_test
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
@@ -25,6 +26,7 @@ from tests.app.running import (
     PAGES,
     STRESS_TEST_PAGE,
     button,
+    button_group,
     button_groups,
     captions,
     click,
@@ -167,7 +169,7 @@ def test_the_stress_test_shows_every_example_through_a_crash(
 
 def test_choosing_another_crash_tells_its_story(monkeypatch: pytest.MonkeyPatch) -> None:
     app = stress_test_page(monkeypatch, FakeLibrary())
-    button_groups(app)[0].set_value(COVID.key).run()
+    button_group(app, state.CRASH).set_value(COVID.key).run()
 
     assert stress_test.EPISODE_STORIES[COVID.key] in [markdown.value for markdown in app.markdown]
 

@@ -226,12 +226,13 @@ def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> No
     assert stress_test.chart_view([outcome]).splits == ("*Mine*",)
 
 
-def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_high() -> None:
+def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_start() -> None:
     mixed = Split(name="Mixed", percentages={Block.US_SHARES: 60, Block.UK_BONDS: 40})
     returns = panel(us_shares=(-0.40, 0.0, 0.0, 0.0), uk_bonds=(0.10, 0.0, 0.0, 0.0))
     [outcome] = stress.outcomes(in_slots(mixed), EPISODE, returns)
     assert stress_test.card(outcome, EPISODE).why == (
-        "Of every £100 at its high, US shares lost £24.00 and UK government bonds made back £4.00.",
+        "Of every £100 it had at the start, US shares lost £24.00 and UK government bonds made "
+        "back £4.00 on the way down to its low in the crash phase.",
     )
 
 
@@ -249,7 +250,7 @@ def with_dollars(pounds: tuple[float, ...], dollars: tuple[float, ...]) -> Panel
     )
 
 
-STEADY = "Had the pound held steady against the dollar, it would"
+IN_DOLLARS = "With its shares' returns counted in dollars rather than pounds, it would"
 
 
 @pytest.mark.parametrize(
@@ -258,25 +259,26 @@ STEADY = "Had the pound held steady against the dollar, it would"
         (
             -0.10,
             -0.25,
-            f"{STEADY} have fallen 25% at worst in the crash phase rather than 10%: "
-            "the pound's moves cushioned it.",
+            f"{IN_DOLLARS} have fallen 25% at worst in the crash phase rather than 10%: "
+            "the pound's moves against the dollar cushioned it.",
         ),
         (
             -0.25,
             -0.10,
-            f"{STEADY} have fallen 10% at worst in the crash phase rather than 25%: "
-            "the pound's moves made it worse.",
+            f"{IN_DOLLARS} have fallen 10% at worst in the crash phase rather than 25%: "
+            "the pound's moves against the dollar made it worse.",
         ),
         (
             -0.10,
             0.00,
-            f"{STEADY} not have fallen in the crash phase: the pound's moves made it worse.",
+            f"{IN_DOLLARS} not have fallen in the crash phase: the pound's moves against the "
+            "dollar made it worse.",
         ),
         (
             0.01,
             -0.10,
-            f"{STEADY} have fallen 10% at worst in the crash phase: the pound's moves "
-            "cushioned it.",
+            f"{IN_DOLLARS} have fallen 10% at worst in the crash phase: the pound's moves "
+            "against the dollar cushioned it.",
         ),
     ],
 )
@@ -303,6 +305,23 @@ def test_a_fall_too_small_to_show_in_pence_needs_no_breakdown() -> None:
     tiny = Split(name="Tiny", percentages={Block.US_SHARES: 50, Block.UK_BONDS: 50})
     returns = panel(us_shares=(-0.00002, 0.0, 0.0, 0.0), uk_bonds=(0.0,) * 4)
     [outcome] = stress.outcomes(in_slots(tiny), EPISODE, returns)
+    assert outcome.run is not None
+    assert outcome.run.result.fall is not None
+    assert stress_test.card(outcome, EPISODE).why == ()
+
+
+def test_a_fall_is_never_put_down_to_gains_alone() -> None:
+    """Two holdings lose less than half a penny each per £100, while cash makes back a penny."""
+    mixed = Split(
+        name="Mixed",
+        percentages={Block.GLOBAL_SHARES: 20, Block.UK_BONDS: 60, Block.CASH: 20},
+    )
+    returns = panel(
+        global_shares=(-0.0002, 0.0, 0.0, 0.0),
+        uk_bonds=(-0.00005, 0.0, 0.0, 0.0),
+        cash=(0.0003, 0.0, 0.0, 0.0),
+    )
+    [outcome] = stress.outcomes(in_slots(mixed), EPISODE, returns)
     assert outcome.run is not None
     assert outcome.run.result.fall is not None
     assert stress_test.card(outcome, EPISODE).why == ()

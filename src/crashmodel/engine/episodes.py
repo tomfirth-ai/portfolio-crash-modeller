@@ -41,7 +41,8 @@ class Episode:
 
 DOT_COM = Episode(key="2000-03", start=Month(2000, 2), crash_end=Month(2003, 3), end=Month(2005, 2))
 """Starts before the technology bubble burst in March 2000; the crash phase ends as the Iraq war
-began in March 2003, after the 2001 recession and the September 2001 attacks."""
+began in March 2003, after the US recession of 2001, the September 2001 attacks and the accounting
+scandals of 2002."""
 
 GLOBAL_FINANCIAL_CRISIS = Episode(
     key="2007-09", start=Month(2007, 6), crash_end=Month(2009, 6), end=Month(2012, 6)

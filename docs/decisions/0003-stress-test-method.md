@@ -35,9 +35,9 @@ project may use, and explainable in plain words.
   `r_GBP = (1 + r_USD) * X[t-1] / X[t] - 1`. The returns multiply, never add; the dropped cross
   term is large in a crash. H.10 rates are noon New York rates, a few hours away from the month-end
   closes behind the share returns, which adds small timing noise.
-- **Kept at its weights.** Each split is put back to its weights at every month end, as ready-made
-  multi-asset funds are, so results describe the split as designed. Costs, fees and taxes are left
-  out. Leaving a split alone to drift is a later option.
+- **Kept at its weights, by default.** Each split is put back to its weights at every month end,
+  much as ready-made multi-asset funds keep a fixed mix, so results describe the split as designed.
+  Costs, fees and taxes are left out. Leaving a split alone to drift was added in Slice 2 (below).
 - **Fixed crash windows from events**, shared by every split:
 
   | Crash | Worth 100 at the end of | Crash phase ends | Window ends |
@@ -49,7 +49,8 @@ project may use, and explainable in plain words.
   The starts come before each crash broke (the technology bubble bursting in March 2000; the credit
   crunch in August 2007; the first reported cases at the end of 2019). The 2007-09 and 2020 crash
   phases end with the recessions' troughs; the dot-com crash phase ends with the start of the Iraq
-  war in March 2003, after the 2001 recession and the September 2001 attacks. The windows are not
+  war in March 2003, after the US recession of 2001, the September 2001 attacks and the accounting
+  scandals of 2002. The windows are not
   anchored on any index's peak, so nothing about them depends on data that may change or may not be
   committed.
 - **A split gets a result only if every block it holds covers the whole window.** Otherwise it says
@@ -86,10 +87,13 @@ project may use, and explainable in plain words.
   sum of its holdings' gains over the months in between, so each holding's share of the fall is its
   own gains as a fraction of the value at the high. The shares add up to the fall, with no
   remainder to explain away.
-- **What the pound did.** For a split holding dollar shares, the same split is also run with those
-  shares' returns left in dollars, as if the pound had held steady against the dollar. The
-  difference is what the exchange rate did to a sterling investor. It is a what-if, not a hedged
-  return: hedging would also earn or pay the interest-rate gap between the two currencies.
+- **What the pound did.** For a split holding shares, the same split is also run with the share
+  returns left in US dollars, while bonds and cash stay in pounds. The difference shows what the
+  pound's moves against the dollar did to a sterling investor. It is exact for US shares. For global
+  shares it is approximate: that index is priced in dollars but holds UK and other non-US
+  companies, so its dollar returns still carry their own currencies' moves, and its UK part gains a
+  pound-dollar effect a sterling investor never had. It is a what-if, not a hedged return: hedging
+  would also earn or pay the interest-rate gap between the two currencies.
 - **A third crash.** The dot-com crash joins the two windows above, measured the same way. Every
   block covers it: the developed-markets returns start in July 1990 and the gilt yield in December
   1993.

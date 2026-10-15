@@ -16,6 +16,10 @@ type SessionState = MutableMapping[str | int, Any]
 
 SLOTS = "slots"
 """The session key holding the four slots, which no widget uses."""
+CRASH = "crash"
+"""The key of the Stress-test page's crash picker, which keeps its choice for the session."""
+MANAGEMENT = "management"
+"""The key of the Stress-test page's picker for how splits are managed."""
 NAME = "name"
 INCLUDED = "included"
 TEMPLATE = "template"

@@ -42,3 +42,23 @@ def test_only_the_months_from_the_high_to_the_bottom_count(rebalancing: Rebalanc
     contributions = fall_contributions(path, fall)
     assert sum(contributions.values()) == pytest.approx(-fall.depth)
     assert contributions["shares"] < 0 < contributions["bonds"]
+
+
+def test_three_holdings_share_a_fall_exactly() -> None:
+    """Kept at 50/30/20, the split loses 20% of 50, 10% of 30 and gains 5% of 20 in one month.
+
+    That is -10, -3 and +1 out of 100: a 12% fall.
+    """
+    returns_by_holding = {
+        "shares": returns(-0.20),
+        "bonds": returns(-0.10),
+        "cash": returns(0.05),
+    }
+    weights = {"shares": 0.5, "bonds": 0.3, "cash": 0.2}
+    path = portfolio_path(weights, returns_by_holding, START, START + 1)
+    fall = crash_result(path.values, START + 1).fall
+    assert fall is not None
+    assert fall.depth == pytest.approx(0.12)
+    assert fall_contributions(path, fall) == pytest.approx(
+        {"shares": -0.10, "bonds": -0.03, "cash": 0.01}
+    )

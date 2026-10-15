@@ -17,8 +17,8 @@ from crashmodel.app.presenters.format import (
     pounds,
     pounds_and_pence,
 )
-from crashmodel.app.presenters.names import display_names, markdown_text
-from crashmodel.app.splits import Slot, example_slots
+from crashmodel.app.presenters.names import markdown_text
+from crashmodel.app.splits import Slot, display_names, example_slots
 from crashmodel.app.stress import SplitOutcome
 from crashmodel.data.blocks import Block
 from crashmodel.data.french import Vintage
@@ -36,13 +36,13 @@ NO_SPLITS = "There is no split to test yet. Switch one on, and make it add up to
 CRASH_PICKER = "Crash"
 MANAGEMENT_PICKER = "How each split is managed"
 MANAGEMENT_NAMES = {
-    Rebalancing.MONTHLY.value: "Kept at its weights",
+    Rebalancing.MONTHLY.value: "Kept at its percentages",
     Rebalancing.NEVER.value: "Left alone",
 }
 MANAGEMENT_HELP = (
-    "Kept at its weights: put back to its percentages at the end of every month, as ready-made "
-    "multi-asset funds do. Left alone: bought once and never changed, so whatever does well grows "
-    "to a larger share."
+    "Kept at its percentages: put back to them at the end of every month, much as ready-made "
+    "multi-asset funds keep a fixed mix. Left alone: bought once and never changed, so whatever "
+    "does well grows to a larger share."
 )
 TRY_AGAIN = "Try again"
 FETCHING = "Fetching share returns..."
@@ -74,9 +74,9 @@ EPISODE_NAMES = {
 EPISODE_STORIES = {
     DOT_COM.key: (
         "Technology shares had soared in the late 1990s. The bubble burst in March 2000, and the "
-        "fall deepened through the 2001 recession and the September 2001 attacks. Measured from "
-        "February 2000, the crash phase runs to March 2003, when the Iraq war began, and recovery "
-        "is judged by February 2005."
+        "fall deepened through the US recession of 2001, the September 2001 attacks and the "
+        "accounting scandals of 2002. Measured from February 2000, the crash phase runs to March "
+        "2003, when the Iraq war began, and recovery is judged by February 2005."
     ),
     GLOBAL_FINANCIAL_CRISIS.key: (
         "Banks' losses on US mortgage debt froze lending in August 2007 and turned into a global "
@@ -204,16 +204,27 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
             )
         else:
             sentences = (*_fall_sentences(name, fall, episode), ending)
-    return CrashCard(title=name, sentences=sentences, why=_why(outcome))
+    return CrashCard(title=name, sentences=sentences, why=_why(outcome, episode))
 
 
-def _why(outcome: SplitOutcome) -> tuple[str, ...]:
-    reasons = (_drivers_sentence(outcome.drivers), _pound_sentence(outcome))
+def _why(outcome: SplitOutcome, episode: Episode) -> tuple[str, ...]:
+    fall = None if outcome.run is None else outcome.run.result.fall
+    drivers = None if fall is None else _drivers_sentence(outcome.drivers, _high(fall, episode))
+    reasons = (drivers, _pound_sentence(outcome))
     return tuple(reason for reason in reasons if reason is not None)
 
 
-def _drivers_sentence(drivers: Mapping[Block, float]) -> str | None:
-    """Say how much each holding lost or made back, out of every £100 at the high."""
+def _high(fall: Fall, episode: Episode) -> str:
+    """Name the high a fall is measured from, as the card does: the start, or a later high."""
+    return "the start" if fall.peak == episode.start else "its high"
+
+
+def _drivers_sentence(drivers: Mapping[Block, float], high: str) -> str | None:
+    """Say how much each holding lost or made back on the way down, per £100 at the high.
+
+    Nothing is said for a split of one holding, or when no loss is big enough to show in pence,
+    so a fall is never put down to gains alone.
+    """
     if len(drivers) < MINIMUM_HOLDINGS_TO_EXPLAIN:
         return None
     ordered = sorted(drivers.items(), key=lambda item: abs(item[1]), reverse=True)
@@ -230,26 +241,32 @@ def _drivers_sentence(drivers: Mapping[Block, float]) -> str | None:
         for block, share, amount in amounts
         if share > 0 and amount != NOTHING
     ]
-    if not lost + made_back:
+    if not lost:
         return None
-    return f"Of every £100 at its high, {listed(lost + made_back)}."
+    return (
+        f"Of every £100 it had at {high}, {listed(lost + made_back)} on the way down to its low "
+        "in the crash phase."
+    )
 
 
 def _pound_sentence(outcome: SplitOutcome) -> str | None:
-    """Say how the fall would have differed had the pound held steady against the dollar."""
-    if outcome.run is None or outcome.steady_pound is None:
+    """Say how the fall would have differed with the share returns counted in dollars."""
+    if outcome.run is None or outcome.shares_in_dollars is None:
         return None
-    actual, steady = _depth(outcome.run.result), _depth(outcome.steady_pound)
-    if percent(actual) == percent(steady):
+    actual, in_dollars = _depth(outcome.run.result), _depth(outcome.shares_in_dollars)
+    if percent(actual) == percent(in_dollars):
         return None
-    start = "Had the pound held steady against the dollar, it would"
-    effect = "cushioned it" if steady > actual else "made it worse"
-    if not steady:
-        return f"{start} not have fallen in the crash phase: the pound's moves made it worse."
+    start = "With its shares' returns counted in dollars rather than pounds, it would"
+    effect = "cushioned it" if in_dollars > actual else "made it worse"
+    if not in_dollars:
+        return (
+            f"{start} not have fallen in the crash phase: the pound's moves against the dollar "
+            "made it worse."
+        )
     rather = f" rather than {percent(actual)}" if actual else ""
     return (
-        f"{start} have fallen {percent(steady)} at worst in the crash phase{rather}: the pound's "
-        f"moves {effect}."
+        f"{start} have fallen {percent(in_dollars)} at worst in the crash phase{rather}: the "
+        f"pound's moves against the dollar {effect}."
     )
 
 
@@ -258,9 +275,8 @@ def _depth(result: CrashResult) -> float:
 
 
 def _fall_sentences(name: str, fall: Fall, episode: Episode) -> tuple[str, ...]:
-    from_start = fall.peak == episode.start
-    high = "the start" if from_start else "its high"
-    back_to = "where it started" if from_start else "that high"
+    high = _high(fall, episode)
+    back_to = "where it started" if fall.peak == episode.start else "that high"
     if fall.months_to_recover is None:
         recovery = f"had not got back to {back_to} by {month_name(episode.end)}"
     else:

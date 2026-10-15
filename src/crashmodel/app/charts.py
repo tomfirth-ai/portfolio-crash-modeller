@@ -16,9 +16,10 @@ SPLIT_COLOURS = ("#0072B2", "#D55E00", "#009E73", "#9085E9")
 against both light and dark backgrounds."""
 SPLIT_DASHES = ((1, 0), (6, 3), (2, 2), (8, 3, 2, 3))
 """Solid, dashed, dotted and dash-dot, so the lines differ without colour too."""
-BLOCK_COLOURS = SPLIT_COLOURS
-"""The same colour-blind-safe set, in block order. Blocks are coloured only on the Design page and
-splits only on the Stress-test page, so a colour never means two things on one page."""
+BLOCK_COLOURS = ("#CC6677", "#AA4499", "#8F8F30", "#888888")
+"""Rose, purple, olive and grey, in block order, from Paul Tol's colour-blind-safe muted set and
+darkened where needed to stand out at least 3:1 on light and dark backgrounds. They share no colour
+with the splits, so a colour means one thing throughout the journey."""
 BAR_HEIGHT = 36
 """Pixels per split in the composition chart, so each bar's label has room."""
 MONTH_AXIS_FORMAT = "%b %Y"
@@ -95,7 +96,12 @@ def composition_chart(view: CompositionView) -> alt.Chart:
         .mark_bar()
         .encode(
             y=alt.Y("split:N", sort=list(view.splits), title=None),
-            x=alt.X("percent:Q", stack="zero", title=view.x_title),
+            x=alt.X(
+                "percent:Q",
+                stack="zero",
+                title=view.x_title,
+                scale=alt.Scale(domain=[0, view.x_max]),
+            ),
             color=alt.Color(
                 "block:N",
                 title=None,

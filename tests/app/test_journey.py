@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from crashmodel.app import loaders
+from crashmodel.app import loaders, state
 from crashmodel.app.charts import SPLIT_COLOURS
 from crashmodel.app.presenters import design, home, stress_test
 from crashmodel.app.splits import CAUTIOUS, EXAMPLE_SPLITS
@@ -23,7 +23,7 @@ from tests.app.running import (
     DESIGN_PAGE,
     STRESS_TEST_PAGE,
     button,
-    button_groups,
+    button_group,
     captions,
     click,
     click_through,
@@ -84,7 +84,10 @@ def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
         "and took another 5 months to get back to that high. £100 at the start was worth £100 by "
         "June 2012."
     ) in paragraphs
-    assert "Of every £100 at its high, global shares lost £20.00." in paragraphs
+    assert (
+        "Of every £100 it had at its high, global shares lost £20.00 on the way down to its low "
+        "in the crash phase."
+    ) in paragraphs
 
 
 def test_a_split_left_alone_ends_where_its_drifted_weights_take_it() -> None:
@@ -93,7 +96,7 @@ def test_a_split_left_alone_ends_where_its_drifted_weights_take_it() -> None:
     The 50% rise in March 2009 lifts it only to 95, so it is not back at its high by June 2012.
     """
     app = designed_half_and_half()
-    button_groups(app)[1].set_value(Rebalancing.NEVER.value).run()
+    button_group(app, state.MANAGEMENT).set_value(Rebalancing.NEVER.value).run()
 
     row = app.table[0].value.to_dict("records")[0]
     assert (row["Months to get back"], row["£100 became"]) == ("Not by June 2012", "£95")
@@ -158,11 +161,20 @@ def test_a_visitors_splits_survive_a_visit_to_another_page() -> None:
 
 def test_the_chosen_crash_survives_a_visit_to_another_page() -> None:
     app = run_app(STRESS_TEST_PAGE)
-    button_groups(app)[0].set_value(COVID.key).run()
+    button_group(app, state.CRASH).set_value(COVID.key).run()
     app.switch_page(DESIGN_PAGE).run()
     app.switch_page(STRESS_TEST_PAGE).run()
 
-    assert button_groups(app)[0].value == COVID.key
+    assert button_group(app, state.CRASH).value == COVID.key
+
+
+def test_the_chosen_way_of_managing_splits_survives_a_visit_to_another_page() -> None:
+    app = run_app(STRESS_TEST_PAGE)
+    button_group(app, state.MANAGEMENT).set_value(Rebalancing.NEVER.value).run()
+    app.switch_page(DESIGN_PAGE).run()
+    app.switch_page(STRESS_TEST_PAGE).run()
+
+    assert button_group(app, state.MANAGEMENT).value == Rebalancing.NEVER.value
 
 
 def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
