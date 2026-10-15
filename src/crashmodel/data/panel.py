@@ -7,7 +7,7 @@ why it has no result instead of failing.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from crashmodel.data.blocks import SHARE_BLOCKS, Block
 from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET, FrenchFile, MarketReturns, Vintage
@@ -30,11 +30,14 @@ class Panel:
         returns: Each available block's monthly returns in pounds, as decimals.
         unavailable: Blocks whose data could not be fetched.
         vintages: For share blocks with data, which monthly update of the library it comes from.
+        dollar_returns: For share blocks with data, their returns in US dollars, before
+            conversion: what a sterling investor would have earned had the pound held steady.
     """
 
     returns: Mapping[Block, MonthlySeries]
     unavailable: frozenset[Block]
     vintages: Mapping[Block, Vintage]
+    dollar_returns: Mapping[Block, MonthlySeries] = field(default_factory=dict)
 
 
 def stored_returns() -> dict[Block, MonthlySeries]:
@@ -52,13 +55,16 @@ def build_panel(markets: Mapping[Block, MarketReturns | None]) -> Panel:
     usd_per_gbp = stored(USD_PER_GBP)
     returns = stored_returns()
     vintages: dict[Block, Vintage] = {}
+    dollar_returns: dict[Block, MonthlySeries] = {}
     for block in SHARE_BLOCKS:
         market = markets.get(block)
         if market is not None:
             returns[block] = to_home_currency(market.returns, usd_per_gbp)
             vintages[block] = market.vintage
+            dollar_returns[block] = market.returns
     return Panel(
         returns=returns,
         unavailable=frozenset(SHARE_BLOCKS - returns.keys()),
         vintages=vintages,
+        dollar_returns=dollar_returns,
     )

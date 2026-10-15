@@ -32,6 +32,7 @@ def test_share_returns_are_converted_to_pounds_at_the_stored_rates() -> None:
     )
     assert panel.vintages == {Block.US_SHARES: VINTAGE}
     assert panel.unavailable == {Block.GLOBAL_SHARES}
+    assert panel.dollar_returns == {Block.US_SHARES: ZERO_DOLLAR_RETURNS.returns}
 
 
 def test_without_share_data_bonds_and_cash_still_have_returns() -> None:
