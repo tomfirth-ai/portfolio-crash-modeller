@@ -68,9 +68,9 @@ an S&P 500 tracker, a money market fund. Two constraints shape how:
   - no logos, and never "replica", "clone" or "stand-in", which would present a model as an imitation
     of the fund;
   - no claim of how closely a model follows its index or fund.
-- **Funds that launched after a crash began.** The card says the fund did not exist until its
-  launch month, so for that crash its figures show how a fund tracking its index, at the same
-  charge, would have done.
+- **Funds that launched after a crash began.** The card names them with their launch months, and
+  says that their figures, like every figure in the app, come from a model of the index each
+  tracks, after its charge.
 
 ## Consequences
 

@@ -17,7 +17,7 @@ from crashmodel.engine.attribution import fall_contributions
 from crashmodel.engine.charges import after_yearly_charge
 from crashmodel.engine.drawdown import CrashResult
 from crashmodel.engine.episodes import Episode, EpisodeRun, missing_holdings, run_episode
-from crashmodel.engine.months import MonthlySeries
+from crashmodel.engine.months import Month, MonthlySeries
 from crashmodel.engine.portfolio import Rebalancing
 
 
@@ -38,6 +38,9 @@ class SplitOutcome:
             through with their returns counted in US dollars rather than pounds, which shows what
             the pound's moves against the dollar did; otherwise ``None``. Global indexes are priced
             in dollars but hold UK and other non-US companies, so for them this is approximate.
+        launched_late: For a split that was run, each fund it holds that was launched after the
+            crash began, with its launch month. Its figures come from its index's model all the
+            same.
     """
 
     split: Split
@@ -47,6 +50,7 @@ class SplitOutcome:
     fetch_failed: bool = False
     drivers: Mapping[HoldingId, float] = field(default_factory=dict)
     shares_in_dollars: CrashResult | None = None
+    launched_late: Mapping[HoldingId, Month] = field(default_factory=dict)
 
 
 def runnable(slots: Sequence[Slot]) -> list[tuple[int, Split]]:
@@ -112,7 +116,18 @@ def _outcome(
         run=run,
         drivers={} if fall is None else fall_contributions(run.path, fall),
         shares_in_dollars=_with_shares_in_dollars(weights, returns, episode, panel, rebalancing),
+        launched_late=_launched_after(weights, episode.start),
     )
+
+
+def _launched_after(weights: Mapping[HoldingId, float], start: Month) -> dict[HoldingId, Month]:
+    """The funds held that were launched after the crash began, with their launch months."""
+    funds = ((holding, HOLDINGS_BY_ID[holding].fund) for holding in weights)
+    return {
+        holding: fund.launched
+        for holding, fund in funds
+        if fund is not None and fund.launched > start
+    }
 
 
 def _after_charges(

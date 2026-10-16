@@ -7,6 +7,7 @@ from crashmodel.data.panel import Panel
 from crashmodel.engine.episodes import Episode
 from crashmodel.engine.months import Month, MonthlySeries
 from crashmodel.engine.portfolio import Rebalancing
+from tests.app.example_funds import use_example_funds
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 8), end=Month(2007, 9))
 US_ONLY = Slot(split=Split(name="US", percentages={"sp500": 100}))
@@ -85,3 +86,47 @@ def test_holdings_without_data_are_named_once_each_in_the_order_they_appear() ->
     slots = [CASH_ONLY, HALF_AND_HALF, US_ONLY]
     assert stress.unavailable_holdings(slots, offline) == ["sp500"]
     assert stress.unavailable_holdings(slots, panel()) == []
+
+
+@pytest.fixture
+def example_funds(monkeypatch: pytest.MonkeyPatch) -> None:
+    use_example_funds(monkeypatch)
+
+
+def flat_shares(dollars: MonthlySeries) -> Panel:
+    flat = series(0.0, 0.0, 0.0)
+    return Panel(
+        returns={IndexModel.US_LARGE: flat, IndexModel.STERLING_CASH: flat},
+        unavailable=frozenset(),
+        vintages={},
+        dollar_returns={IndexModel.US_LARGE: dollars},
+    )
+
+
+@pytest.mark.usefixtures("example_funds")
+def test_a_funds_charge_comes_off_its_returns_in_pounds_and_in_dollars() -> None:
+    """A fund charging 0.1% a month keeps 0.999 of each month: flat in pounds, up 1% in dollars."""
+    fund = Slot(split=Split(name="Fund", percentages={"late": 100}))
+    [outcome] = stress.outcomes([fund], EPISODE, flat_shares(series(0.01, 0.01, 0.01)))
+    assert outcome.run is not None
+    assert outcome.shares_in_dollars is not None
+    assert outcome.run.result.end_value == pytest.approx(100 * 0.999**3)
+    assert outcome.shares_in_dollars.end_value == pytest.approx(100 * (1.01 * 0.999) ** 3)
+
+
+@pytest.mark.usefixtures("example_funds")
+def test_only_funds_held_and_launched_after_the_crash_began_are_launched_late() -> None:
+    """The crash begins in June 2007: EARLY launched in May, START in June, LATE in August."""
+    split = Split(
+        name="Mixed", percentages={"early": 25, "start": 25, "late": 25, "sp500": 25, "later": 0}
+    )
+    [outcome] = stress.outcomes([Slot(split=split)], EPISODE, panel())
+    assert outcome.launched_late == {"late": Month(2007, 8)}
+
+
+@pytest.mark.usefixtures("example_funds")
+def test_a_split_that_could_not_be_run_has_no_launch_months() -> None:
+    offline = panel(unavailable=frozenset({IndexModel.US_LARGE}))
+    late = Slot(split=Split(name="Late", percentages={"late": 100}))
+    [outcome] = stress.outcomes([late], EPISODE, offline)
+    assert (outcome.run, outcome.launched_late) == (None, {})

@@ -20,7 +20,7 @@ from crashmodel.app.presenters.holdings import holding_list, holding_name, short
 from crashmodel.app.presenters.names import markdown_text
 from crashmodel.app.splits import Slot, display_names, example_slots
 from crashmodel.app.stress import SplitOutcome
-from crashmodel.data.catalogue import HOLDINGS_BY_ID, HoldingId
+from crashmodel.data.catalogue import HoldingId
 from crashmodel.data.french import PORTFOLIO_FILES, PortfolioFile, Vintage
 from crashmodel.engine.drawdown import CrashResult, Fall
 from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
@@ -219,30 +219,25 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
         title=name,
         sentences=sentences,
         why=_why(outcome, episode),
-        notes=_launch_notes(outcome, episode),
+        notes=_launch_notes(outcome),
     )
 
 
-def _launch_notes(outcome: SplitOutcome, episode: Episode) -> tuple[str, ...]:
-    """Say which funds did not yet exist when the crash began, so their figures are only models."""
-    late = [
-        (short_name(holding), month_name(fund.launched))
-        for holding in outcome.split.percentages
-        if (fund := HOLDINGS_BY_ID[holding].fund) is not None and fund.launched > episode.start
-    ]
-    if not late:
+def _launch_notes(outcome: SplitOutcome) -> tuple[str, ...]:
+    """Name the funds launched after the crash began, whose figures are modelled like the rest."""
+    if not outcome.launched_late:
         return ()
-    if len(late) == 1:
-        [(name, launched)] = late
+    names = [short_name(holding) for holding in outcome.launched_late]
+    launches = [month_name(month) for month in outcome.launched_late.values()]
+    if len(names) == 1:
         return (
-            f"{name} did not exist until {launched}, so for this crash its figures show how a fund "
-            "tracking its index at the same charge would have done.",
+            f"{names[0]} was launched after this crash began, in {launches[0]}. Its figures, like "
+            "every figure here, come from a model of the index it tracks, after its charge.",
         )
-    names, launches = zip(*late, strict=True)
     return (
-        f"{listed(names)} did not exist when this crash began: they launched in "
-        f"{listed(launches)}. For this crash their figures show how funds tracking their indexes "
-        "at the same charges would have done.",
+        f"{listed(names)} were launched after this crash began, in {listed(launches)}. Their "
+        "figures, like every figure here, come from models of the indexes they track, after their "
+        "charges.",
     )
 
 
