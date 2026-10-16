@@ -1,7 +1,9 @@
 import pytest
 
 from crashmodel.engine.episodes import (
+    BOND_CRASH,
     COVID,
+    DOT_COM,
     EPISODES,
     EPISODES_BY_KEY,
     GLOBAL_FINANCIAL_CRISIS,
@@ -12,9 +14,15 @@ from crashmodel.engine.episodes import (
 from crashmodel.engine.months import Month, MonthlySeries
 
 
-def test_each_episode_spans_five_years_of_returns() -> None:
-    for episode in EPISODES:
-        assert episode.end - episode.start == 60
+def test_the_crashes_are_listed_oldest_first_with_their_windows() -> None:
+    windows = [(episode.key, episode.start, episode.crash_end, episode.end) for episode in EPISODES]
+    assert windows == [
+        ("2000-03", Month(2000, 2), Month(2003, 3), Month(2005, 2)),
+        ("2007-09", Month(2007, 6), Month(2009, 6), Month(2012, 6)),
+        ("2020", Month(2019, 12), Month(2020, 6), Month(2024, 12)),
+        ("2022-23", Month(2021, 12), Month(2023, 10), Month(2024, 12)),
+    ]
+    assert list(EPISODES) == [DOT_COM, GLOBAL_FINANCIAL_CRISIS, COVID, BOND_CRASH]
 
 
 def test_the_financial_crisis_needs_returns_from_july_2007_to_june_2012() -> None:

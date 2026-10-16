@@ -6,7 +6,7 @@ three months:
 
 - the **start**, at whose end every split is worth 100, chosen before the crash broke;
 - the **end of the crash phase**, after which a fall belongs to another story;
-- the **end of the window**, five years after the start, by which recovery is judged.
+- the **end of the window**, by which recovery is judged.
 """
 
 from collections.abc import Mapping
@@ -54,7 +54,13 @@ COVID = Episode(key="2020", start=Month(2019, 12), crash_end=Month(2020, 6), end
 """Starts as the first cases were reported at the end of 2019; the crash phase ends with the record
 fall in output in the second quarter of 2020."""
 
-EPISODES = (DOT_COM, GLOBAL_FINANCIAL_CRISIS, COVID)
+BOND_CRASH = Episode(
+    key="2022-23", start=Month(2021, 12), crash_end=Month(2023, 10), end=Month(2024, 12)
+)
+"""Starts as the Bank of England began raising Bank Rate in December 2021; the crash phase ends in
+October 2023, after the last rise, in August 2023, with gilt yields at their highest."""
+
+EPISODES = (DOT_COM, GLOBAL_FINANCIAL_CRISIS, COVID, BOND_CRASH)
 """Every crash, oldest first."""
 EPISODES_BY_KEY = {episode.key: episode for episode in EPISODES}
 

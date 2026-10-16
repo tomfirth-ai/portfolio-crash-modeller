@@ -24,7 +24,13 @@ from crashmodel.data.catalogue import HoldingId
 from crashmodel.data.french import PORTFOLIO_FILES, PortfolioFile, Vintage
 from crashmodel.data.reference_data import SONIA_ATTRIBUTION
 from crashmodel.engine.drawdown import CrashResult, Fall
-from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
+from crashmodel.engine.episodes import (
+    BOND_CRASH,
+    COVID,
+    DOT_COM,
+    GLOBAL_FINANCIAL_CRISIS,
+    Episode,
+)
 from crashmodel.engine.portfolio import STARTING_VALUE, Rebalancing
 
 TITLE = STRESS_TEST.title
@@ -79,6 +85,7 @@ EPISODE_NAMES = {
     DOT_COM.key: "2000-03 dot-com crash",
     GLOBAL_FINANCIAL_CRISIS.key: "2007-09 financial crisis",
     COVID.key: "2020 Covid crash",
+    BOND_CRASH.key: "2022-23 bond crash",
 }
 EPISODE_STORIES = {
     DOT_COM.key: (
@@ -95,7 +102,17 @@ EPISODE_STORIES = {
     COVID.key: (
         "Lockdowns in early 2020 caused the sharpest fall in output on record. Measured from "
         "December 2019, the crash phase runs to June 2020, and recovery is judged by December "
-        "2024. Rising interest rates in 2022 hit bonds hard within that time."
+        "2024. Rising interest rates in 2022 hit bonds hard within that time: see the 2022-23 "
+        "bond crash."
+    ),
+    BOND_CRASH.key: (
+        "Prices rose fast after the pandemic, and faster still when Russia's invasion of Ukraine "
+        "in February 2022 drove up energy costs. The Bank of England raised Bank Rate from "
+        "December 2021, step by step to 5.25% by August 2023, and as interest rates rose, bond "
+        "prices fell. Long-dated gilts fell furthest, worst after the government's mini-budget in "
+        "September 2022, when the Bank stepped in to buy them. Shares fell too. Measured from "
+        "December 2021, the crash phase runs to October 2023, and recovery is judged by December "
+        "2024."
     ),
 }
 
