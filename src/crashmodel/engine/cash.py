@@ -1,12 +1,13 @@
-"""The return on cash that earns Bank Rate.
+"""The return on cash that earns an overnight rate, such as SONIA or Bank Rate.
 
-Interest accrues each calendar day at the rate in force that day, weekends and holidays included,
-and is credited at the end of the month:
+Interest is earned each calendar day at the rate in force that day, weekends and holidays included,
+and added to the balance, so each day's interest earns interest too:
 
-    r_month = sum over the month's days of (rate that day in percent) / 100 / 365
+    r_month = product over the month's days of (1 + (rate that day in percent) / 100 / 365) - 1
 
-Bank Rate is the Bank of England's policy rate, not what a saver is actually paid, so this is a
-yardstick for cash rather than any account's return.
+This is how SONIA's own compounded index grows. SONIA is the rate banks pay each other overnight
+and Bank Rate the Bank of England's policy rate; neither is what a saver is actually paid, so this
+is a yardstick for cash rather than any account's return.
 """
 
 from collections.abc import Sequence
@@ -46,11 +47,11 @@ def monthly_cash_returns(observations: Sequence[tuple[date, float]], last: Month
     returns: list[tuple[Month, float]] = []
     current = 0
     for month in month_range(first, last):
-        accrued = 0.0
+        growth = 1.0
         for offset in range(month.days):
             day = month.first_day + timedelta(days=offset)
             while current + 1 < len(observations) and days[current + 1] <= day:
                 current += 1
-            accrued += observations[current][1] / PERCENT / DAYS_IN_YEAR
-        returns.append((month, accrued))
+            growth *= 1 + observations[current][1] / PERCENT / DAYS_IN_YEAR
+        returns.append((month, growth - 1))
     return MonthlySeries.from_pairs(returns)

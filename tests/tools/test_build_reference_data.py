@@ -90,7 +90,8 @@ def test_every_series_and_its_source_note_are_written(tmp_path: Path) -> None:
         "2020-01,1.5000",
     ]
     cash = (tmp_path / "boe-bank-rate/cash_return.csv").read_text().splitlines()
-    assert cash[1:] == ["2020-01,0.0031000000", "2020-02,0.0029000000", "2020-03,0.0061000000"]
+    # 3.65% a year is 0.0001 a day, compounded: 31 and 29 days, then a day at 3.65% and 30 at 7.3%.
+    assert cash[1:] == ["2020-01,0.0031046545", "2020-02,0.0029040637", "2020-03,0.0061180343"]
     source = (tmp_path / "fed-h10/SOURCE.md").read_text()
     assert "Public domain" in source
     assert "Retrieved:** 2020-04-15" in source
