@@ -47,7 +47,6 @@ MANAGEMENT_HELP = (
 TRY_AGAIN = "Try again"
 FETCHING = "Fetching share data..."
 TABLE_HEADING = "Side by side"
-CHART_HEADING = "What £100 became"
 DATA_HEADING = "Where the data comes from"
 SIMULATED = (
     "Simulated past performance: these figures come from models, not from any fund's or index's "

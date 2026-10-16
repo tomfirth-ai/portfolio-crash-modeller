@@ -1,4 +1,4 @@
-"""Stress-test: how each split came through a real crash, in words, figures and a chart."""
+"""Stress-test: how each split came through a real crash, in a chart, then in words and figures."""
 
 from itertools import batched
 
@@ -27,9 +27,13 @@ st.page_link(navigation.design_page(), label=presenter.CHANGE_SPLITS, icon=":mat
 if note := presenter.left_out_note(slots):
     st.warning(note, icon=":material/rule:")
 
-# Strings are the options, because Streamlit reads a dataclass as a mapping. Both choices are kept
-# for the session, so they survive a visit to another page.
-with st.container(horizontal=True):
+notices = st.container()
+# The crash picker and the chart share one panel, so the chart stays in place while the visitor
+# flicks between crashes, and the stories follow below.
+panel_box = st.container(border=True)
+with panel_box, st.container(horizontal=True):
+    # Strings are the options, because Streamlit reads a dataclass as a mapping. Both choices are
+    # kept for the session, so they survive a visit to another page.
     key = st.segmented_control(
         presenter.CRASH_PICKER,
         list(EPISODES_BY_KEY),
@@ -52,18 +56,26 @@ with st.container(horizontal=True):
         wrap=True,
     )
 episode = EPISODES_BY_KEY[key]
-st.write(presenter.EPISODE_STORIES[episode.key])
 
-with st.spinner(presenter.FETCHING):
+with panel_box, st.spinner(presenter.FETCHING):
     panel = loaders.load_panel(stress.models_held(slots))
 if unavailable := stress.unavailable_holdings(slots, panel):
-    st.warning(presenter.offline_banner(unavailable), icon=":material/cloud_off:")
-    st.button(presenter.TRY_AGAIN, icon=":material/refresh:", on_click=loaders.try_again)
+    with notices:
+        st.warning(presenter.offline_banner(unavailable), icon=":material/cloud_off:")
+        st.button(presenter.TRY_AGAIN, icon=":material/refresh:", on_click=loaders.try_again)
 
 results = stress.outcomes(slots, episode, panel, Rebalancing(management))
 if not results:
-    st.info(presenter.NO_SPLITS, icon=":material/info:")
+    with panel_box:
+        st.info(presenter.NO_SPLITS, icon=":material/info:")
     st.stop()
+chart = presenter.chart_view(results)
+if chart.points:
+    with panel_box:
+        st.altair_chart(value_chart(chart), width="stretch")
+        st.caption(presenter.SIMULATED)
+
+st.write(presenter.EPISODE_STORIES[episode.key])
 for row in batched(results, CARDS_PER_ROW):
     # Borders go on the cards, not the columns, so a row with one card shows no empty box.
     for column, outcome in zip(st.columns(CARDS_PER_ROW), row, strict=False):
@@ -78,12 +90,6 @@ for row in batched(results, CARDS_PER_ROW):
 
 st.subheader(presenter.TABLE_HEADING, anchor=False)
 st.table([presenter.table_row(outcome, episode) for outcome in results], hide_index=True)
-
-chart = presenter.chart_view(results)
-if chart.points:
-    st.subheader(presenter.CHART_HEADING, anchor=False)
-    st.caption(presenter.SIMULATED)
-    st.altair_chart(value_chart(chart), width="stretch")
 
 st.subheader(presenter.DATA_HEADING, anchor=False)
 st.caption(presenter.CAVEAT)

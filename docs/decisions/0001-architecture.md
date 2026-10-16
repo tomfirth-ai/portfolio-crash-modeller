@@ -12,7 +12,9 @@ correctness and privacy matter more than feature count.
 
 - **The four-step journey is the spine of the product.** Design, Stress-test, Decide and Track are
   defined once in a registry that every page reads from. Pages say things in words first, then
-  numbers, then charts.
+  numbers, then charts. Amended 16 October 2026: on Stress-test the chart comes first, in one panel
+  with the crash picker, so it stays in place while a visitor flicks between crashes; each split's
+  story and figures follow.
 - **Three layers with one-way dependencies.**
   - `engine/` holds every financial calculation as pure, typed functions with tests.
   - `data/` fetches, validates and stores series, and owns all I/O.

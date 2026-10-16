@@ -18,7 +18,9 @@ Private context, when present, lives in the git-ignored `CLAUDE.local.md` and `p
 
 ## Product
 - The user journey is the spine: **Design** a split, **Stress-test** it through real crashes, **Decide** and
-  lock one in, **Track** it. Every page serves that story: words first, then numbers, then charts.
+  lock one in, **Track** it. Every page serves that story: words first, then numbers, then charts. The
+  exception is Stress-test, whose chart sits under the crash picker so it stays put while a visitor
+  flicks between crashes.
 - "Not investment advice" appears in the README and on every page. Never describe a split as best, safe,
   recommended or suitable.
 
