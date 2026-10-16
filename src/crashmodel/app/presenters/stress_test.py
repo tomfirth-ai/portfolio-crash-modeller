@@ -225,11 +225,24 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
 
 def _launch_notes(outcome: SplitOutcome, episode: Episode) -> tuple[str, ...]:
     """Say which funds did not yet exist when the crash began, so their figures are only models."""
-    return tuple(
-        f"{short_name(holding)} did not exist until {month_name(fund.launched)}, so for this "
-        "crash its figures show how a fund tracking its index at the same charge would have done."
+    late = [
+        (short_name(holding), month_name(fund.launched))
         for holding in outcome.split.percentages
         if (fund := HOLDINGS_BY_ID[holding].fund) is not None and fund.launched > episode.start
+    ]
+    if not late:
+        return ()
+    if len(late) == 1:
+        [(name, launched)] = late
+        return (
+            f"{name} did not exist until {launched}, so for this crash its figures show how a fund "
+            "tracking its index at the same charge would have done.",
+        )
+    names, launches = zip(*late, strict=True)
+    return (
+        f"{listed(names)} did not exist when this crash began: they launched in "
+        f"{listed(launches)}. For this crash their figures show how funds tracking their indexes "
+        "at the same charges would have done.",
     )
 
 

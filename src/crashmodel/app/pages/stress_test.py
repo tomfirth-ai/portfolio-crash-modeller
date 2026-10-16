@@ -65,9 +65,10 @@ if not results:
     st.info(presenter.NO_SPLITS, icon=":material/info:")
     st.stop()
 for row in batched(results, CARDS_PER_ROW):
-    for column, outcome in zip(st.columns(CARDS_PER_ROW, border=True), row, strict=False):
+    # Borders go on the cards, not the columns, so a row with one card shows no empty box.
+    for column, outcome in zip(st.columns(CARDS_PER_ROW), row, strict=False):
         card = presenter.card(outcome, episode)
-        with column:
+        with column, st.container(border=True, height="stretch"):
             st.subheader(card.title, anchor=False)
             st.write(card.text)
             if card.why:

@@ -353,11 +353,23 @@ LATE_FUND = Holding(
     ),
 )
 """A made-up fund launched during the test crash, charging 1.2% a year: 0.1% a month."""
+LATER_FUND = Holding(
+    id="later",
+    index=S_AND_P_500,
+    fund=Fund(
+        provider="Vanguard",
+        name="Example S&P 500 UCITS ETF Dist",
+        ticker="LATER",
+        yearly_charge=Decimal("1.2"),
+        launched=Month(2007, 9),
+        documented=date(2026, 1, 1),
+    ),
+)
 
 
 @pytest.fixture
 def late_fund(monkeypatch: pytest.MonkeyPatch) -> None:
-    catalogue = {**HOLDINGS_BY_ID, LATE_FUND.id: LATE_FUND}
+    catalogue = {**HOLDINGS_BY_ID, LATE_FUND.id: LATE_FUND, LATER_FUND.id: LATER_FUND}
     for module in (stress, stress_test, holdings):
         monkeypatch.setattr(module, "HOLDINGS_BY_ID", catalogue)
 
@@ -369,6 +381,17 @@ def test_a_fund_launched_after_the_crash_began_is_said_to_be_only_a_model() -> N
     assert stress_test.card(outcome, EPISODE).notes_text == (
         "LATE did not exist until August 2007, so for this crash its figures show how a fund "
         "tracking its index at the same charge would have done."
+    )
+
+
+@pytest.mark.usefixtures("late_fund")
+def test_funds_launched_after_the_crash_began_share_one_note() -> None:
+    split = Split(name="Late", percentages={"late": 40, "sp500": 20, "later": 40})
+    [outcome] = stress.outcomes(in_slots(split), EPISODE, panel(us_shares=(0.0,) * 4))
+    assert stress_test.card(outcome, EPISODE).notes_text == (
+        "LATE and LATER did not exist when this crash began: they launched in August 2007 and "
+        "September 2007. For this crash their figures show how funds tracking their indexes at "
+        "the same charges would have done."
     )
 
 
