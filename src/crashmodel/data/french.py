@@ -34,6 +34,9 @@ RETURN_RANGE = (-100.0, 300.0)
 ceiling only catches a garbled value."""
 MISSING_DATA = (-99.99, -999.0)
 MINIMUM_MONTHS = 12
+LARGEST_DECIMAL_RETURN = 1.0
+"""Over a year or more, some month's return in percent passes 1, while returns written as
+decimals, such as 0.03 for 3%, never do."""
 MAX_DOWNLOAD_BYTES = 1_000_000
 """The zips are at most a few hundred kilobytes; anything far larger is not the expected file."""
 MAX_CSV_BYTES = 5_000_000
@@ -201,7 +204,7 @@ def parse_portfolios(text: str, file: PortfolioFile) -> Portfolios:
     if [month for month, _ in firms] != months or [month for month, _ in sizes] != months:
         raise ValueError("the sections cover different months")
     percents = [value for _, row in returns for value in row if value is not None]
-    if percents and all(abs(value) < 1 / PERCENT for value in percents):
+    if percents and all(abs(value) < LARGEST_DECIMAL_RETURN for value in percents):
         raise ValueError("the returns look like decimals, not percent")
     return Portfolios(
         portfolios={

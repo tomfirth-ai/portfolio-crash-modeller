@@ -107,6 +107,13 @@ def every_month(cell: Cell) -> Values:
     return values
 
 
+def in_decimals(column: str, month: Month) -> Cell:
+    """Returns of 1%, -2%, 3% and -1% written as decimals, as a file in the wrong unit would be."""
+    percent, firms, size = steady(column, month)
+    assert percent is not None
+    return percent / 100, firms, size
+
+
 def implausible(field: int, value: float) -> Values:
     def values(column: str, month: Month) -> Cell:
         cell = list(steady(column, month))
@@ -149,9 +156,7 @@ def implausible(field: int, value: float) -> Values:
         pytest.param(six(values=implausible(0, -100.0)), "plausible range", id="lost everything"),
         pytest.param(six(values=implausible(0, 300.0)), "plausible range", id="garbled gain"),
         pytest.param(six(values=implausible(1, 10.5)), "whole number", id="part of a firm"),
-        pytest.param(
-            six(values=every_month((0.001, 10, 100))), "decimals", id="decimals not percent"
-        ),
+        pytest.param(six(values=in_decimals), "decimals", id="decimals not percent"),
     ],
 )
 def test_anything_unexpected_is_refused(text: str, message: str) -> None:
