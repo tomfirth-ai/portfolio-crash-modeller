@@ -20,9 +20,11 @@ KIND_COLOURS = ("#CC6677", "#8F8F30", "#888888")
 """Rose for shares, olive for bonds and grey for cash, from Paul Tol's colour-blind-safe muted set
 and darkened where needed to stand out at least 3:1 on light and dark backgrounds. They share no
 colour with the splits, so a colour means one thing throughout the journey."""
-SEPARATOR = "#FFFFFF"
+LIGHT_PAGE, DARK_PAGE = "#FFFFFF", "#0E1117"
+"""Streamlit's light and dark page backgrounds."""
 SEPARATOR_WIDTH = 1
-"""A thin line between holdings, so two of the same kind side by side stay apart."""
+"""A thin line between holdings, in the page's own colour, so two of the same kind side by side
+stay apart without framing the bar."""
 BAR_HEIGHT = 36
 """Pixels per split in the composition chart, so each bar's label has room."""
 MONTH_AXIS_FORMAT = "%b %Y"
@@ -85,8 +87,13 @@ def value_chart(view: ValueChartView) -> alt.LayerChart:
     return alt.LayerChart(layer=[start, lines])
 
 
-def composition_chart(view: CompositionView) -> alt.Chart:
-    """Draw one bar per split, divided into its holdings and coloured by their kind."""
+def composition_chart(view: CompositionView, *, dark: bool = False) -> alt.Chart:
+    """Draw one bar per split, divided into its holdings and coloured by their kind.
+
+    Args:
+        view: The splits and what each holds.
+        dark: Whether the page is dark, so the lines between holdings match it.
+    """
     data = alt.InlineData(
         values=[
             {
@@ -102,7 +109,7 @@ def composition_chart(view: CompositionView) -> alt.Chart:
     kinds = list(view.kinds)
     chart: alt.Chart = (
         alt.Chart(data, height=alt.Step(BAR_HEIGHT))
-        .mark_bar(stroke=SEPARATOR, strokeWidth=SEPARATOR_WIDTH)
+        .mark_bar(stroke=DARK_PAGE if dark else LIGHT_PAGE, strokeWidth=SEPARATOR_WIDTH)
         .encode(
             y=alt.Y("split:N", sort=list(view.splits), title=None),
             x=alt.X(

@@ -93,7 +93,8 @@ for row in batched(enumerate(slots), CARDS_PER_ROW):
 composition = presenter.composition_view(slots)
 if composition.points:
     st.subheader(presenter.COMPOSITION_HEADING, anchor=False)
-    st.altair_chart(composition_chart(composition), width="stretch")
+    dark = st.context.theme.type == "dark"
+    st.altair_chart(composition_chart(composition, dark=dark), width="stretch")
 
 blocker = presenter.next_blocker(slots)
 if st.button(

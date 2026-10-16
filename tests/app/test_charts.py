@@ -3,8 +3,10 @@ from typing import Any
 import pytest
 
 from crashmodel.app.charts import (
+    DARK_PAGE,
     KIND_COLOURS,
     LEGEND_COLUMNS,
+    LIGHT_PAGE,
     SPLIT_COLOURS,
     SPLIT_DASHES,
     composition_chart,
@@ -79,8 +81,12 @@ def test_the_composition_chart_stacks_each_splits_holdings_coloured_by_kind() ->
     assert chart["mark"]["strokeWidth"] > 0
 
 
-LIGHT_BACKGROUND, DARK_BACKGROUND = "#FFFFFF", "#0E1117"
-"""Streamlit's light and dark page backgrounds."""
+@pytest.mark.parametrize(("dark", "page"), [(False, LIGHT_PAGE), (True, DARK_PAGE)])
+def test_the_lines_between_holdings_match_the_page(dark: bool, page: str) -> None:
+    view = CompositionView(points=(), splits=())
+    assert composition_chart(view, dark=dark).to_dict()["mark"]["stroke"] == page
+
+
 GRAPHICS_CONTRAST = 3.0
 """The contrast WCAG asks of shapes that carry meaning, such as lines and bars."""
 
@@ -99,8 +105,8 @@ def contrast(first: str, second: str) -> float:
 
 @pytest.mark.parametrize("colour", [*SPLIT_COLOURS, *KIND_COLOURS])
 def test_every_chart_colour_stands_out_on_light_and_dark_pages(colour: str) -> None:
-    assert contrast(colour, LIGHT_BACKGROUND) >= GRAPHICS_CONTRAST
-    assert contrast(colour, DARK_BACKGROUND) >= GRAPHICS_CONTRAST
+    assert contrast(colour, LIGHT_PAGE) >= GRAPHICS_CONTRAST
+    assert contrast(colour, DARK_PAGE) >= GRAPHICS_CONTRAST
 
 
 def test_kinds_and_splits_never_share_a_colour() -> None:
