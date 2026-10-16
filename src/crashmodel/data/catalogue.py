@@ -50,15 +50,39 @@ FTSE_GILTS_ALL_STOCKS = TrackedIndex(
     model=IndexModel.UK_GILTS_ALL,
     short_name="FTSE All Stocks gilts",
 )
+BLOOMBERG_UK_GILT = TrackedIndex(name="Bloomberg UK Gilt", model=IndexModel.UK_GILTS_ALL)
+BLOOMBERG_GILT_FLOAT_ADJUSTED = TrackedIndex(
+    name="Bloomberg Sterling Gilt Float Adjusted", model=IndexModel.UK_GILTS_ALL
+)
+"""A float adjusted index counts each gilt less the amount the Bank of England holds of it.
+
+The models ignore the adjustment (ADR 0006).
+"""
 FTSE_GILTS_UP_TO_5_YEARS = TrackedIndex(
     name="FTSE Actuaries UK Conventional Gilts Up to 5 Years",
     model=IndexModel.UK_GILTS_SHORT,
     short_name="FTSE gilts up to 5 years",
 )
+BLOOMBERG_UK_GILT_1_TO_5_YEARS = TrackedIndex(
+    name="Bloomberg UK Gilt 1-5 Year", model=IndexModel.UK_GILTS_SHORT
+)
+BLOOMBERG_UK_GILT_1_TO_5_YEARS_FLOAT_ADJUSTED = TrackedIndex(
+    name="Bloomberg UK Gilt 1-5 Year Float Adjusted", model=IndexModel.UK_GILTS_SHORT
+)
+JP_MORGAN_UK_SHORT_TERM = TrackedIndex(
+    name="J.P. Morgan GBI United Kingdom Short-term Custom Maturity",
+    model=IndexModel.UK_GILTS_SHORT,
+)
 FTSE_GILTS_OVER_15_YEARS = TrackedIndex(
     name="FTSE Actuaries UK Conventional Gilts Over 15 Years",
     model=IndexModel.UK_GILTS_LONG,
     short_name="FTSE gilts over 15 years",
+)
+BLOOMBERG_UK_GILT_15_YEARS = TrackedIndex(
+    name="Bloomberg UK Gilt 15+ Year", model=IndexModel.UK_GILTS_LONG
+)
+BLOOMBERG_UK_GOVERNMENT_15_YEARS_FLOAT_ADJUSTED = TrackedIndex(
+    name="Bloomberg U.K. Government 15+ Years Float Adjusted", model=IndexModel.UK_GILTS_LONG
 )
 SONIA = TrackedIndex(name="SONIA", model=IndexModel.STERLING_CASH)
 """The overnight rate that sterling money market funds aim to earn."""
@@ -72,8 +96,15 @@ TRACKED_INDEXES = (
     FTSE_GLOBAL_ALL_CAP,
     MSCI_ACWI_IMI,
     FTSE_GILTS_ALL_STOCKS,
+    BLOOMBERG_UK_GILT,
+    BLOOMBERG_GILT_FLOAT_ADJUSTED,
     FTSE_GILTS_UP_TO_5_YEARS,
+    BLOOMBERG_UK_GILT_1_TO_5_YEARS,
+    BLOOMBERG_UK_GILT_1_TO_5_YEARS_FLOAT_ADJUSTED,
+    JP_MORGAN_UK_SHORT_TERM,
     FTSE_GILTS_OVER_15_YEARS,
+    BLOOMBERG_UK_GILT_15_YEARS,
+    BLOOMBERG_UK_GOVERNMENT_15_YEARS_FLOAT_ADJUSTED,
     SONIA,
 )
 """Every index a holding is or tracks, in the order the picker groups them."""

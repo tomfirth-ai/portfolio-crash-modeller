@@ -61,6 +61,27 @@ MSCI ACWI,Xtrackers,Scalable MSCI AC World Xtrackers UCITS ETF 1C,SCXW,0.15,2024
 MSCI ACWI,SPDR,State Street SPDR MSCI All Country World UCITS ETF (Acc),ACWI,0.12,2011-05,2026-02-19
 FTSE Global All Cap,Vanguard,Vanguard FTSE Global All Cap Index Fund A GBP Accumulation Shares,,0.23,2016-11,2026-02-17
 FTSE Global All Cap,Vanguard,Vanguard FTSE Global All-Cap UCITS ETF (USD) Accumulating Shares,VALL,0.07,2026-08,2026-08-20
+FTSE Actuaries UK Conventional Gilts All Stocks,Amundi,Amundi Core UK Government Bond UCITS ETF Dist,GILS,0.05,2016-10,2026-02-11
+FTSE Actuaries UK Conventional Gilts All Stocks,Fidelity,Fidelity Index UK Gilt Fund P Accumulation Shares,,0.10,2020-08,2026-01-30
+FTSE Actuaries UK Conventional Gilts All Stocks,HSBC,UK Gilt Index Fund Accumulation C,,0.11,2012-09,2026-07-09
+FTSE Actuaries UK Conventional Gilts All Stocks,iShares,iShares Core UK Gilts UCITS ETF GBP (Dist),IGLT,0.07,2006-12,2026-02-09
+FTSE Actuaries UK Conventional Gilts All Stocks,iShares,iShares UK Gilts All Stocks Index Fund (UK) Class D Accumulating GBP,,0.11,2012-06,2026-02-09
+Bloomberg UK Gilt,Invesco,Invesco UK Gilts UCITS ETF Acc,GLTA,0.06,2019-06,2026-06-26
+Bloomberg UK Gilt,Invesco,Invesco UK Gilts UCITS ETF Dist,GLTP,0.06,2019-03,2026-06-26
+Bloomberg UK Gilt,SPDR,State Street SPDR Bloomberg UK Gilt UCITS ETF (Dist),GLTY,0.15,2012-05,2026-02-19
+Bloomberg Sterling Gilt Float Adjusted,Vanguard,Vanguard U.K. Gilt UCITS ETF (GBP) Accumulating,VGVA,0.05,2019-02,2026-02-17
+Bloomberg Sterling Gilt Float Adjusted,Vanguard,Vanguard U.K. Gilt UCITS ETF (GBP) Distributing,VGOV,0.05,2012-05,2026-02-17
+FTSE Actuaries UK Conventional Gilts Up to 5 Years,Amundi,Amundi UK Government Bond 0-5Y UCITS ETF Dist,GIL5,0.05,2016-07,2026-02-11
+FTSE Actuaries UK Conventional Gilts Up to 5 Years,iShares,iShares UK Gilts 0-5yr UCITS ETF GBP (Acc),IGL5,0.07,2023-05,2026-02-09
+FTSE Actuaries UK Conventional Gilts Up to 5 Years,iShares,iShares UK Gilts 0-5yr UCITS ETF GBP (Dist),IGLS,0.07,2009-04,2026-02-09
+Bloomberg UK Gilt 1-5 Year,Invesco,Invesco UK Gilt 1-5 Year UCITS ETF Dist,GLT5,0.06,2019-03,2026-06-26
+Bloomberg UK Gilt 1-5 Year,SPDR,State Street SPDR Bloomberg 1-5 Year Gilt UCITS ETF (Dist),GLTS,0.15,2012-05,2026-02-19
+Bloomberg UK Gilt 1-5 Year Float Adjusted,Vanguard,Vanguard U.K. Short-Term Gilt Index Fund GBP Accumulation Shares,,0.12,2025-06,2026-02-17
+J.P. Morgan GBI United Kingdom Short-term Custom Maturity,L&G,L&G UK Gilt 0-5 Year UCITS ETF (Share Class GBP Distributing ETF),UKG5,0.06,2020-12,2026-06-30
+FTSE Actuaries UK Conventional Gilts Over 15 Years,iShares,iShares Over 15 Years Gilts Index Fund (UK) Class D Accumulating GBP,,0.11,2017-03,2026-02-09
+Bloomberg UK Gilt 15+ Year,Invesco,Invesco UK Gilt 15+ Year UCITS ETF Dist,GT15,0.06,2025-07,2026-06-26
+Bloomberg UK Gilt 15+ Year,SPDR,State Street SPDR Bloomberg 15+ Year Gilt UCITS ETF (Dist),GLTL,0.15,2012-05,2026-02-19
+Bloomberg U.K. Government 15+ Years Float Adjusted,Vanguard,Vanguard U.K. Long Duration Gilt Index Fund A GBP Accumulation Shares,,0.12,2011-02,2026-02-17
 SONIA,Invesco,Invesco GBP Overnight Return Swap UCITS ETF Acc,GONS,0.10,2025-10,2026-06-26
 SONIA,iShares,iShares £ Overnight Rate Swap UCITS ETF GBP (Acc),SCSH,0.10,2026-07,2026-07-24
 SONIA,UBS,UBS GBP Overnight Rate SF UCITS ETF GBP acc,GBPO,0.05,2025-05,2026-03-16

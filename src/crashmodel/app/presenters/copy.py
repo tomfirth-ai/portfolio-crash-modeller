@@ -15,9 +15,10 @@ NOT_AFFILIATED = (
 TRADE_MARKS = (
     "S&P 500 and SPDR are trade marks of Standard & Poor's Financial Services LLC, and SPDR is "
     "used by State Street under licence. MSCI is a trade mark of MSCI Inc. FTSE is a trade mark of "
-    'the London Stock Exchange Group companies. The trade marks "Bank of England" and "SONIA" are '
-    "registered trade marks of the Bank of England. Other fund names are trade marks of their fund "
-    "managers or of the firms that license them."
+    "the London Stock Exchange Group companies. Bloomberg is a trade mark of Bloomberg Finance "
+    'L.P. J.P. Morgan is a trade mark of JPMorgan Chase & Co. The trade marks "Bank of England" '
+    'and "SONIA" are registered trade marks of the Bank of England. Other fund names are trade '
+    "marks of their fund managers or of the firms that license them."
 )
 
 SOURCE_CODE = "Source code and design notes"

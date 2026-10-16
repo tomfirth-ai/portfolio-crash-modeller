@@ -52,8 +52,15 @@ FUND_INDEXES = (
     "FTSE Global All Cap",
     "MSCI ACWI IMI",
     "FTSE Actuaries UK Conventional Gilts All Stocks",
+    "Bloomberg UK Gilt",
+    "Bloomberg Sterling Gilt Float Adjusted",
     "FTSE Actuaries UK Conventional Gilts Up to 5 Years",
+    "Bloomberg UK Gilt 1-5 Year",
+    "Bloomberg UK Gilt 1-5 Year Float Adjusted",
+    "J.P. Morgan GBI United Kingdom Short-term Custom Maturity",
     "FTSE Actuaries UK Conventional Gilts Over 15 Years",
+    "Bloomberg UK Gilt 15+ Year",
+    "Bloomberg U.K. Government 15+ Years Float Adjusted",
     "SONIA",
 )
 FUND_PROVIDERS = (
