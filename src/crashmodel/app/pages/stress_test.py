@@ -69,7 +69,7 @@ if not results:
     with panel_box:
         st.info(presenter.NO_SPLITS, icon=":material/info:")
     st.stop()
-chart = presenter.chart_view(results)
+chart = presenter.chart_view(results, episode)
 if chart.points:
     with panel_box:
         st.altair_chart(value_chart(chart), width="stretch")

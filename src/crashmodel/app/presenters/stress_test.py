@@ -71,6 +71,7 @@ CHART_Y_TITLE = "Value of £100 (£)"
 CHART_SPLIT = "Split"
 CHART_MONTH = "Month end"
 CHART_VALUE = "Value (£)"
+CRASH_PHASE_LABEL = "Crash phase"
 
 EPISODE_NAMES = {
     DOT_COM.key: "2000-03 dot-com crash",
@@ -145,11 +146,18 @@ class ChartPoint:
 
 @dataclass(frozen=True, kw_only=True)
 class ValueChartView:
-    """The chart of the value of £100 through a crash."""
+    """The chart of the value of £100 through a crash.
+
+    Attributes:
+        crash_phase: The first and last month ends of the crash phase, shaded on the chart, or
+            ``None`` for no shading.
+    """
 
     points: tuple[ChartPoint, ...]
     splits: tuple[str, ...]
     slots: tuple[int, ...]
+    crash_phase: tuple[str, str] | None = None
+    crash_phase_label: str = CRASH_PHASE_LABEL
     x_title: str = CHART_X_TITLE
     y_title: str = CHART_Y_TITLE
     split_title: str = CHART_SPLIT
@@ -359,8 +367,8 @@ def table_row(outcome: SplitOutcome, episode: Episode) -> dict[str, str]:
     return dict(zip(COLUMNS, cells, strict=True))
 
 
-def chart_view(results: Sequence[SplitOutcome]) -> ValueChartView:
-    """The value of £100 in each split that could be run, month by month."""
+def chart_view(results: Sequence[SplitOutcome], episode: Episode) -> ValueChartView:
+    """The value of £100 in each split that could be run, month by month, through the crash."""
     drawn = [(outcome, outcome.run) for outcome in results if outcome.run is not None]
     points = tuple(
         ChartPoint(split=outcome.split.name, month=f"{month}-01", value=value)
@@ -371,6 +379,7 @@ def chart_view(results: Sequence[SplitOutcome]) -> ValueChartView:
         points=points,
         splits=tuple(outcome.split.name for outcome, _ in drawn),
         slots=tuple(outcome.slot for outcome, _ in drawn),
+        crash_phase=(f"{episode.start}-01", f"{episode.crash_end}-01"),
     )
 
 

@@ -156,8 +156,9 @@ def test_table_rows_give_the_figures() -> None:
 
 def test_the_chart_draws_only_splits_that_could_be_run() -> None:
     results = stress.outcomes(in_slots(ALL_IN, BONDS_ONLY), EPISODE, panel(gilts=(0.0,) * 4))
-    view = stress_test.chart_view(results)
+    view = stress_test.chart_view(results, EPISODE)
     assert (view.splits, view.slots) == (("Bonds",), (1,))
+    assert view.crash_phase == ("2007-06-01", "2007-09-01")
     assert view.points[0] == stress_test.ChartPoint(split="Bonds", month="2007-06-01", value=100)
     assert len(view.points) == 5
 
@@ -236,7 +237,7 @@ def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> No
     [outcome] = stress.outcomes(in_slots(starred), EPISODE, panel(gilts=(0.0,) * 4))
     assert stress_test.card(outcome, EPISODE).title == r"\*Mine\*"
     assert stress_test.table_row(outcome, EPISODE)["Split"] == r"\*Mine\*"
-    assert stress_test.chart_view([outcome]).splits == ("*Mine*",)
+    assert stress_test.chart_view([outcome], EPISODE).splits == ("*Mine*",)
 
 
 def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_start() -> None:

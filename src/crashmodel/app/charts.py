@@ -30,6 +30,11 @@ BAR_HEIGHT = 36
 MONTH_AXIS_FORMAT = "%b %Y"
 MONTH_TOOLTIP_FORMAT = "%B %Y"
 POUNDS_FORMAT = ",.0f"
+CRASH_PHASE_COLOUR = "#888888"
+CRASH_PHASE_OPACITY = 0.12
+"""A faint grey band behind the lines, which reads on light and dark pages alike."""
+CRASH_PHASE_LABEL_OFFSET = 4
+"""Pixels between the band's corner and its label."""
 LEGEND_COLUMNS = 2
 """Four splits in one row overflow a phone screen; two rows of two fit at any width."""
 
@@ -84,7 +89,29 @@ def value_chart(view: ValueChartView) -> alt.LayerChart:
         .mark_rule(strokeDash=[2, 2], opacity=0.6)
         .encode(y="value:Q")
     )
-    return alt.LayerChart(layer=[start, lines])
+    return alt.LayerChart(layer=[*_crash_phase(view), start, lines])
+
+
+def _crash_phase(view: ValueChartView) -> list[alt.Chart]:
+    """Shade the crash phase behind the lines, and name it in the band's top corner."""
+    if view.crash_phase is None:
+        return []
+    first, last = view.crash_phase
+    band = alt.Chart(
+        alt.InlineData(values=[{"first": first, "last": last, "label": view.crash_phase_label}])
+    ).encode(
+        x=alt.X("utcyearmonth(first):T", title=view.x_title, scale=alt.Scale(type="utc")),
+        x2="utcyearmonth(last):T",
+    )
+    shade: alt.Chart = band.mark_rect(color=CRASH_PHASE_COLOUR, opacity=CRASH_PHASE_OPACITY)
+    label: alt.Chart = band.mark_text(
+        align="left",
+        baseline="top",
+        dx=CRASH_PHASE_LABEL_OFFSET,
+        dy=CRASH_PHASE_LABEL_OFFSET,
+        color=CRASH_PHASE_COLOUR,
+    ).encode(text="label:N", y=alt.value(0))
+    return [shade, label]
 
 
 def composition_chart(view: CompositionView, *, dark: bool = False) -> alt.Chart:

@@ -123,7 +123,8 @@ def test_a_split_that_does_not_add_up_holds_back_the_next_step() -> None:
 def chart_colours(app: AppTest) -> list[str]:
     [chart] = app.get("vega_lite_chart")
     spec: dict[str, Any] = json.loads(chart.proto.spec)
-    colours: list[str] = spec["layer"][1]["encoding"]["color"]["scale"]["range"]
+    [lines] = [layer for layer in spec["layer"] if layer["mark"]["type"] == "line"]
+    colours: list[str] = lines["encoding"]["color"]["scale"]["range"]
     return colours
 
 

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -22,12 +23,18 @@ VIEW = ValueChartView(
     ),
     splits=("Cautious", "Adventurous"),
     slots=(0, 2),
+    crash_phase=("2007-06-01", "2009-06-01"),
 )
 
 
-def lines(spec: dict[str, Any]) -> dict[str, Any]:
-    layer: dict[str, Any] = spec["layer"][1]
+def layer_of(spec: dict[str, Any], mark: str) -> dict[str, Any]:
+    layers: list[dict[str, Any]] = spec["layer"]
+    [layer] = [layer for layer in layers if layer["mark"]["type"] == mark]
     return layer
+
+
+def lines(spec: dict[str, Any]) -> dict[str, Any]:
+    return layer_of(spec, "line")
 
 
 def test_each_split_keeps_the_colour_and_dash_of_its_slot() -> None:
@@ -48,9 +55,25 @@ def test_months_are_read_and_shown_in_utc() -> None:
     assert x["scale"]["type"] == "utc"
 
 
+def test_the_crash_phase_is_shaded_behind_the_lines_and_named() -> None:
+    spec = value_chart(VIEW).to_dict()
+    assert spec["layer"][0]["mark"]["type"] == "rect"
+    shade, label = layer_of(spec, "rect"), layer_of(spec, "text")
+    assert spec["datasets"][shade["data"]["name"]] == [
+        {"first": "2007-06-01", "last": "2009-06-01", "label": "Crash phase"}
+    ]
+    assert shade["encoding"]["x"]["timeUnit"] == "utcyearmonth"
+    assert label["encoding"]["text"]["field"] == "label"
+
+
+def test_no_shading_without_a_crash_phase() -> None:
+    spec = value_chart(replace(VIEW, crash_phase=None)).to_dict()
+    assert [layer["mark"]["type"] for layer in spec["layer"]] == ["rule", "line"]
+
+
 def test_a_faint_line_marks_the_starting_100() -> None:
     spec = value_chart(VIEW).to_dict()
-    start = spec["layer"][0]
+    start = layer_of(spec, "rule")
     assert start["mark"]["type"] == "rule"
     assert spec["datasets"][start["data"]["name"]] == [{"value": 100.0}]
 
