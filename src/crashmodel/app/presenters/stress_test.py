@@ -55,9 +55,9 @@ SIMULATED = (
 )
 CAVEAT = (
     "These figures are in pounds before inflation. Each fund's ongoing charge is taken off; tax on "
-    "dividends, dealing costs and platform charges are not. They use month-end values, so a fall "
-    "within a month could have been deeper. Getting back to an earlier high in pounds is not the "
-    "same as getting back your spending power."
+    "dividends, dealing costs and platform charges are not. Income a fund pays out is counted as "
+    "reinvested. They use month-end values, so a fall within a month could have been deeper. "
+    "Getting back to an earlier high in pounds is not the same as getting back your spending power."
 )
 BANK_OF_ENGLAND_CREDIT = (
     "UK gilts are modelled from the Bank of England's 10-year par gilt yield, using Swinkels' "

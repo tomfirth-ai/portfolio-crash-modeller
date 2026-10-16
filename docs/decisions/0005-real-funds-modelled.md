@@ -48,10 +48,18 @@ an S&P 500 tracker, a money market fund. Two constraints shape how:
   information document, typed in by hand with the document's date. Tax withheld on dividends, dealing
   costs, platform charges and any gap between a fund and its index beyond its charge are not
   modelled. A split that holds the index itself bears no charge.
-- **Which funds are listed.** For each index the app models, one line per tracker that UK investors
-  can buy from Amundi, Fidelity, HSBC, Invesco, iShares, L&G, SPDR, UBS, Vanguard and Xtrackers,
-  listed alphabetically. Each line holds the fund's name, ticker, index, ongoing charge and launch
-  month, from its key information document. There are no ISINs, and nothing is copied by script.
+- **Which funds are listed.** For each index the app models, every tracker that UK investors can
+  buy from Amundi, Fidelity, HSBC, Invesco, iShares, L&G, SPDR, UBS, Vanguard and Xtrackers, listed
+  alphabetically: for an ETF, each share class that trades in pounds on the London Stock Exchange,
+  under its London ticker; for an index fund, the class UK platforms usually sell. Hedged classes,
+  and money market funds that are managed actively rather than tracking SONIA, are left out. Each
+  line of `src/crashmodel/data/funds.csv` holds a fund's index, manager, name, ticker, ongoing charge
+  and share-class launch month, with the date of the key information document they come from. There
+  are no ISINs, and nothing is copied by script.
+- **The fund list and the privacy scan.** A public fund's name or ticker may also be an entry on the
+  owner's denylist, so the scan reads the fund list for numbers and dates only, and only while the
+  file has exactly the list's shape. Anything else in it is scanned in full, and tests check that
+  every line names a listed index and manager.
 - **How funds are named.** Names are used only to identify the index or fund a model describes:
   - every label says "(modelled)";
   - each page that names a fund says the app is not affiliated with, sponsored or endorsed by any

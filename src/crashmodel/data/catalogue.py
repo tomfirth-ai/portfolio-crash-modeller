@@ -1,9 +1,9 @@
 """The indexes and funds a split can hold, each linked to the model of the index it tracks.
 
 Holding an index means holding the index itself, before any charges. A fund is a real tracker that
-UK investors can buy; its facts are typed in by hand from its key information document, with that
-document's date (ADR 0005). Nothing here is a price or a return: every figure the app shows for a
-fund or an index comes from its model.
+UK investors can buy; its facts are typed by hand into ``funds.csv`` from its key information
+document, with that document's date (ADR 0005). Nothing here is a price or a return: every figure
+the app shows for a fund or an index comes from its model.
 """
 
 import re
@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from importlib.resources import files
 
 from crashmodel.data.models import IndexModel
 from crashmodel.engine.months import Month
@@ -41,6 +42,22 @@ UK_GILT = TrackedIndex(name="10-year UK gilt", model=IndexModel.UK_GILTS)
 BANK_RATE = TrackedIndex(name="Bank Rate", model=IndexModel.STERLING_CASH)
 SONIA = TrackedIndex(name="SONIA", model=IndexModel.STERLING_CASH)
 """The overnight rate sterling money market funds aim to earn, which follows Bank Rate closely."""
+
+TRACKED_INDEXES = (
+    S_AND_P_500,
+    MSCI_WORLD,
+    FTSE_DEVELOPED,
+    FTSE_ALL_WORLD,
+    MSCI_ACWI,
+    FTSE_GLOBAL_ALL_CAP,
+    MSCI_ACWI_IMI,
+    UK_GILT,
+    BANK_RATE,
+    SONIA,
+)
+"""Every index a holding is or tracks, in the order the picker groups them."""
+
+INDEXES_BY_NAME: Mapping[str, TrackedIndex] = {index.name: index for index in TRACKED_INDEXES}
 
 
 PROVIDERS = (
@@ -126,30 +143,70 @@ INDEXES: tuple[Holding, ...] = (
 )
 """Each index held directly, before any charges, in the order the picker lists them."""
 
-FUNDS: tuple[Holding, ...] = ()
-"""Every listed fund, in any order; the picker groups them by index."""
+FUND_FILE = "funds.csv"
+"""The fund list beside this module: a header, then one line per fund, typed in by hand."""
+FUND_COLUMNS = ("index", "provider", "name", "ticker", "yearly_charge", "launched", "documented")
+"""Its columns. No field holds a comma, so the file needs no quoting."""
+_CHARGE = re.compile(r"[0-9]+\.[0-9]+", re.ASCII)
+_NOT_IN_ID = re.compile(r"[^a-z0-9]+")
 
 
-TRACKED_INDEXES = (
-    S_AND_P_500,
-    MSCI_WORLD,
-    FTSE_DEVELOPED,
-    FTSE_ALL_WORLD,
-    MSCI_ACWI,
-    FTSE_GLOBAL_ALL_CAP,
-    MSCI_ACWI_IMI,
-    UK_GILT,
-    BANK_RATE,
-    SONIA,
-)
-"""Every index a holding is or tracks, in the order the picker groups them."""
+def fund_id(fund: Fund) -> HoldingId:
+    """Key a fund by its ticker in lower case or, without a ticker, by its name in snake case."""
+    if fund.ticker is not None:
+        return fund.ticker.lower()
+    return _NOT_IN_ID.sub("_", fund.name.lower()).strip("_")
+
+
+def parse_funds(text: str) -> tuple[Holding, ...]:
+    """Read the fund list.
+
+    Raises:
+        ValueError: If the header is not the list's own, or a line has the wrong number of fields,
+            names an index or provider not listed here, or has a malformed charge or date.
+    """
+    lines = text.splitlines()
+    header = ",".join(FUND_COLUMNS)
+    if not lines or lines[0] != header:
+        raise ValueError(f"{FUND_FILE} must start with the header {header!r}")
+    return tuple(_fund_line(number, line) for number, line in enumerate(lines[1:], start=2))
+
+
+def _fund_line(number: int, line: str) -> Holding:
+    where = f"{FUND_FILE}:{number}"
+    fields = line.split(",")
+    if len(fields) != len(FUND_COLUMNS):
+        raise ValueError(f"{where}: expected {len(FUND_COLUMNS)} fields")
+    index, provider, name, ticker, charge, launched, documented = fields
+    if index not in INDEXES_BY_NAME:
+        raise ValueError(f"{where}: {index!r} is not an index listed here")
+    if provider not in PROVIDERS:
+        raise ValueError(f"{where}: {provider!r} is not a listed provider")
+    if not _CHARGE.fullmatch(charge):
+        raise ValueError(f"{where}: expected a charge in percent, such as 0.12, not {charge!r}")
+    try:
+        fund = Fund(
+            provider=provider,
+            name=name,
+            ticker=ticker or None,
+            yearly_charge=Decimal(charge),
+            launched=Month.parse(launched),
+            documented=date.fromisoformat(documented),
+        )
+        return Holding(id=fund_id(fund), index=INDEXES_BY_NAME[index], fund=fund)
+    except ValueError as error:
+        raise ValueError(f"{where}: {error}") from None
+
+
+FUNDS = parse_funds(files(__package__).joinpath(FUND_FILE).read_text(encoding="utf-8"))
+"""Every listed fund, in the list's order; the picker sorts them itself."""
 
 
 def _in_picker_order(holdings: tuple[Holding, ...]) -> tuple[Holding, ...]:
     """Group holdings by index; within each, the index itself comes first, then funds by name."""
 
     def place(holding: Holding) -> tuple[int, int, str]:
-        name = "" if holding.fund is None else holding.fund.name
+        name = "" if holding.fund is None else holding.fund.name.casefold()
         return TRACKED_INDEXES.index(holding.index), holding.fund is not None, name
 
     return tuple(sorted(holdings, key=place))

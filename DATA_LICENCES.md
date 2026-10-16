@@ -33,4 +33,6 @@ or commits them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)). Nothing c
 appears in this repository. The app's Data sources page checks that each file can be reached.
 
 Fund names, tickers, ongoing charges and launch dates are facts typed in by hand from each fund's
-key information document, with the document's date. No index values or fund prices are used.
+key information document, with the document's date, into
+[`src/crashmodel/data/funds.csv`](src/crashmodel/data/funds.csv). No index values or fund prices are
+used.

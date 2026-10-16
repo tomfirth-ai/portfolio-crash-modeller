@@ -1,0 +1,58 @@
+index,provider,name,ticker,yearly_charge,launched,documented
+S&P 500,Amundi,Amundi Core S&P 500 Swap UCITS ETF Acc,SP5L,0.05,2014-12,2026-06-30
+S&P 500,Amundi,Amundi Core S&P 500 Swap UCITS ETF USD Dist,LSPX,0.05,2010-03,2026-02-11
+S&P 500,Amundi,Amundi S&P 500 Swap UCITS ETF USD Acc,500G,0.15,2018-03,2026-02-11
+S&P 500,Fidelity,Fidelity Index US Fund P Accumulation Shares,,0.06,2014-03,2026-01-30
+S&P 500,HSBC,HSBC American Index Fund Accumulation C,,0.07,2012-09,2026-02-17
+S&P 500,HSBC,HSBC S&P 500 UCITS ETF USD,HSPX,0.09,2010-05,2026-01-28
+S&P 500,HSBC,HSBC S&P 500 UCITS ETF USD (Acc),HSPS,0.09,2022-06,2026-01-28
+S&P 500,Invesco,Invesco S&P 500 UCITS ETF Acc,SPXP,0.05,2010-05,2026-06-26
+S&P 500,iShares,iShares Core S&P 500 UCITS ETF USD (Acc),CSP1,0.07,2010-05,2026-02-09
+S&P 500,iShares,iShares Core S&P 500 UCITS ETF USD (Dist),IUSA,0.07,2002-03,2026-02-09
+S&P 500,iShares,iShares S&P 500 Swap UCITS ETF USD (Acc),I500,0.05,2020-09,2026-03-06
+S&P 500,iShares,iShares S&P 500 Swap UCITS ETF USD (Dist),I50D,0.05,2022-04,2026-03-06
+S&P 500,SPDR,State Street SPDR S&P 500 UCITS ETF (Acc),SPXL,0.03,2023-10,2026-02-19
+S&P 500,SPDR,State Street SPDR S&P 500 UCITS ETF (Dist),SPX5,0.03,2012-03,2026-02-19
+S&P 500,UBS,UBS Core S&P 500 UCITS ETF USD acc,S5UA,0.03,2025-08,2026-03-16
+S&P 500,UBS,UBS Core S&P 500 UCITS ETF USD dis,UC13,0.03,2012-04,2026-03-16
+S&P 500,Vanguard,Vanguard S&P 500 UCITS ETF (USD) Accumulating,VUAG,0.07,2019-05,2026-02-17
+S&P 500,Vanguard,Vanguard S&P 500 UCITS ETF (USD) Distributing,VUSA,0.07,2012-05,2026-02-17
+S&P 500,Xtrackers,Xtrackers S&P 500 Swap UCITS ETF 1C,XSPX,0.15,2010-03,2026-02-16
+S&P 500,Xtrackers,Xtrackers S&P 500 Swap UCITS ETF 1D,XSXG,0.07,2022-06,2026-02-16
+S&P 500,Xtrackers,Xtrackers S&P 500 UCITS ETF 4C,XDPP,0.03,2022-06,2026-04-14
+MSCI World,Amundi,Amundi Core MSCI World Swap UCITS ETF Dist,MSCW,0.20,2023-04,2026-02-11
+MSCI World,Amundi,Amundi Core MSCI World UCITS ETF Acc,MWRL,0.12,2024-01,2026-02-18
+MSCI World,Amundi,Amundi MSCI World Swap II UCITS ETF Dist,WLDL,0.30,2018-09,2026-02-14
+MSCI World,Amundi,Amundi MSCI World Swap UCITS ETF EUR Acc,CW8,0.38,2018-04,2026-02-11
+MSCI World,Amundi,Amundi MSCI World Swap UCITS ETF USD Acc,CW8G,0.379,2018-04,2026-02-11
+MSCI World,HSBC,HSBC MSCI WORLD UCITS ETF Class USD,HMWO,0.15,2010-12,2026-03-03
+MSCI World,HSBC,HSBC MSCI WORLD UCITS ETF Class USD (Acc),HMWS,0.15,2022-06,2026-03-03
+MSCI World,iShares,iShares Core MSCI World UCITS ETF USD (Acc),SWDA,0.20,2009-09,2026-02-09
+MSCI World,iShares,iShares Core MSCI World UCITS ETF USD (Dist),IWDD,0.20,2023-07,2026-02-09
+MSCI World,iShares,iShares Developed World Index Fund (IE) Class D Accumulating GBP,,0.12,2017-05,2026-02-09
+MSCI World,iShares,iShares MSCI World Swap UCITS ETF USD (Acc),IWDS,0.12,2024-03,2026-03-06
+MSCI World,iShares,iShares MSCI World UCITS ETF USD (Dist),IWRD,0.50,2005-10,2026-02-09
+MSCI World,SPDR,State Street SPDR MSCI World UCITS ETF (Acc),SWLD,0.12,2019-02,2026-02-19
+MSCI World,SPDR,State Street SPDR MSCI World UCITS ETF (Dist),SWWD,0.12,2026-08,2026-07-17
+MSCI World,Xtrackers,Xtrackers MSCI World UCITS ETF 1C,XWLD,0.12,2014-07,2026-03-06
+MSCI World,Xtrackers,Xtrackers MSCI World UCITS ETF 1D,XDWP,0.12,2015-02,2026-03-06
+FTSE Developed,Vanguard,Vanguard FTSE Developed World UCITS ETF (USD) Accumulating,VHVG,0.12,2019-09,2026-02-17
+FTSE Developed,Vanguard,Vanguard FTSE Developed World UCITS ETF (USD) Distributing,VEVE,0.12,2014-09,2026-02-17
+FTSE All-World,HSBC,HSBC FTSE All-World Index Fund Accumulation C,,0.13,2014-09,2026-02-17
+FTSE All-World,Invesco,Invesco FTSE All-World UCITS ETF Acc,FWRG,0.15,2023-06,2026-06-26
+FTSE All-World,Invesco,Invesco FTSE All-World UCITS ETF Dist,FTWG,0.15,2023-06,2026-06-26
+FTSE All-World,iShares,iShares FTSE All-World UCITS ETF USD (Acc),FTAW,0.12,2026-05,2026-05-12
+FTSE All-World,Vanguard,Vanguard FTSE All-World UCITS ETF (USD) Accumulating,VWRP,0.14,2019-07,2026-07-28
+FTSE All-World,Vanguard,Vanguard FTSE All-World UCITS ETF (USD) Distributing,VWRL,0.14,2012-05,2026-07-28
+FTSE All-World,Xtrackers,Xtrackers FTSE All-World UCITS ETF 1C,ALLG,0.07,2026-04,2026-06-02
+MSCI ACWI,Amundi,Amundi MSCI All Country World Swap UCITS ETF USD Acc,ACWL,0.45,2018-11,2026-09-30
+MSCI ACWI,iShares,iShares MSCI All Country World UCITS ETF USD (Acc),SSAC,0.20,2011-10,2026-09-03
+MSCI ACWI,iShares,iShares MSCI All Country World UCITS ETF USD (Dist),ISAD,0.20,2025-10,2026-09-03
+MSCI ACWI,Xtrackers,Scalable MSCI AC World Xtrackers UCITS ETF 1C,SCXW,0.15,2024-12,2026-06-23
+MSCI ACWI,SPDR,State Street SPDR MSCI All Country World UCITS ETF (Acc),ACWI,0.12,2011-05,2026-02-19
+FTSE Global All Cap,Vanguard,Vanguard FTSE Global All Cap Index Fund A GBP Accumulation Shares,,0.23,2016-11,2026-02-17
+FTSE Global All Cap,Vanguard,Vanguard FTSE Global All-Cap UCITS ETF (USD) Accumulating Shares,VALL,0.07,2026-08,2026-08-20
+SONIA,Invesco,Invesco GBP Overnight Return Swap UCITS ETF Acc,GONS,0.10,2025-10,2026-06-26
+SONIA,iShares,iShares £ Overnight Rate Swap UCITS ETF GBP (Acc),SCSH,0.10,2026-07,2026-07-24
+SONIA,UBS,UBS GBP Overnight Rate SF UCITS ETF GBP acc,GBPO,0.05,2025-05,2026-03-16
+SONIA,Xtrackers,Xtrackers II GBP Overnight Rate Swap UCITS ETF 1D,XSTR,0.10,2007-10,2026-02-16
