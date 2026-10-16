@@ -1,7 +1,9 @@
 # 3. Stress-test method: monthly, in pounds, through fixed crash windows
 
 Date: 15 October 2026. Status: accepted. Extended in Slice 2 with a second way of managing a split,
-an explanation of each fall and a third crash (see the end).
+an explanation of each fall and a third crash (see the end). Amended by
+[ADR 0005](0005-real-funds-modelled.md): splits now hold funds and indexes, and fund charges are
+taken off.
 
 ## Context
 
