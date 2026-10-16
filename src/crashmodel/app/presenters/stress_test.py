@@ -16,11 +16,11 @@ from crashmodel.app.presenters.format import (
     pounds,
     pounds_and_pence,
 )
-from crashmodel.app.presenters.holdings import holding_list, holding_name
+from crashmodel.app.presenters.holdings import holding_list, holding_name, short_name
 from crashmodel.app.presenters.names import markdown_text
 from crashmodel.app.splits import Slot, display_names, example_slots
 from crashmodel.app.stress import SplitOutcome
-from crashmodel.data.catalogue import HoldingId
+from crashmodel.data.catalogue import HOLDINGS_BY_ID, HoldingId
 from crashmodel.data.french import PORTFOLIO_FILES, PortfolioFile, Vintage
 from crashmodel.engine.drawdown import CrashResult, Fall
 from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
@@ -110,11 +110,12 @@ COLUMNS = (
 
 @dataclass(frozen=True, kw_only=True)
 class CrashCard:
-    """One split's story in words: what happened, then why."""
+    """One split's story in words: what happened, then why, then anything to bear in mind."""
 
     title: str
     sentences: tuple[str, ...]
     why: tuple[str, ...] = ()
+    notes: tuple[str, ...] = ()
 
     @property
     def text(self) -> str:
@@ -125,6 +126,11 @@ class CrashCard:
     def why_text(self) -> str:
         """Why it happened, as one paragraph, which may be empty."""
         return " ".join(self.why)
+
+    @property
+    def notes_text(self) -> str:
+        """What to bear in mind, as one paragraph, which may be empty."""
+        return " ".join(self.notes)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -209,7 +215,22 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
             )
         else:
             sentences = (*_fall_sentences(name, fall, episode), ending)
-    return CrashCard(title=name, sentences=sentences, why=_why(outcome, episode))
+    return CrashCard(
+        title=name,
+        sentences=sentences,
+        why=_why(outcome, episode),
+        notes=_launch_notes(outcome, episode),
+    )
+
+
+def _launch_notes(outcome: SplitOutcome, episode: Episode) -> tuple[str, ...]:
+    """Say which funds did not yet exist when the crash began, so their figures are only models."""
+    return tuple(
+        f"{short_name(holding)} did not exist until {month_name(fund.launched)}, so for this "
+        "crash its figures show how a fund tracking its index at the same charge would have done."
+        for holding in outcome.split.percentages
+        if (fund := HOLDINGS_BY_ID[holding].fund) is not None and fund.launched > episode.start
+    )
 
 
 def _why(outcome: SplitOutcome, episode: Episode) -> tuple[str, ...]:

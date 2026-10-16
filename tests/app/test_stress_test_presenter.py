@@ -1,9 +1,11 @@
 from dataclasses import replace
+from datetime import date
+from decimal import Decimal
 
 import pytest
 
 from crashmodel.app import stress
-from crashmodel.app.presenters import stress_test
+from crashmodel.app.presenters import holdings, stress_test
 from crashmodel.app.presenters.format import (
     month_name,
     months,
@@ -13,6 +15,7 @@ from crashmodel.app.presenters.format import (
 )
 from crashmodel.app.presenters.holdings import holding_list
 from crashmodel.app.splits import Slot, Split, example_slots
+from crashmodel.data.catalogue import HOLDINGS_BY_ID, S_AND_P_500, Fund, Holding
 from crashmodel.data.french import DEVELOPED_BY_SIZE, US_BY_SIZE, Vintage
 from crashmodel.data.models import IndexModel
 from crashmodel.data.panel import Panel
@@ -335,3 +338,47 @@ def test_a_fall_is_never_put_down_to_gains_alone() -> None:
     assert outcome.run is not None
     assert outcome.run.result.fall is not None
     assert stress_test.card(outcome, EPISODE).why == ()
+
+
+LATE_FUND = Holding(
+    id="late",
+    index=S_AND_P_500,
+    fund=Fund(
+        name="Example S&P 500 UCITS ETF",
+        ticker="LATE",
+        yearly_charge=Decimal("1.2"),
+        launched=Month(2007, 8),
+        documented=date(2026, 1, 1),
+    ),
+)
+"""A made-up fund launched during the test crash, charging 1.2% a year: 0.1% a month."""
+
+
+@pytest.fixture
+def late_fund(monkeypatch: pytest.MonkeyPatch) -> None:
+    catalogue = {**HOLDINGS_BY_ID, LATE_FUND.id: LATE_FUND}
+    for module in (stress, stress_test, holdings):
+        monkeypatch.setattr(module, "HOLDINGS_BY_ID", catalogue)
+
+
+@pytest.mark.usefixtures("late_fund")
+def test_a_fund_launched_after_the_crash_began_is_said_to_be_only_a_model() -> None:
+    split = Split(name="Late", percentages={"late": 50, "sp500": 50})
+    [outcome] = stress.outcomes(in_slots(split), EPISODE, panel(us_shares=(0.0,) * 4))
+    assert stress_test.card(outcome, EPISODE).notes_text == (
+        "LATE did not exist until August 2007, so for this crash its figures show how a fund "
+        "tracking its index at the same charge would have done."
+    )
+
+
+@pytest.mark.usefixtures("late_fund")
+def test_a_funds_charge_comes_off_its_index_every_month() -> None:
+    """Half in the index and half in a fund charging 0.1% a month, with the index flat."""
+    split = Split(name="Late", percentages={"late": 50, "sp500": 50})
+    [outcome] = stress.outcomes(in_slots(split), EPISODE, panel(us_shares=(0.0,) * 4))
+    assert outcome.run is not None
+    assert outcome.run.path.gains["late"].values == pytest.approx((-0.05,) * 4, rel=1e-2)
+
+
+def test_no_note_for_indexes_or_funds_that_already_existed() -> None:
+    assert card_for((0.0,) * 4).notes == ()

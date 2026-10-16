@@ -72,6 +72,8 @@ for row in batched(results, CARDS_PER_ROW):
             st.write(card.text)
             if card.why:
                 st.write(card.why_text)
+            if card.notes:
+                st.caption(card.notes_text)
 
 st.subheader(presenter.TABLE_HEADING, anchor=False)
 st.table([presenter.table_row(outcome, episode) for outcome in results], hide_index=True)
