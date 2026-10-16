@@ -344,6 +344,7 @@ LATE_FUND = Holding(
     id="late",
     index=S_AND_P_500,
     fund=Fund(
+        provider="Vanguard",
         name="Example S&P 500 UCITS ETF",
         ticker="LATE",
         yearly_charge=Decimal("1.2"),

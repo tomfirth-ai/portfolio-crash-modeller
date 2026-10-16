@@ -43,11 +43,27 @@ SONIA = TrackedIndex(name="SONIA", model=IndexModel.STERLING_CASH)
 """The overnight rate sterling money market funds aim to earn, which follows Bank Rate closely."""
 
 
+PROVIDERS = (
+    "Amundi",
+    "Fidelity",
+    "HSBC",
+    "Invesco",
+    "iShares",
+    "L&G",
+    "SPDR",
+    "UBS",
+    "Vanguard",
+    "Xtrackers",
+)
+"""The fund managers whose trackers are listed, so that the list follows a rule, not a choice."""
+
+
 @dataclass(frozen=True, kw_only=True)
 class Fund:
     """A real fund's facts, as its key information document gives them.
 
     Attributes:
+        provider: The fund manager, one of :data:`PROVIDERS`.
         name: The share class's full name, as the fund manager writes it.
         ticker: Its London Stock Exchange ticker, for an exchange-traded fund; otherwise ``None``.
         yearly_charge: Its ongoing charge, in percent a year, as printed (``Decimal("0.07")``).
@@ -55,6 +71,7 @@ class Fund:
         documented: The date of the key information document the facts come from.
     """
 
+    provider: str
     name: str
     ticker: str | None
     yearly_charge: Decimal
@@ -109,7 +126,36 @@ INDEXES: tuple[Holding, ...] = (
 )
 """Each index held directly, before any charges, in the order the picker lists them."""
 
-CATALOGUE: tuple[Holding, ...] = INDEXES
+FUNDS: tuple[Holding, ...] = ()
+"""Every listed fund, in any order; the picker groups them by index."""
+
+
+TRACKED_INDEXES = (
+    S_AND_P_500,
+    MSCI_WORLD,
+    FTSE_DEVELOPED,
+    FTSE_ALL_WORLD,
+    MSCI_ACWI,
+    FTSE_GLOBAL_ALL_CAP,
+    MSCI_ACWI_IMI,
+    UK_GILT,
+    BANK_RATE,
+    SONIA,
+)
+"""Every index a holding is or tracks, in the order the picker groups them."""
+
+
+def _in_picker_order(holdings: tuple[Holding, ...]) -> tuple[Holding, ...]:
+    """Group holdings by index; within each, the index itself comes first, then funds by name."""
+
+    def place(holding: Holding) -> tuple[int, int, str]:
+        name = "" if holding.fund is None else holding.fund.name
+        return TRACKED_INDEXES.index(holding.index), holding.fund is not None, name
+
+    return tuple(sorted(holdings, key=place))
+
+
+CATALOGUE: tuple[Holding, ...] = _in_picker_order(INDEXES + FUNDS)
 """Everything a split can hold, in the order the picker lists it."""
 
 HOLDINGS_BY_ID: Mapping[HoldingId, Holding] = {holding.id: holding for holding in CATALOGUE}
