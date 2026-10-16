@@ -16,6 +16,9 @@ from crashmodel.engine.bonds import par_bond_returns
 from crashmodel.engine.currency import to_home_currency
 from crashmodel.engine.months import MonthlySeries
 
+TEN_YEARS = 10
+"""The term of the gilt the UK gilt model holds."""
+
 
 @dataclass(frozen=True, kw_only=True)
 class Panel:
@@ -38,7 +41,7 @@ class Panel:
 def stored_returns() -> dict[IndexModel, MonthlySeries]:
     """Return the models built only from data stored with the app: UK gilts and sterling cash."""
     return {
-        IndexModel.UK_GILTS: par_bond_returns(stored(GILT_YIELD)),
+        IndexModel.UK_GILTS: par_bond_returns(stored(GILT_YIELD), TEN_YEARS),
         IndexModel.STERLING_CASH: stored(CASH_RETURN),
     }
 
