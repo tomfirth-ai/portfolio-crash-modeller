@@ -6,7 +6,7 @@ import pytest
 from tests.tools.helpers import GitRunner, png, png_chunk
 from tools import check_hygiene
 from tools._report import EXIT_CLEAN, EXIT_PROBLEMS
-from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES
+from tools.policy import BLOCKED_FORMAT, BLOCKED_SUFFIXES, FUND_CATALOGUE
 
 PUBLIC_EXAMPLE_ISIN = "US0378331005"
 """A well-known, public ISIN with a valid check digit, used only as test data."""
@@ -80,6 +80,12 @@ def test_valid_isins_in_config_are_flagged(line: str) -> None:
 )
 def test_bad_check_digits_and_lower_case_names_pass(line: str) -> None:
     assert list(check_hygiene.content_problems("config/demo.yaml", f"{line}\n".encode())) == []
+
+
+def test_an_isin_in_the_fund_list_is_flagged() -> None:
+    line = f"S&P 500,Vanguard,Example {PUBLIC_EXAMPLE_ISIN} UCITS ETF,,0.07,2019-05,2026-01-01\n"
+    problems = list(check_hygiene.content_problems(FUND_CATALOGUE, line.encode()))
+    assert problems == [f"contains an ISIN; {check_hygiene.ISIN_RULE}"]
 
 
 def test_isins_outside_config_and_data_pass() -> None:

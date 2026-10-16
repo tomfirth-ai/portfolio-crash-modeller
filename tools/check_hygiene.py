@@ -30,6 +30,7 @@ from tools._report import Problem, report
 from tools._text import decode_text
 from tools.policy import (
     BLOCKED_FORMAT,
+    FUND_CATALOGUE,
     IMAGE_DIRECTORY,
     IMAGE_SUFFIXES,
     REFERENCE_DATA_DIRECTORY,
@@ -40,7 +41,8 @@ from tools.policy import (
 )
 
 MAX_FILE_BYTES = 1_000_000
-ISIN_DIRECTORIES = ("config/", "data/", REFERENCE_DATA_DIRECTORY)
+ISIN_PATHS = ("config/", "data/", REFERENCE_DATA_DIRECTORY, FUND_CATALOGUE)
+"""Where ISINs are refused: configuration, data and the fund list."""
 LUHN_DOUBLED_DIGIT_LIMIT = 9
 LUHN_MODULUS = 10
 ALPHANUMERIC_BASE = 36
@@ -51,7 +53,7 @@ _ISIN_SHAPE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}[A-Z0-9]{9}[0-9](?![A-Za-z0-9
 Underscores count as a boundary, so ``isin_US0378331005`` is caught. ISINs are upper case, and a
 case-insensitive search would mistake names such as ``portfolio005`` for one.
 """
-ISIN_RULE = "config and data hold only asset-class proxies and demo instruments"
+ISIN_RULE = "config and data name a fund only by its name and ticker"
 
 
 def is_valid_isin(candidate: str) -> bool:
@@ -82,7 +84,7 @@ def path_problems(path: str) -> Iterator[str]:
     is_image = PurePosixPath(path).suffix.lower() in IMAGE_SUFFIXES
     if is_image and not path.startswith(IMAGE_DIRECTORY):
         yield f"images belong in {IMAGE_DIRECTORY} after review"
-    if path.startswith(ISIN_DIRECTORIES) and contains_isin(path):
+    if path.startswith(ISIN_PATHS) and contains_isin(path):
         yield f"file name contains an ISIN; {ISIN_RULE}"
 
 
@@ -99,7 +101,7 @@ def content_problems(path: str, content: bytes) -> Iterator[str]:
     text = decode_text(content)
     if text is None:
         yield f"binary content; only screenshots in {IMAGE_DIRECTORY} may be binary"
-    elif path.startswith(ISIN_DIRECTORIES) and contains_isin(text):
+    elif path.startswith(ISIN_PATHS) and contains_isin(text):
         yield f"contains an ISIN; {ISIN_RULE}"
 
 

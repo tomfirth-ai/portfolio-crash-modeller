@@ -124,12 +124,14 @@ class Entry:
         sequences: Token sequences that count as a match.
         amounts: The values that count as a match, for entries that are amounts.
         is_name: Whether the entry is a two-word name, which may have initials between its words.
+        is_words: Whether the entry is words, such as a name or a ticker, not an amount or a date.
     """
 
     line: int
     sequences: tuple[tuple[str, ...], ...]
     amounts: AmountForms | None = None
     is_name: bool = False
+    is_words: bool = False
 
     @property
     def is_short(self) -> bool:
@@ -335,7 +337,7 @@ def parse_entry(line: int, raw: str) -> Entry:
     tokens = tokenise(text)
     if not tokens:
         raise DenylistError(f"denylist line {line} has no letters or digits to match")
-    return Entry(line, sequences=_word_sequences(tokens), is_name=_is_name(tokens))
+    return Entry(line, sequences=_word_sequences(tokens), is_name=_is_name(tokens), is_words=True)
 
 
 def _is_inside(path: Path, directory: Path) -> bool:

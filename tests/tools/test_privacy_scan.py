@@ -7,6 +7,7 @@ from tests.tools.sentinels import NAME_LINE, TICKER_LINE
 from tools import privacy_scan as scan
 from tools._report import EXIT_CLEAN, EXIT_CONFIG_ERROR, EXIT_PROBLEMS
 from tools.denylist import parse_entry
+from tools.policy import FUND_CATALOGUE
 
 
 def commit_file(run_git: GitRunner, repo: Path, name: str, content: bytes) -> None:
@@ -417,5 +418,63 @@ def test_a_file_in_the_reference_folder_that_is_not_a_series_is_scanned_in_full(
     (repo / REFERENCE_CSV).parent.mkdir(parents=True)
     (repo / REFERENCE_CSV).write_text(SERIES_TEXT + "total,271828\n", encoding="utf-8")
     run_git("add", REFERENCE_CSV)
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
+
+
+FUND_LIST_HEADER = "index,provider,name,ticker,yearly_charge,launched,documented\n"
+FUND_LINE = "Example Index,Example,Zebedee Quartermaine UCITS ETF,ZQXW,0.12,2019-07,2026-07-28\n"
+"""A fund whose name and ticker are denylist entries, as a public fund's may be by chance."""
+FUND_LIST = FUND_LIST_HEADER + FUND_LINE
+
+
+@pytest.mark.parametrize(
+    ("path", "text", "numbers_only"),
+    [
+        (FUND_CATALOGUE, FUND_LIST, True),
+        (FUND_CATALOGUE, FUND_LIST.replace(",ZQXW,", ",,"), True),
+        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.379,"), True),
+        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.1234,"), False),
+        ("notes/funds.csv", FUND_LIST, False),
+        (FUND_CATALOGUE, FUND_LIST_HEADER, False),
+        (FUND_CATALOGUE, FUND_LIST + "# owner: Zebedee Quartermaine\n", False),
+        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.12,note,"), False),
+        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",271828,"), False),
+        (FUND_CATALOGUE, FUND_LIST.removesuffix("\n"), False),
+    ],
+)
+def test_only_a_well_formed_fund_list_is_scanned_for_numbers_alone(
+    path: str, text: str, numbers_only: bool
+) -> None:
+    assert scan.is_numbers_only(path, text) is numbers_only
+
+
+def stage_fund_list(repo: Path, run_git: GitRunner, text: str) -> None:
+    (repo / FUND_CATALOGUE).parent.mkdir(parents=True)
+    (repo / FUND_CATALOGUE).write_text(text, encoding="utf-8")
+    run_git("add", FUND_CATALOGUE)
+
+
+def test_a_fund_list_is_clean_however_its_names_and_tickers_collide(
+    repo: Path, run_git: GitRunner, denylist: Path
+) -> None:
+    stage_fund_list(repo, run_git, FUND_LIST)
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_CLEAN
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        FUND_LIST.replace("2026-07-28", "2031-02-17"),
+        FUND_LIST.replace("UCITS ETF", "271828 UCITS ETF"),
+        FUND_LIST + "# owner: Zebedee Quartermaine\n",
+    ],
+    ids=["date", "amount", "comment"],
+)
+def test_a_fund_lists_dates_amounts_and_anything_out_of_shape_are_still_found(
+    repo: Path, run_git: GitRunner, denylist: Path, text: str
+) -> None:
+    stage_fund_list(repo, run_git, text)
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS

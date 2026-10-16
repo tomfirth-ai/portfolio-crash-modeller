@@ -40,6 +40,9 @@ IMAGE_DIRECTORY = "docs/img/"
 REFERENCE_DATA_DIRECTORY = "src/crashmodel/data/reference/"
 """Where the committed open data lives: monthly series generated from public publishers' files."""
 
+FUND_CATALOGUE = "src/crashmodel/data/funds.csv"
+"""The funds a split can hold: public names, tickers, charges and dates, typed in by hand."""
+
 PRIVATE_DIRECTORIES = frozenset({"private", "local"})
 """Directories, at any depth, that hold private or machine-local files."""
 

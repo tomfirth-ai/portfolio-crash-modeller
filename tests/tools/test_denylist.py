@@ -286,3 +286,13 @@ def test_denylist_path_comes_from_git_config_or_the_default(repo: Path, run_git:
 
 def test_an_entry_with_no_tokens_never_matches() -> None:
     assert Matcher([Entry(1, sequences=((),))]).find("anything at all") == []
+
+
+@pytest.mark.parametrize(
+    ("raw", "is_words"),
+    [("Zebedee Quartermaine", True), ("ZQXW", True), ("271828", False), ("2031-02-17", False)],
+)
+def test_names_and_tickers_are_words_while_amounts_and_dates_are_not(
+    raw: str, is_words: bool
+) -> None:
+    assert denylist.parse_entry(1, raw).is_words is is_words

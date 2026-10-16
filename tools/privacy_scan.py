@@ -43,6 +43,7 @@ from tools.denylist import (
 )
 from tools.policy import (
     BLOCKED_FORMAT,
+    FUND_CATALOGUE,
     REFERENCE_DATA_DIRECTORY,
     is_blocked_format,
     is_screenshot_path,
@@ -63,6 +64,14 @@ by chance. Package names are still scanned. The rule covers these exact paths on
 _DIGIT = re.compile(r"[0-9]")
 _MONTHLY_SERIES = re.compile(r"month,[a-z_]+\n(?:\d{4}-\d{2},-?\d+(?:\.\d+)?\n)+")
 """A committed monthly series: a ``month,<name>`` header, then ``YYYY-MM,<number>`` rows only."""
+_FUND_LINE = (
+    r"[^,\n]+,[^,\n]+,[^,\n]+,(?:[A-Z0-9]{3,5})?,"
+    r"[0-9]\.[0-9]{2,3},[0-9]{4}-[0-9]{2},[0-9]{4}-[0-9]{2}-[0-9]{2}\n"
+)
+_FUND_CATALOGUE = re.compile(
+    rf"index,provider,name,ticker,yearly_charge,launched,documented\n(?:{_FUND_LINE})+"
+)
+"""The fund list: a header, then lines of index, provider, name, ticker, charge and two dates."""
 
 
 def is_words_only(path: str, text: str) -> bool:
@@ -78,6 +87,17 @@ def is_words_only(path: str, text: str) -> bool:
         return True
     in_reference_data = path.startswith(REFERENCE_DATA_DIRECTORY) and path.endswith(".csv")
     return in_reference_data and _MONTHLY_SERIES.fullmatch(text) is not None
+
+
+def is_numbers_only(path: str, text: str) -> bool:
+    """Whether only a file's numbers and dates are scanned, because its words are public names.
+
+    Covers the fund list alone. A public fund's name or ticker may also be a denylist entry, so the
+    list's words are not scanned; its charges and dates are, like any other number. The file
+    qualifies only if it has exactly the fund list's shape, so a comment or any other text in it
+    is scanned in full, and tests in CI check that each line names a listed index and provider.
+    """
+    return path == FUND_CATALOGUE and _FUND_CATALOGUE.fullmatch(text) is not None
 
 
 @dataclass(frozen=True)
@@ -122,6 +142,7 @@ def scan_text(text: str, matcher: Matcher, location: str) -> list[Finding]:
 def scan_documents(documents: Iterable[Document], entries: Sequence[Entry]) -> list[Finding]:
     """Scan file names and contents, refusing binary data formats and unscannable binaries."""
     matcher = Matcher(entries)
+    numbers_matcher = Matcher([entry for entry in entries if not entry.is_words])
     findings: list[Finding] = []
     for document in documents:
         name_matches = [] if document.path is None else matcher.entries_in(document.path)
@@ -130,11 +151,13 @@ def scan_documents(documents: Iterable[Document], entries: Sequence[Entry]) -> l
             Finding(location, f"file name matches denylist line {entry.line}")
             for entry in name_matches
         )
-        findings.extend(_content_findings(document, location, matcher))
+        findings.extend(_content_findings(document, location, matcher, numbers_matcher))
     return findings
 
 
-def _content_findings(document: Document, location: str, matcher: Matcher) -> list[Finding]:
+def _content_findings(
+    document: Document, location: str, matcher: Matcher, numbers_matcher: Matcher
+) -> list[Finding]:
     path = document.path or ""
     if is_blocked_format(path):
         return [Finding(location, BLOCKED_FORMAT)]
@@ -142,7 +165,8 @@ def _content_findings(document: Document, location: str, matcher: Matcher) -> li
     if text is not None:
         if is_words_only(path, text):
             text = _DIGIT.sub(" ", text)
-        return scan_text(text, matcher, location)
+        chosen = numbers_matcher if is_numbers_only(path, text) else matcher
+        return scan_text(text, chosen, location)
     if is_screenshot_path(path):
         problem = screenshot_problem(document.content)
         if problem is not None:
