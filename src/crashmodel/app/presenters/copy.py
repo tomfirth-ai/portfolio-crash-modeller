@@ -13,9 +13,10 @@ NOT_AFFILIATED = (
     "or fund prices: every figure comes from a model built from published research and open data."
 )
 TRADE_MARKS = (
-    "S&P 500 is a trade mark of Standard & Poor's Financial Services LLC. MSCI is a trade mark of "
-    "MSCI Inc. FTSE is a trade mark of the London Stock Exchange Group companies. Fund names and "
-    "tickers belong to their fund managers."
+    "S&P 500 and SPDR are trade marks of Standard & Poor's Financial Services LLC, and SPDR is "
+    "used by State Street under licence. MSCI is a trade mark of MSCI Inc. FTSE is a trade mark of "
+    "the London Stock Exchange Group companies. SONIA is a trade mark of the Bank of England. "
+    "Other fund names are trade marks of their fund managers or of the firms that license them."
 )
 
 SOURCE_CODE = "Source code and design notes"

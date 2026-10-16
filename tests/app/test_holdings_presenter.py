@@ -51,8 +51,12 @@ def example_funds(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_every_label_and_name_says_it_is_modelled() -> None:
     assert holding_label("sp500") == "S&P 500 (modelled)"
-    assert holding_label("xmpl") == "XMPL: Example All-World UCITS ETF Acc (modelled)"
-    assert holding_label("example_index_fund") == "Example All-World Index Fund C Acc (modelled)"
+    assert holding_label("xmpl") == (
+        "XMPL: Example All-World UCITS ETF Acc, tracking FTSE All-World (modelled)"
+    )
+    assert holding_label("example_index_fund") == (
+        "Example All-World Index Fund C Acc, tracking FTSE All-World (modelled)"
+    )
     assert holding_name("xmpl") == "XMPL (modelled)"
     assert holding_name("example_index_fund") == "Example All-World Index Fund C Acc (modelled)"
 

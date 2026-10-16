@@ -46,7 +46,7 @@ def test_at_least_one_split_must_be_included() -> None:
 
 
 def test_each_box_is_labelled_with_its_holding_and_unit() -> None:
-    assert design.percent_label("sp500") == "S&P 500 (%)"
+    assert design.percent_label("sp500") == "% in S&P 500 (modelled)"
 
 
 def test_blank_names_take_their_place_and_repeats_among_included_splits_are_numbered() -> None:

@@ -41,7 +41,7 @@ MSCI_ACWI_IMI = TrackedIndex(name="MSCI ACWI IMI", model=IndexModel.GLOBAL_ALL_C
 UK_GILT = TrackedIndex(name="10-year UK gilt", model=IndexModel.UK_GILTS)
 BANK_RATE = TrackedIndex(name="Bank Rate", model=IndexModel.STERLING_CASH)
 SONIA = TrackedIndex(name="SONIA", model=IndexModel.STERLING_CASH)
-"""The overnight rate sterling money market funds aim to earn, which follows Bank Rate closely."""
+"""The overnight rate that sterling money market funds aim to earn, modelled with Bank Rate."""
 
 TRACKED_INDEXES = (
     S_AND_P_500,

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from crashmodel.app.journey import DESIGN
-from crashmodel.app.presenters.holdings import KIND_LABELS, holding_kind, holding_name, short_name
+from crashmodel.app.presenters.holdings import KIND_LABELS, holding_kind, holding_name
 from crashmodel.app.presenters.names import markdown_text
 from crashmodel.app.splits import EXAMPLE_SPLITS, WHOLE, Slot, Split, display_names
 from crashmodel.data.catalogue import HoldingId
@@ -14,8 +14,9 @@ from crashmodel.data.models import AssetKind
 TITLE = DESIGN.title
 INTRODUCTION = (
     "Choose up to six funds or indexes for each split, then give each a whole percentage so that "
-    "they add up to 100. Every one is modelled from published research and open data, after its "
-    "ongoing charge. You can compare up to four splits; switch one off to leave it out."
+    "they add up to 100. Every one is modelled from published research and open data: each fund "
+    "after its ongoing charge, and each index before any charges. You can compare up to four "
+    "splits; switch one off to leave it out."
 )
 START_OWN = "Start your own"
 SHOW_EXAMPLES = "Back to the examples"
@@ -55,8 +56,8 @@ class TotalBadge:
 
 
 def percent_label(holding: HoldingId) -> str:
-    """Label a holding's percentage box, such as "VWRP (%)"."""
-    return f"{short_name(holding)} (%)"
+    """Label a holding's percentage box, such as "% in VWRP (modelled)"."""
+    return f"% in {holding_name(holding)}"
 
 
 def total_badge(slot: Slot) -> TotalBadge:

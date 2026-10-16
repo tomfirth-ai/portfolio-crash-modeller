@@ -122,10 +122,12 @@ def test_a_split_whose_data_does_not_reach_back_far_enough_says_so() -> None:
 
 
 def test_the_offline_banner_names_the_holdings_whose_data_failed() -> None:
-    banner = stress_test.offline_banner(["sp500", "msci_world"])
-    assert banner.startswith(
+    assert stress_test.offline_banner(["sp500", "msci_world"]) == (
         "The share data behind S&P 500 (modelled) and MSCI World (modelled) could not be fetched "
-        "just now"
+        "just now, so splits holding them have no results. Splits without them are not affected."
+    )
+    assert stress_test.offline_banner(["sp500"]).endswith(
+        "so splits holding it have no results. Splits without it are not affected."
     )
 
 

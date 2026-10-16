@@ -160,6 +160,13 @@ def test_no_line_holds_an_isin(holding: Holding) -> None:
     assert not any(contains_isin(field) for field in fields)
 
 
+@pytest.mark.parametrize("holding", FUNDS_ONLY, ids=lambda holding: holding.id)
+def test_every_funds_label_names_its_index_so_a_search_for_the_index_finds_it(
+    holding: Holding,
+) -> None:
+    assert holding.index.name.casefold() in holding_label(holding.id).casefold()
+
+
 def test_each_fund_is_listed_once_and_every_label_is_its_own() -> None:
     """The picker tells options apart by their labels, so two may never share one."""
     names = [fund_of(holding).name for holding in FUNDS_ONLY]

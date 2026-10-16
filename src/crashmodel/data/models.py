@@ -41,7 +41,7 @@ class IndexModel(StrEnum):
     UK_GILTS = "uk_gilts"
     """A 10-year UK government bond, bought new each month."""
     STERLING_CASH = "sterling_cash"
-    """Cash earning the Bank of England's Bank Rate, which money market funds follow closely."""
+    """Cash earning the Bank of England's Bank Rate."""
 
 
 class AssetKind(StrEnum):

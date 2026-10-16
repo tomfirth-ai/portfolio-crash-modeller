@@ -33,21 +33,26 @@ MODEL_DEFINITIONS = {
         "Modelled as a 10-year UK government bond, bought new each month at the going yield. "
         "Bonds lose value when interest rates rise and gain when they fall."
     ),
-    IndexModel.STERLING_CASH: (
-        "Modelled as cash earning the Bank of England's Bank Rate, which sterling money market "
-        "funds follow closely."
-    ),
+    IndexModel.STERLING_CASH: "Modelled as cash earning the Bank of England's Bank Rate.",
 }
 
 KIND_LABELS = {AssetKind.SHARES: "Shares", AssetKind.BONDS: "Bonds", AssetKind.CASH: "Cash"}
 
 
 def holding_label(holding_id: HoldingId) -> str:
-    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World... (modelled)"."""
+    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World... (modelled)".
+
+    A fund whose name does not say which index it tracks has the index added, so that searching
+    the picker for an index finds every fund tracking it.
+    """
     holding = HOLDINGS_BY_ID[holding_id]
-    if holding.fund is None or holding.fund.ticker is None:
+    fund = holding.fund
+    if fund is None:
         return holding_name(holding_id)
-    return f"{holding.fund.ticker}: {holding.fund.name} {MODELLED}"
+    name = fund.name if fund.ticker is None else f"{fund.ticker}: {fund.name}"
+    if holding.index.name.casefold() not in fund.name.casefold():
+        name = f"{name}, tracking {holding.index.name}"
+    return f"{name} {MODELLED}"
 
 
 def holding_name(holding_id: HoldingId) -> str:
