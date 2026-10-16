@@ -136,7 +136,7 @@ def _after_charges(
     """Each holding's returns from its model, after the fund's yearly charge."""
     held = ((holding, HOLDINGS_BY_ID[holding]) for holding in weights)
     return {
-        holding: after_yearly_charge(by_model[entry.model], entry.yearly_charge)
+        holding: after_yearly_charge(by_model[entry.model], entry.charge_fraction)
         for holding, entry in held
         if entry.model in by_model
     }

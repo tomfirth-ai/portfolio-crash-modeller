@@ -35,7 +35,7 @@ def test_every_holding_has_its_own_id() -> None:
 
 def test_every_model_can_be_held_directly() -> None:
     assert {holding.model for holding in INDEXES} == set(IndexModel)
-    assert all(holding.fund is None and holding.yearly_charge == 0 for holding in INDEXES)
+    assert all(holding.fund is None and holding.charge_fraction == 0 for holding in INDEXES)
 
 
 def test_a_funds_charge_reaches_the_engine_as_a_fraction() -> None:
@@ -48,7 +48,7 @@ def test_a_funds_charge_reaches_the_engine_as_a_fraction() -> None:
         documented=date(2026, 1, 1),
     )
     holding = Holding(id="xmpl", index=S_AND_P_500, fund=fund)
-    assert holding.yearly_charge == pytest.approx(0.0007)
+    assert holding.charge_fraction == pytest.approx(0.0007)
     assert holding.model is IndexModel.US_LARGE
 
 

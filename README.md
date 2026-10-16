@@ -59,9 +59,9 @@ staged files, commit messages and every commit you push with a denylist of perso
 you keep outside the repository, at `~/.config/crashmodel/denylist.txt` (one entry per line, with
 `#` for comment lines). It matches names, tickers, amounts and dates in the common forms they are
 written, and refuses to run without a denylist. It reads only the words of `uv.lock` and the stored
-monthly series, whose figures match amounts by chance, and only the numbers and dates of the fund
-list, whose public fund names may also be on your denylist. It is a safety net, not a guarantee, so
-still review what you commit.
+monthly series, whose figures match amounts by chance, and skips the words of the fund names and
+tickers in the fund list, which may also be on your denylist. It is a safety net, not a guarantee,
+so still review what you commit.
 
 ## Licence
 

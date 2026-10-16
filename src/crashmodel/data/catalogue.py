@@ -125,8 +125,8 @@ class Holding:
         return self.index.model
 
     @property
-    def yearly_charge(self) -> float:
-        """The yearly charge as a decimal fraction (0.0007 is 0.07%), or 0 for an index."""
+    def charge_fraction(self) -> float:
+        """The yearly charge as a fraction, not in percent (0.0007 is 0.07%), or 0 for an index."""
         return 0.0 if self.fund is None else float(self.fund.yearly_charge / PERCENT)
 
 

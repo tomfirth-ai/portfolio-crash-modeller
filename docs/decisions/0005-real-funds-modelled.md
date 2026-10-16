@@ -57,9 +57,10 @@ an S&P 500 tracker, a money market fund. Two constraints shape how:
   and share-class launch month, with the date of the key information document they come from. There
   are no ISINs, and nothing is copied by script.
 - **The fund list and the privacy scan.** A public fund's name or ticker may also be an entry on the
-  owner's denylist, so the scan reads the fund list for numbers and dates only, and only while the
-  file has exactly the list's shape. Anything else in it is scanned in full, and tests check that
-  every line names a listed index and manager.
+  owner's denylist, so the scan skips the words in the list's name and ticker fields, and only
+  while the file has exactly the list's shape: its index and manager fields may hold only the
+  listed names. Everything else is scanned, including any digits in a name, and a file out of shape
+  is scanned in full.
 - **How funds are named.** Names are used only to identify the index or fund a model describes:
   - every label says "(modelled)";
   - each page that names a fund says the app is not affiliated with, sponsored or endorsed by any
