@@ -5,9 +5,10 @@ and added to the balance, so each day's interest earns interest too:
 
     r_month = product over the month's days of (1 + (rate that day in percent) / 100 / 365) - 1
 
-This is how SONIA's own compounded index grows. SONIA is the rate banks pay each other overnight
-and Bank Rate the Bank of England's policy rate; neither is what a saver is actually paid, so this
-is a yardstick for cash rather than any account's return.
+This is much how SONIA's compounded index grows, though that index compounds once each business
+day, with simple interest over weekends and holidays. SONIA is the rate banks pay each other
+overnight and Bank Rate the Bank of England's policy rate; neither is what a saver is actually
+paid, so this is a yardstick for cash rather than any account's return.
 """
 
 from collections.abc import Sequence

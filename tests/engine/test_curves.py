@@ -41,6 +41,18 @@ def test_on_a_flat_curve_the_par_coupon_matches_the_yield_compounded_half_yearly
     assert [par_coupon(flat, term) for term in (0.5, 5, 50)] == pytest.approx([expected] * 3)
 
 
+def test_on_a_negative_curve_the_par_coupon_is_negative() -> None:
+    """Holders pay to own gilts at negative yields: 200 * (exp(-0.005) - 1) a year at -1%."""
+    assert par_coupon(ZeroCurve.from_points({0: -1.0}), 5) == pytest.approx(
+        200 * (math.exp(-0.005) - 1)
+    )
+
+
+def test_a_curve_known_to_10_years_stays_at_its_10_year_yield_beyond() -> None:
+    curve = ZeroCurve.from_points({0: 1.0, 5: 3.0, 10: 4.0})
+    assert [curve.yield_at(term) for term in (12, 50)] == [4.0, 4.0]
+
+
 def test_a_par_coupon_prices_its_gilt_at_face_value() -> None:
     coupon = par_coupon(CURVE, 10)
     discounts = [CURVE.discount(k / 2) for k in range(1, 21)]

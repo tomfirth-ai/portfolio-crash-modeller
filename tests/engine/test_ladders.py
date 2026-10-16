@@ -85,10 +85,49 @@ def test_a_ladder_needs_two_curves_and_rungs_its_gilts_can_reach(
 
 @pytest.mark.parametrize(
     ("years_left", "weight", "message"),
-    [(0, 1, "half years"), (0.3, 1, "half years"), (1, 0, "some of the money")],
+    [(0, 1, "half years"), (0.3, 1, "half years"), (1, 0, "some of the gilts")],
 )
 def test_a_rung_is_whole_half_years_and_holds_money(
     years_left: float, weight: float, message: str
 ) -> None:
     with pytest.raises(ValueError, match=message):
         Rung(years_left, weight)
+
+
+def test_with_no_interest_anywhere_every_gilt_returns_nothing() -> None:
+    returns = ladder_returns([flat(0.0)] * 3, START, [Rung(0.5, 1), Rung(30, 1)], (5, 50))
+    assert returns.values == (0.0, 0.0)
+
+
+@pytest.mark.parametrize(("years_left", "exponent"), [(0.5, 0.005), (1, 0.011), (5, 0.059)])
+def test_a_zero_coupon_gilt_falls_with_the_yield_on_its_remaining_term(
+    years_left: float, exponent: float
+) -> None:
+    """Issued when rates were 0, its coupon is 0; at 1.2% a pound due in s - 1/12 years is worth
+    exp(-0.012 * (s - 1/12))."""
+    curves = [flat(0.0), flat(0.0), flat(1.2)]
+    assert last_return(curves, [Rung(years_left, 1)], (5,)) == pytest.approx(
+        math.exp(-exponent) - 1
+    )
+
+
+def test_a_gilt_takes_the_coupon_of_the_month_it_was_issued_exactly() -> None:
+    """A curve flat at 200 * ln(1.02) gives a coupon of exactly 4%. This gilt, a year and a half
+    long, was issued six months before the month its year-left rung is bought, at that curve."""
+    at_four = flat(200 * math.log(1.02))
+    curves = [at_four] + [flat(2.0)] * 6 + [flat(3.0)]
+    worth_before = 0.02 * (math.exp(-0.01) + math.exp(-0.02)) + math.exp(-0.02)
+    worth_after = 0.02 * (math.exp(-0.03 * 5 / 12) + math.exp(-0.03 * 11 / 12)) + math.exp(
+        -0.03 * 11 / 12
+    )
+    expected = worth_after / worth_before - 1
+    assert last_return(curves, [Rung(1, 1)], (1.5,)) == pytest.approx(expected)
+    month_later = [flat(2.0), at_four] + [flat(2.0)] * 5 + [flat(3.0)]
+    assert last_return(month_later, [Rung(1, 1)], (1.5,)) != pytest.approx(expected)
+
+
+def test_rungs_are_counted_at_face_value_as_an_index_counts_gilts_in_issue() -> None:
+    """Zero-coupon gilts worth 1/2 and 1/4 of face value, both then worth face: the ladder's value
+    goes from 3/4 to 2, a return of 2 / (3/4) - 1 = 5/3, not the average of the returns, 2."""
+    curves = [flat(0.0), flat(100 * math.log(2)), flat(0.0)]
+    assert last_return(curves, [Rung(1, 1), Rung(2, 1)], (5,)) == pytest.approx(5 / 3)

@@ -5,14 +5,16 @@ ago with coupons set by the yields of their day. When yields rise, a gilt with a
 falls less than a new low-coupon gilt with the same time left, because more of its value comes back
 sooner. The ladder captures this:
 
-- each rung is a time left to run, a whole number of half years, with a share of the money;
+- each rung is a time left to run, a whole number of half years, with a share of the gilts the
+  ladder holds, counted at face value, as an index counts the amount of each gilt in issue;
 - a rung holds equal amounts of gilts first issued at each of a few terms, those at least as long as
   the time left, and each pays the par coupon of the month it was issued (a gilt issued before the
   first curve takes that curve's coupon);
 - each month every gilt is valued just after a coupon, off that month's zero curve, and again a
   month later, off the next month's curve, when every payment is a month nearer;
 - the ladder's return is the change in the value of all its gilts, and each month it is filled
-  again with the same rungs.
+  again with the same amounts of each rung, so a rung whose gilts are worth more holds more of the
+  money, as in an index.
 
 Every payment falls on the half-year grid, so each month needs one discount factor per half year
 on each curve, and running sums of them value every rung at once.
@@ -35,7 +37,8 @@ class Rung:
 
     Attributes:
         years_left: The time left to run, a whole number of half years.
-        weight: Its share of the money, relative to the other rungs.
+        weight: Its share of the gilts the ladder holds, counted at face value, relative to the
+            other rungs.
     """
 
     years_left: float
@@ -51,7 +54,7 @@ class Rung:
         if self.years_left <= 0 or half_years != round(half_years):
             raise ValueError(f"a rung must be a whole number of half years, not {self.years_left}")
         if self.weight <= 0:
-            raise ValueError("a rung must hold some of the money")
+            raise ValueError("a rung must hold some of the gilts")
 
 
 @dataclass(frozen=True)
