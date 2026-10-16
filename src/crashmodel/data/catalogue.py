@@ -147,7 +147,10 @@ FUND_FILE = "funds.csv"
 """The fund list beside this module: a header, then one line per fund, typed in by hand."""
 FUND_COLUMNS = ("index", "provider", "name", "ticker", "yearly_charge", "launched", "documented")
 """Its columns. No field holds a comma, so the file needs no quoting."""
-_CHARGE = re.compile(r"[0-9]+\.[0-9]+", re.ASCII)
+FUND_TICKER = re.compile(r"[A-Z0-9]{3,5}", re.ASCII)
+"""A London Stock Exchange ticker, such as ``VWRP`` or ``CW8G``."""
+FUND_CHARGE = re.compile(r"[0-9]\.[0-9]{2,3}", re.ASCII)
+"""An ongoing charge in percent, as a key information document prints it, such as ``0.12``."""
 _NOT_IN_ID = re.compile(r"[^a-z0-9]+")
 
 
@@ -163,7 +166,7 @@ def parse_funds(text: str) -> tuple[Holding, ...]:
 
     Raises:
         ValueError: If the header is not the list's own, or a line has the wrong number of fields,
-            names an index or provider not listed here, or has a malformed charge or date.
+            names an index or provider not listed here, or has a malformed ticker, charge or date.
     """
     lines = text.splitlines()
     header = ",".join(FUND_COLUMNS)
@@ -182,7 +185,9 @@ def _fund_line(number: int, line: str) -> Holding:
         raise ValueError(f"{where}: {index!r} is not an index listed here")
     if provider not in PROVIDERS:
         raise ValueError(f"{where}: {provider!r} is not a listed provider")
-    if not _CHARGE.fullmatch(charge):
+    if ticker and not FUND_TICKER.fullmatch(ticker):
+        raise ValueError(f"{where}: expected a ticker of 3 to 5 capitals or digits, not {ticker!r}")
+    if not FUND_CHARGE.fullmatch(charge):
         raise ValueError(f"{where}: expected a charge in percent, such as 0.12, not {charge!r}")
     try:
         fund = Fund(

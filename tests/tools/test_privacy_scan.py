@@ -6,7 +6,7 @@ from tests.tools.helpers import GitRunner, png, png_chunk
 from tests.tools.sentinels import NAME_LINE, TICKER_LINE
 from tools import privacy_scan as scan
 from tools._report import EXIT_CLEAN, EXIT_CONFIG_ERROR, EXIT_PROBLEMS
-from tools.denylist import parse_entry
+from tools.denylist import Matcher, parse_entry
 from tools.policy import FUND_CATALOGUE
 
 
@@ -423,30 +423,47 @@ def test_a_file_in_the_reference_folder_that_is_not_a_series_is_scanned_in_full(
 
 
 FUND_LIST_HEADER = "index,provider,name,ticker,yearly_charge,launched,documented\n"
-FUND_LINE = "Example Index,Example,Zebedee Quartermaine UCITS ETF,ZQXW,0.12,2019-07,2026-07-28\n"
+FUND_LINE = "S&P 500,Vanguard,Zebedee Quartermaine UCITS ETF,ZQXW,0.12,2019-07,2026-07-28\n"
 """A fund whose name and ticker are denylist entries, as a public fund's may be by chance."""
 FUND_LIST = FUND_LIST_HEADER + FUND_LINE
+COMMENT = "# owner: Zebedee Quartermaine\n"
 
 
 @pytest.mark.parametrize(
-    ("path", "text", "numbers_only"),
+    ("path", "text", "fund_list"),
     [
         (FUND_CATALOGUE, FUND_LIST, True),
         (FUND_CATALOGUE, FUND_LIST.replace(",ZQXW,", ",,"), True),
         (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.379,"), True),
-        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.1234,"), False),
         ("notes/funds.csv", FUND_LIST, False),
         (FUND_CATALOGUE, FUND_LIST_HEADER, False),
-        (FUND_CATALOGUE, FUND_LIST + "# owner: Zebedee Quartermaine\n", False),
+        (FUND_CATALOGUE, FUND_LIST + COMMENT, False),
+        (FUND_CATALOGUE, FUND_LIST.replace("S&P 500,", "Zebedee Quartermaine,"), False),
+        (FUND_CATALOGUE, FUND_LIST.replace("Vanguard,", "Zebedee Quartermaine,"), False),
         (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.12,note,"), False),
+        (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",0.1234,"), False),
         (FUND_CATALOGUE, FUND_LIST.replace(",0.12,", ",271828,"), False),
         (FUND_CATALOGUE, FUND_LIST.removesuffix("\n"), False),
     ],
+    ids=[
+        "fund list",
+        "no ticker",
+        "charge to three places",
+        "elsewhere",
+        "header only",
+        "comment",
+        "unknown index",
+        "unknown manager",
+        "extra field",
+        "charge to four places",
+        "amount as charge",
+        "no final newline",
+    ],
 )
-def test_only_a_well_formed_fund_list_is_scanned_for_numbers_alone(
-    path: str, text: str, numbers_only: bool
+def test_only_the_fund_list_in_exactly_its_shape_counts_as_the_fund_list(
+    path: str, text: str, fund_list: bool
 ) -> None:
-    assert scan.is_numbers_only(path, text) is numbers_only
+    assert scan.is_fund_list(path, text) is fund_list
 
 
 def stage_fund_list(repo: Path, run_git: GitRunner, text: str) -> None:
@@ -468,9 +485,9 @@ def test_a_fund_list_is_clean_however_its_names_and_tickers_collide(
     [
         FUND_LIST.replace("2026-07-28", "2031-02-17"),
         FUND_LIST.replace("UCITS ETF", "271828 UCITS ETF"),
-        FUND_LIST + "# owner: Zebedee Quartermaine\n",
+        FUND_LIST + COMMENT,
     ],
-    ids=["date", "amount", "comment"],
+    ids=["date", "amount in a name", "comment"],
 )
 def test_a_fund_lists_dates_amounts_and_anything_out_of_shape_are_still_found(
     repo: Path, run_git: GitRunner, denylist: Path, text: str
@@ -478,3 +495,30 @@ def test_a_fund_lists_dates_amounts_and_anything_out_of_shape_are_still_found(
     stage_fund_list(repo, run_git, text)
 
     assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
+
+
+def test_a_fund_list_out_of_shape_says_why_its_names_were_scanned(
+    repo: Path, run_git: GitRunner, denylist: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stage_fund_list(repo, run_git, FUND_LIST.replace(",0.12,", ",0.1,"))
+
+    assert scan.main(["--staged", "--denylist", str(denylist)]) == EXIT_PROBLEMS
+    assert f"note: {FUND_CATALOGUE}: {scan.FUND_LIST_SHAPE}" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("entry", "found"),
+    [
+        ("Vanguard", True),
+        ("S&P 500", True),
+        ("12-34-56", True),
+        ("Zebedee Quartermaine", False),
+        ("ZQXW", False),
+    ],
+)
+def test_only_words_in_a_fund_lists_names_and_tickers_go_unscanned(entry: str, found: bool) -> None:
+    """A manager, an index or a sort code in a name is still found; a name or a ticker is not."""
+    text = FUND_LIST.replace("Zebedee Quartermaine", "Zebedee Quartermaine 12-34-56")
+    entries = [parse_entry(1, entry)]
+    matchers = Matcher(entries), Matcher([entry for entry in entries if not entry.is_words])
+    assert bool(scan.scan_fund_list(text, *matchers, FUND_CATALOGUE)) is found

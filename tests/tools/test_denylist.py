@@ -290,9 +290,20 @@ def test_an_entry_with_no_tokens_never_matches() -> None:
 
 @pytest.mark.parametrize(
     ("raw", "is_words"),
-    [("Zebedee Quartermaine", True), ("ZQXW", True), ("271828", False), ("2031-02-17", False)],
+    [
+        ("Zebedee Quartermaine", True),
+        ("ZQXW", True),
+        ("CW8G", True),
+        ("271828", False),
+        ("2031-02-17", False),
+        ("2031-02", False),
+        ("17/02/2031", False),
+        ("12-34-56", False),
+        ("QQ123456C", False),
+        ("07700 900123", False),
+    ],
 )
-def test_names_and_tickers_are_words_while_amounts_and_dates_are_not(
+def test_names_and_tickers_are_words_while_anything_else_with_digits_is_not(
     raw: str, is_words: bool
 ) -> None:
     assert denylist.parse_entry(1, raw).is_words is is_words

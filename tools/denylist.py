@@ -89,6 +89,8 @@ _GROUPED_NUMBER = re.compile(
 _ABBREVIATED_NUMBER = re.compile(r"([0-9]+(?:\.[0-9]+)?) ?(k|m|bn)\b", re.IGNORECASE)
 _THOUSANDS_SEPARATORS = re.compile(r"[,_' \u00a0\u202f]")
 _ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+_TICKER_ENTRY = re.compile(r"(?=[0-9]*[A-Za-z])[A-Za-z0-9]{3,5}")
+"""A ticker such as ``CW8G``: a short code of letters and digits, with at least one letter."""
 _INLINE_COMMENT = re.compile(r"\s#")
 
 
@@ -124,7 +126,8 @@ class Entry:
         sequences: Token sequences that count as a match.
         amounts: The values that count as a match, for entries that are amounts.
         is_name: Whether the entry is a two-word name, which may have initials between its words.
-        is_words: Whether the entry is words, such as a name or a ticker, not an amount or a date.
+        is_words: Whether the entry is only words, such as a name, or a ticker. Entries with other
+            digits, such as amounts, dates, sort codes and reference numbers, are not.
     """
 
     line: int
@@ -337,7 +340,10 @@ def parse_entry(line: int, raw: str) -> Entry:
     tokens = tokenise(text)
     if not tokens:
         raise DenylistError(f"denylist line {line} has no letters or digits to match")
-    return Entry(line, sequences=_word_sequences(tokens), is_name=_is_name(tokens), is_words=True)
+    is_words = all(token.isalpha() for token in tokens) or bool(_TICKER_ENTRY.fullmatch(text))
+    return Entry(
+        line, sequences=_word_sequences(tokens), is_name=_is_name(tokens), is_words=is_words
+    )
 
 
 def _is_inside(path: Path, directory: Path) -> bool:

@@ -44,6 +44,11 @@ from tools.denylist import (
 from tools.policy import (
     BLOCKED_FORMAT,
     FUND_CATALOGUE,
+    FUND_CHARGE,
+    FUND_COLUMNS,
+    FUND_INDEXES,
+    FUND_PROVIDERS,
+    FUND_TICKER,
     REFERENCE_DATA_DIRECTORY,
     is_blocked_format,
     is_screenshot_path,
@@ -64,14 +69,15 @@ by chance. Package names are still scanned. The rule covers these exact paths on
 _DIGIT = re.compile(r"[0-9]")
 _MONTHLY_SERIES = re.compile(r"month,[a-z_]+\n(?:\d{4}-\d{2},-?\d+(?:\.\d+)?\n)+")
 """A committed monthly series: a ``month,<name>`` header, then ``YYYY-MM,<number>`` rows only."""
-_FUND_LINE = (
-    r"[^,\n]+,[^,\n]+,[^,\n]+,(?:[A-Z0-9]{3,5})?,"
-    r"[0-9]\.[0-9]{2,3},[0-9]{4}-[0-9]{2},[0-9]{4}-[0-9]{2}-[0-9]{2}\n"
+_FUND_ROW = re.compile(
+    rf"(?:{'|'.join(map(re.escape, FUND_INDEXES))}),(?:{'|'.join(map(re.escape, FUND_PROVIDERS))}),"
+    rf"(?P<name>[^,\n]+),(?P<ticker>{FUND_TICKER})?,{FUND_CHARGE},"
+    r"[0-9]{4}-[0-9]{2},[0-9]{4}-[0-9]{2}-[0-9]{2}\n"
 )
-_FUND_CATALOGUE = re.compile(
-    rf"index,provider,name,ticker,yearly_charge,launched,documented\n(?:{_FUND_LINE})+"
-)
-"""The fund list: a header, then lines of index, provider, name, ticker, charge and two dates."""
+"""A line of the fund list: a listed index and manager, a name, a ticker, a charge and two dates."""
+_FUND_LIST = re.compile(rf"{','.join(FUND_COLUMNS)}\n(?:{_FUND_ROW.pattern})+")
+_PUBLIC_FIELDS = ("name", "ticker")
+FUND_LIST_SHAPE = "is not in the fund list's exact shape, so its names and tickers were scanned too"
 
 
 def is_words_only(path: str, text: str) -> bool:
@@ -89,15 +95,26 @@ def is_words_only(path: str, text: str) -> bool:
     return in_reference_data and _MONTHLY_SERIES.fullmatch(text) is not None
 
 
-def is_numbers_only(path: str, text: str) -> bool:
-    """Whether only a file's numbers and dates are scanned, because its words are public names.
+def is_fund_list(path: str, text: str) -> bool:
+    """Whether a file is the fund list, in exactly its shape.
 
-    Covers the fund list alone. A public fund's name or ticker may also be a denylist entry, so the
-    list's words are not scanned; its charges and dates are, like any other number. The file
-    qualifies only if it has exactly the fund list's shape, so a comment or any other text in it
-    is scanned in full, and tests in CI check that each line names a listed index and provider.
+    A public fund's name or ticker may also be a denylist entry, so the words in the list's name
+    and ticker columns are not scanned. Everything else is: the index and manager columns may hold
+    only the listed names, and the charges, the dates and any digits in a name are scanned like any
+    other number. A file at that path in any other shape, such as one with a comment, is scanned in
+    full, with a note saying why.
     """
-    return path == FUND_CATALOGUE and _FUND_CATALOGUE.fullmatch(text) is not None
+    return path == FUND_CATALOGUE and _FUND_LIST.fullmatch(text) is not None
+
+
+def _without_public_names(text: str) -> str:
+    """Blank the fund list's name and ticker fields, keeping every other character in place."""
+    characters = list(text)
+    for row in _FUND_ROW.finditer(text):
+        for field in _PUBLIC_FIELDS:
+            start, end = row.span(field)
+            characters[start:end] = " " * (end - start)
+    return "".join(characters)
 
 
 @dataclass(frozen=True)
@@ -139,6 +156,29 @@ def scan_text(text: str, matcher: Matcher, location: str) -> list[Finding]:
     ]
 
 
+def scan_fund_list(
+    text: str, matcher: Matcher, numbers_matcher: Matcher, location: str
+) -> list[Finding]:
+    """Scan the fund list for every denylist entry, except words in its names and tickers.
+
+    Args:
+        text: The fund list, in exactly its shape.
+        matcher: Finds every entry; it reads the list with its names and tickers blanked.
+        numbers_matcher: Finds the entries that are not words; it reads the whole list.
+        location: Where the list is, as shown in findings.
+    """
+    found = {
+        (line, entry.line)
+        for line, entry in (
+            *matcher.find(_without_public_names(text)),
+            *numbers_matcher.find(text),
+        )
+    }
+    return [
+        Finding(location, f"matches denylist line {entry}", line) for line, entry in sorted(found)
+    ]
+
+
 def scan_documents(documents: Iterable[Document], entries: Sequence[Entry]) -> list[Finding]:
     """Scan file names and contents, refusing binary data formats and unscannable binaries."""
     matcher = Matcher(entries)
@@ -163,10 +203,14 @@ def _content_findings(
         return [Finding(location, BLOCKED_FORMAT)]
     text = decode_text(document.content)
     if text is not None:
+        if is_fund_list(path, text):
+            return scan_fund_list(text, matcher, numbers_matcher, location)
         if is_words_only(path, text):
             text = _DIGIT.sub(" ", text)
-        chosen = numbers_matcher if is_numbers_only(path, text) else matcher
-        return scan_text(text, chosen, location)
+        findings = scan_text(text, matcher, location)
+        if path == FUND_CATALOGUE:
+            findings.append(Finding(location, FUND_LIST_SHAPE, blocking=False))
+        return findings
     if is_screenshot_path(path):
         problem = screenshot_problem(document.content)
         if problem is not None:

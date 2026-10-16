@@ -9,8 +9,10 @@ from crashmodel.app.presenters.holdings import holding_label
 from crashmodel.data.catalogue import (
     CATALOGUE,
     FTSE_ALL_WORLD,
+    FUND_CHARGE,
     FUND_COLUMNS,
     FUND_FILE,
+    FUND_TICKER,
     HOLDINGS_BY_ID,
     INDEXES,
     PROVIDERS,
@@ -22,9 +24,9 @@ from crashmodel.data.catalogue import (
 )
 from crashmodel.data.models import IndexModel
 from crashmodel.engine.months import Month
+from tools import policy
 from tools.check_hygiene import contains_isin
-from tools.policy import FUND_CATALOGUE
-from tools.privacy_scan import is_numbers_only
+from tools.privacy_scan import is_fund_list
 
 
 def test_every_holding_has_its_own_id() -> None:
@@ -99,9 +101,19 @@ def test_the_fund_list_is_read_one_fund_a_line() -> None:
             id="provider",
         ),
         pytest.param(
+            f"{HEADER}\n{ETF_LINE.replace('XMPL', 'xmpl')}",
+            "funds.csv:2: expected a ticker",
+            id="ticker",
+        ),
+        pytest.param(
             f"{HEADER}\n{ETF_LINE.replace('0.07', '7bp')}",
             "funds.csv:2: expected a charge in percent",
             id="charge",
+        ),
+        pytest.param(
+            f"{HEADER}\n{ETF_LINE.replace('0.07', '0.1')}",
+            "funds.csv:2: expected a charge in percent",
+            id="charge written short",
         ),
         pytest.param(
             f"{HEADER}\n{ETF_LINE.replace('2019-05', 'May 2019')}",
@@ -123,12 +135,18 @@ def test_a_malformed_fund_list_is_refused_with_the_line_at_fault(text: str, mess
 def test_the_fund_list_has_the_shape_the_privacy_scan_expects() -> None:
     """Only a list of exactly this shape has its public names left out of the privacy scan."""
     text = files("crashmodel.data").joinpath(FUND_FILE).read_text(encoding="utf-8")
-    assert f"src/crashmodel/data/{FUND_FILE}" == FUND_CATALOGUE
-    assert is_numbers_only(FUND_CATALOGUE, text)
+    assert f"src/crashmodel/data/{FUND_FILE}" == policy.FUND_CATALOGUE
+    assert is_fund_list(policy.FUND_CATALOGUE, text)
+
+
+def test_the_privacy_scan_and_the_catalogue_agree_on_what_a_fund_line_holds() -> None:
+    assert policy.FUND_COLUMNS == FUND_COLUMNS
+    assert tuple(index.name for index in TRACKED_INDEXES) == policy.FUND_INDEXES
+    assert policy.FUND_PROVIDERS == PROVIDERS
+    assert (FUND_TICKER.pattern, FUND_CHARGE.pattern) == (policy.FUND_TICKER, policy.FUND_CHARGE)
 
 
 FUNDS_ONLY = [holding for holding in CATALOGUE if holding.fund is not None]
-TICKER = re.compile(r"[A-Z0-9]{3,5}", re.ASCII)
 LARGEST_PLAUSIBLE_CHARGE = Decimal(2)
 """Index funds and ETFs charge well under 2% a year; anything above is a typing slip."""
 
@@ -142,7 +160,7 @@ def fund_of(holding: Holding) -> Fund:
 def test_every_fund_line_holds_plausible_facts_from_a_listed_provider(holding: Holding) -> None:
     fund = fund_of(holding)
     assert fund.provider in PROVIDERS
-    assert fund.ticker is None or TICKER.fullmatch(fund.ticker)
+    assert fund.ticker is None or FUND_TICKER.fullmatch(fund.ticker)
     assert ("ETF" in fund.name) is (fund.ticker is not None)
     assert fund.ticker is not None or any(word in fund.name for word in ("Fund", "Trust"))
     assert 0 < fund.yearly_charge < LARGEST_PLAUSIBLE_CHARGE

@@ -42,6 +42,39 @@ REFERENCE_DATA_DIRECTORY = "src/crashmodel/data/reference/"
 
 FUND_CATALOGUE = "src/crashmodel/data/funds.csv"
 """The funds a split can hold: public names, tickers, charges and dates, typed in by hand."""
+FUND_COLUMNS = ("index", "provider", "name", "ticker", "yearly_charge", "launched", "documented")
+FUND_INDEXES = (
+    "S&P 500",
+    "MSCI World",
+    "FTSE Developed",
+    "FTSE All-World",
+    "MSCI ACWI",
+    "FTSE Global All Cap",
+    "MSCI ACWI IMI",
+    "10-year UK gilt",
+    "Bank Rate",
+    "SONIA",
+)
+FUND_PROVIDERS = (
+    "Amundi",
+    "Fidelity",
+    "HSBC",
+    "Invesco",
+    "iShares",
+    "L&G",
+    "SPDR",
+    "UBS",
+    "Vanguard",
+    "Xtrackers",
+)
+"""The only index and manager names a line of the fund list may give."""
+FUND_TICKER = r"[A-Z0-9]{3,5}"
+FUND_CHARGE = r"[0-9]\.[0-9]{2,3}"
+"""A London ticker, and an ongoing charge in percent as a key information document prints it.
+
+The catalogue that reads the fund list has its own copy of these formats, and of the columns, the
+indexes and the managers; a test keeps the two in step.
+"""
 
 PRIVATE_DIRECTORIES = frozenset({"private", "local"})
 """Directories, at any depth, that hold private or machine-local files."""
