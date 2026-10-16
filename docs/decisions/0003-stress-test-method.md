@@ -3,7 +3,8 @@
 Date: 15 October 2026. Status: accepted. Extended in Slice 2 with a second way of managing a split,
 an explanation of each fall and a third crash (see the end). Amended by
 [ADR 0005](0005-real-funds-modelled.md): splits now hold funds and indexes, and fund charges are
-taken off.
+taken off. Amended by [ADR 0006](0006-gilts-and-sonia.md): gilts are modelled from the Bank of
+England's yield curve, cash earns SONIA compounded daily, and the 2022-23 bond crash is added.
 
 ## Context
 

@@ -1,7 +1,9 @@
 # 5. Real funds, modelled from open data
 
 Date: 16 October 2026. Status: accepted. Amends [ADR 0003](0003-stress-test-method.md): splits hold
-funds and indexes instead of four building blocks, and fund charges are taken off.
+funds and indexes instead of four building blocks, and fund charges are taken off. Amended by
+[ADR 0006](0006-gilts-and-sonia.md), which models gilts from the Bank of England's yield curve and
+sterling cash on SONIA.
 
 ## Context
 
