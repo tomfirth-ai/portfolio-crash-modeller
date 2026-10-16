@@ -4,11 +4,10 @@ Every figure comes from the engine. This module turns the results into sentences
 what each number is measured from, a comparison table and a chart of the value of £100.
 """
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from crashmodel.app.journey import STRESS_TEST
-from crashmodel.app.presenters.blocks import BLOCK_NAMES_IN_TEXT, block_list
 from crashmodel.app.presenters.format import (
     listed,
     month_name,
@@ -17,11 +16,12 @@ from crashmodel.app.presenters.format import (
     pounds,
     pounds_and_pence,
 )
+from crashmodel.app.presenters.holdings import holding_list, holding_name
 from crashmodel.app.presenters.names import markdown_text
 from crashmodel.app.splits import Slot, display_names, example_slots
 from crashmodel.app.stress import SplitOutcome
-from crashmodel.data.blocks import Block
-from crashmodel.data.french import Vintage
+from crashmodel.data.catalogue import HoldingId
+from crashmodel.data.french import PORTFOLIO_FILES, PortfolioFile, Vintage
 from crashmodel.engine.drawdown import CrashResult, Fall
 from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
 from crashmodel.engine.portfolio import STARTING_VALUE, Rebalancing
@@ -45,20 +45,25 @@ MANAGEMENT_HELP = (
     "does well grows to a larger share."
 )
 TRY_AGAIN = "Try again"
-FETCHING = "Fetching share returns..."
+FETCHING = "Fetching share data..."
 TABLE_HEADING = "Side by side"
 CHART_HEADING = "What £100 became"
 DATA_HEADING = "Where the data comes from"
+SIMULATED = (
+    "Simulated past performance: these figures come from models, not from any fund's or index's "
+    "own returns."
+)
 CAVEAT = (
-    "These figures are in pounds before inflation, with no costs, fees or taxes. They use "
-    "month-end values, so a fall within a month could have been deeper. Getting back to an "
-    "earlier high in pounds is not the same as getting back your spending power."
+    "These figures are in pounds before inflation. Each fund's ongoing charge is taken off; tax on "
+    "dividends, dealing costs and platform charges are not. They use month-end values, so a fall "
+    "within a month could have been deeper. Getting back to an earlier high in pounds is not the "
+    "same as getting back your spending power."
 )
 BANK_OF_ENGLAND_CREDIT = (
-    "UK government bonds are worked out from the Bank of England's 10-year par gilt yield, "
-    "using Swinkels' published bond return method, and cash earns the Bank of England's Bank "
-    "Rate. Bank of England data: contains public sector information licensed under the Open "
-    "Government Licence v3.0."
+    "UK gilts are modelled from the Bank of England's 10-year par gilt yield, using Swinkels' "
+    "published bond return method, and sterling cash earns the Bank of England's Bank Rate. Bank "
+    "of England data: contains public sector information licensed under the Open Government "
+    "Licence v3.0."
 )
 CHART_X_TITLE = "Month end"
 CHART_Y_TITLE = "Value of £100 (£)"
@@ -171,12 +176,11 @@ def left_out_note(slots: Sequence[Slot]) -> str | None:
     return " ".join(sentences) or None
 
 
-def offline_banner(unavailable: Collection[Block]) -> str:
-    """Say which share returns could not be fetched, and that other splits are unaffected."""
-    blocks = block_list([block for block in Block if block in unavailable])
+def offline_banner(unavailable: Sequence[HoldingId]) -> str:
+    """Say which holdings' data could not be fetched, and that other splits are unaffected."""
     return (
-        f"Returns on {blocks} could not be fetched just now, so splits holding them have no "
-        "results. Splits without them are not affected."
+        f"The share data behind {holding_list(unavailable)} could not be fetched just now, so "
+        "splits holding them have no results. Splits without them are not affected."
     )
 
 
@@ -189,7 +193,8 @@ def card(outcome: SplitOutcome, episode: Episode) -> CrashCard:
             if outcome.fetch_failed
             else "there is no data for every month of this crash"
         )
-        sentences: tuple[str, ...] = (f"{name} holds {block_list(outcome.missing)}, and {reason}.",)
+        missing = holding_list(outcome.missing)
+        sentences: tuple[str, ...] = (f"{name} holds {missing}, and {reason}.",)
     else:
         result = outcome.run.result
         ending = (
@@ -219,7 +224,7 @@ def _high(fall: Fall, episode: Episode) -> str:
     return "the start" if fall.peak == episode.start else "its high"
 
 
-def _drivers_sentence(drivers: Mapping[Block, float], high: str) -> str | None:
+def _drivers_sentence(drivers: Mapping[HoldingId, float], high: str) -> str | None:
     """Say how much each holding lost or made back on the way down, per £100 at the high.
 
     Nothing is said for a split of one holding, or when no loss is big enough to show in pence,
@@ -229,16 +234,17 @@ def _drivers_sentence(drivers: Mapping[Block, float], high: str) -> str | None:
         return None
     ordered = sorted(drivers.items(), key=lambda item: abs(item[1]), reverse=True)
     amounts = [
-        (block, share, pounds_and_pence(abs(share) * STARTING_VALUE)) for block, share in ordered
+        (holding, share, pounds_and_pence(abs(share) * STARTING_VALUE))
+        for holding, share in ordered
     ]
     lost = [
-        f"{BLOCK_NAMES_IN_TEXT[block]} lost {amount}"
-        for block, share, amount in amounts
+        f"{holding_name(holding)} lost {amount}"
+        for holding, share, amount in amounts
         if share < 0 and amount != NOTHING
     ]
     made_back = [
-        f"{BLOCK_NAMES_IN_TEXT[block]} made back {amount}"
-        for block, share, amount in amounts
+        f"{holding_name(holding)} made back {amount}"
+        for holding, share, amount in amounts
         if share > 0 and amount != NOTHING
     ]
     if not lost:
@@ -337,17 +343,16 @@ def chart_view(results: Sequence[SplitOutcome]) -> ValueChartView:
     )
 
 
-def share_credit(vintages: Mapping[Block, Vintage]) -> str:
+def share_credit(vintages: Mapping[PortfolioFile, Vintage]) -> str:
     """Credit the share data, naming the monthly update each file comes from."""
     updates = "; ".join(
-        f"{BLOCK_NAMES_IN_TEXT[block]}: the {vintages[block].database} update of "
-        f"{month_name(vintages[block].month)}"
-        for block in Block
-        if block in vintages
+        f"{file.name}: the {vintages[file].database} update of {month_name(vintages[file].month)}"
+        for file in PORTFOLIO_FILES
+        if file in vintages
     )
     return (
-        "Share returns come from the Kenneth R. French Data Library"
-        f"{f' ({updates})' if updates else ''}, fetched when the app runs and converted to pounds "
-        "at month-end exchange rates from the Federal Reserve's H.10 release, which is public "
-        "domain."
+        "Share models are built from the Kenneth R. French Data Library's portfolios of companies "
+        f"grouped by size{f' ({updates})' if updates else ''}, fetched when the app runs and "
+        "converted to pounds at month-end exchange rates from the Federal Reserve's H.10 release, "
+        "which is public domain."
     )

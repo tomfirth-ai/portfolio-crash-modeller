@@ -2,6 +2,7 @@
 
 import calendar
 from collections.abc import Sequence
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from crashmodel.engine.months import Month
@@ -34,6 +35,11 @@ def months(count: int) -> str:
 def month_name(month: Month) -> str:
     """Write a month as words: "June 2007"."""
     return f"{calendar.month_name[month.month]} {month.year}"
+
+
+def date_name(day: date) -> str:
+    """Write a date as words: "28 July 2026"."""
+    return f"{day.day} {month_name(Month.of(day))}"
 
 
 def pounds_and_pence(value: float) -> str:

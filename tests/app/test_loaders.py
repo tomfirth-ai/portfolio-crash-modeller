@@ -1,12 +1,13 @@
 from datetime import timedelta
 
 import pytest
+from streamlit.runtime.caching.cache_data_api import CachedDataFuncInfo
 
 from crashmodel.app import loaders
 from crashmodel.app.loaders import FailureMemory
 from crashmodel.data import client
-from crashmodel.data.blocks import SHARE_BLOCKS
-from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET
+from crashmodel.data.french import DEVELOPED_BY_SIZE, EMERGING_BY_SIZE, US_BY_SIZE
+from crashmodel.data.models import IndexModel
 from tests.data.french_text import LIBRARY_END, FakeLibrary
 
 URL = "https://data.example.com/file.zip"
@@ -49,38 +50,53 @@ def library(monkeypatch: pytest.MonkeyPatch) -> FakeLibrary:
 
 
 def test_each_file_is_downloaded_once_and_then_served_from_the_cache(library: FakeLibrary) -> None:
-    first = loaders.share_returns(US_MARKET)
-    again = loaders.share_returns(US_MARKET)
+    first = loaders.portfolios(US_BY_SIZE)
+    again = loaders.portfolios(US_BY_SIZE)
 
     assert first is not None
     assert first == again
-    assert first.returns.end == LIBRARY_END
-    assert library.requests == [US_MARKET.url]
+    assert first.portfolios["Hi 10"].returns.end == LIBRARY_END
+    assert library.requests == [US_BY_SIZE.url]
 
 
 def test_a_failed_file_is_not_tried_again_until_the_visitor_asks(library: FakeLibrary) -> None:
     library.online = False
-    assert loaders.share_returns(DEVELOPED_MARKETS) is None
+    assert loaders.portfolios(DEVELOPED_BY_SIZE) is None
 
     library.online = True
-    assert loaders.share_returns(DEVELOPED_MARKETS) is None
+    assert loaders.portfolios(DEVELOPED_BY_SIZE) is None
     assert len(library.requests) == 1
 
     loaders.try_again()
-    assert loaders.share_returns(DEVELOPED_MARKETS) is not None
+    assert loaders.portfolios(DEVELOPED_BY_SIZE) is not None
     assert len(library.requests) == 2
 
 
-def test_the_panel_has_every_block_when_both_files_arrive(library: FakeLibrary) -> None:
-    panel = loaders.load_panel()
+def test_only_the_files_the_held_models_need_are_fetched(library: FakeLibrary) -> None:
+    panel = loaders.load_panel({IndexModel.GLOBAL_LARGE, IndexModel.STERLING_CASH})
 
     assert panel.unavailable == frozenset()
-    assert panel.returns.keys() >= SHARE_BLOCKS
-    assert sorted(library.requests) == sorted([US_MARKET.url, DEVELOPED_MARKETS.url])
+    assert IndexModel.GLOBAL_LARGE in panel.returns
+    assert IndexModel.US_LARGE not in panel.returns
+    assert library.requests == [DEVELOPED_BY_SIZE.url, EMERGING_BY_SIZE.url]
 
 
-def test_the_panel_lists_share_blocks_as_unavailable_when_the_library_is_down(
+def test_splits_of_gilts_and_cash_fetch_nothing(library: FakeLibrary) -> None:
+    loaders.load_panel({IndexModel.UK_GILTS, IndexModel.STERLING_CASH})
+    assert library.requests == []
+
+
+def test_the_held_share_models_are_unavailable_when_the_library_is_down(
     library: FakeLibrary,
 ) -> None:
     library.online = False
-    assert loaders.load_panel().unavailable == SHARE_BLOCKS
+    panel = loaders.load_panel({IndexModel.US_LARGE, IndexModel.UK_GILTS})
+    assert panel.unavailable == {IndexModel.US_LARGE}
+    assert IndexModel.UK_GILTS in panel.returns
+
+
+def test_share_data_is_cached_in_memory_only() -> None:
+    """French data may never be written to disk, so the cache must not persist it."""
+    info = loaders._download._info
+    assert isinstance(info, CachedDataFuncInfo)
+    assert info.persist is None

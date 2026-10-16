@@ -13,7 +13,7 @@ from enum import Enum, auto
 
 import httpx
 
-from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET
+from crashmodel.data.french import DEVELOPED_BY_SIZE, EMERGING_BY_SIZE, US_BY_SIZE
 
 
 @dataclass(frozen=True)
@@ -64,14 +64,19 @@ class SourceStatus:
 
 HOSTED_SOURCES: tuple[DataSource, ...] = (
     DataSource(
-        name="Kenneth R. French Data Library, developed markets",
-        url=DEVELOPED_MARKETS.url,
-        purpose="Monthly returns on global shares",
+        name="Kenneth R. French Data Library, US shares by size",
+        url=US_BY_SIZE.url,
+        purpose="The model of the S&P 500",
     ),
     DataSource(
-        name="Kenneth R. French Data Library, US market",
-        url=US_MARKET.url,
-        purpose="Monthly returns on US shares",
+        name="Kenneth R. French Data Library, developed markets shares by size",
+        url=DEVELOPED_BY_SIZE.url,
+        purpose="The models of MSCI World, FTSE All-World and FTSE Global All Cap",
+    ),
+    DataSource(
+        name="Kenneth R. French Data Library, emerging markets shares by size",
+        url=EMERGING_BY_SIZE.url,
+        purpose="The models of FTSE All-World and FTSE Global All Cap",
     ),
 )
 

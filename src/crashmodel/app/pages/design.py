@@ -1,4 +1,4 @@
-"""Design: up to four splits of money between the building blocks, side by side."""
+"""Design: up to four splits of money between funds and indexes, side by side."""
 
 from itertools import batched
 
@@ -8,10 +8,10 @@ from crashmodel.app import navigation, state
 from crashmodel.app.charts import composition_chart
 from crashmodel.app.journey import DESIGN
 from crashmodel.app.presenters import design as presenter
-from crashmodel.app.presenters.blocks import BLOCK_DEFINITIONS
+from crashmodel.app.presenters.holdings import holding_help, holding_label
 from crashmodel.app.presenters.progress import progress
 from crashmodel.app.splits import WHOLE
-from crashmodel.data.blocks import Block
+from crashmodel.data.catalogue import HOLDINGS_BY_ID
 
 # Two cards a row keep each box wide enough for its label.
 CARDS_PER_ROW = 2
@@ -61,17 +61,31 @@ for row in batched(enumerate(slots), CARDS_PER_ROW):
                 on_change=state.use_template,
                 args=(session, index),
             )
-            for block in Block:
+            st.multiselect(
+                presenter.HOLDINGS,
+                list(HOLDINGS_BY_ID),
+                format_func=holding_label,
+                key=state.widget_key(index, state.HOLDINGS),
+                help=presenter.HOLDINGS_HELP,
+                max_selections=presenter.MAX_HOLDINGS,
+                placeholder=presenter.HOLDINGS_PLACEHOLDER,
+                select_all=False,
+                wrap=True,
+                disabled=left_out,
+                on_change=state.choose_holdings,
+                args=(session, index),
+            )
+            for holding in slot.split.percentages:
                 st.number_input(
-                    presenter.block_label(block),
+                    presenter.percent_label(holding),
                     min_value=0,
                     max_value=WHOLE,
                     step=presenter.PERCENT_STEP,
-                    help=BLOCK_DEFINITIONS[block],
-                    key=state.widget_key(index, block),
+                    help=holding_help(holding),
+                    key=state.percent_key(index, holding),
                     disabled=left_out,
-                    on_change=state.commit,
-                    args=(session, index),
+                    on_change=state.set_percent,
+                    args=(session, index, holding),
                 )
             badge = presenter.total_badge(slot)
             st.badge(badge.text, icon=badge.icon, color=badge.colour)

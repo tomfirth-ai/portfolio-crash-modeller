@@ -1,14 +1,14 @@
 """Everything the pages load, cached so that they stay quick. The only Streamlit caching lives here.
 
-Share returns are downloaded from the Kenneth R. French Data Library at most once a day per file and
-held in memory only. When a download fails, that file is not tried again for a few minutes, so a
-server that is down does not keep every visitor waiting.
+Share portfolios are downloaded from the Kenneth R. French Data Library at most once a day per file,
+only when a split needs them, and held in memory only. When a download fails, that file is not tried
+again for a few minutes, so a server that is down does not keep every visitor waiting.
 """
 
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import timedelta
 
 import streamlit as st
@@ -16,12 +16,13 @@ import streamlit as st
 from crashmodel.data import client, diagnostics
 from crashmodel.data.diagnostics import SourceStatus
 from crashmodel.data.french import (
-    FrenchFile,
-    MarketReturns,
+    PortfolioFile,
+    Portfolios,
     SourceUnavailableError,
-    fetch_market_returns,
+    fetch_portfolios,
 )
-from crashmodel.data.panel import SHARE_FILES, Panel, build_panel
+from crashmodel.data.models import IndexModel, files_for
+from crashmodel.data.panel import Panel, build_panel
 
 SHARE_DATA_LIFETIME = timedelta(days=1)
 """The library is updated monthly, so a copy up to a day old is current enough."""
@@ -75,34 +76,34 @@ class _RecentlyFailedError(Exception):
 
 
 @st.cache_data(ttl=SHARE_DATA_LIFETIME, show_spinner=False)
-def _download(file: FrenchFile) -> MarketReturns:
+def _download(file: PortfolioFile) -> Portfolios:
     # Checked here, inside the cache, so visitors queued behind a failing download do not each
     # try again. A failure raises, and Streamlit caches only results.
     if _failures().is_waiting(file.url):
         raise _RecentlyFailedError
     with client.make_client() as http_client:
-        return fetch_market_returns(http_client, file)
+        return fetch_portfolios(http_client, file)
 
 
-def share_returns(file: FrenchFile) -> MarketReturns | None:
-    """Return one file's market returns, or ``None`` if it cannot be fetched just now."""
+def portfolios(file: PortfolioFile) -> Portfolios | None:
+    """Return one file's portfolios, or ``None`` if it cannot be fetched just now."""
     try:
         return _download(file)
     except _RecentlyFailedError:
         return None
     except SourceUnavailableError as error:
-        _LOGGER.warning("Share returns are unavailable: %s", error)
+        _LOGGER.warning("Share portfolios are unavailable: %s", error)
         _failures().record(file.url)
         return None
 
 
-def load_panel() -> Panel:
-    """Return every block's monthly returns in pounds, with whichever share files can be fetched."""
-    return build_panel({block: share_returns(file) for block, file in SHARE_FILES.items()})
+def load_panel(models: Iterable[IndexModel]) -> Panel:
+    """Return each model's monthly returns in pounds, fetching only the files ``models`` need."""
+    return build_panel({file: portfolios(file) for file in files_for(models)})
 
 
 def try_again() -> None:
-    """Forget recent failures, so the next load tries every share file again."""
+    """Forget recent failures, so the next load tries every file again."""
     _failures().forget()
 
 

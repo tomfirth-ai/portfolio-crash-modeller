@@ -16,10 +16,13 @@ SPLIT_COLOURS = ("#0072B2", "#D55E00", "#009E73", "#9085E9")
 against both light and dark backgrounds."""
 SPLIT_DASHES = ((1, 0), (6, 3), (2, 2), (8, 3, 2, 3))
 """Solid, dashed, dotted and dash-dot, so the lines differ without colour too."""
-BLOCK_COLOURS = ("#CC6677", "#AA4499", "#8F8F30", "#888888")
-"""Rose, purple, olive and grey, in block order, from Paul Tol's colour-blind-safe muted set and
-darkened where needed to stand out at least 3:1 on light and dark backgrounds. They share no colour
-with the splits, so a colour means one thing throughout the journey."""
+KIND_COLOURS = ("#CC6677", "#8F8F30", "#888888")
+"""Rose for shares, olive for bonds and grey for cash, from Paul Tol's colour-blind-safe muted set
+and darkened where needed to stand out at least 3:1 on light and dark backgrounds. They share no
+colour with the splits, so a colour means one thing throughout the journey."""
+SEPARATOR = "#FFFFFF"
+SEPARATOR_WIDTH = 1
+"""A thin line between holdings, so two of the same kind side by side stay apart."""
 BAR_HEIGHT = 36
 """Pixels per split in the composition chart, so each bar's label has room."""
 MONTH_AXIS_FORMAT = "%b %Y"
@@ -83,17 +86,23 @@ def value_chart(view: ValueChartView) -> alt.LayerChart:
 
 
 def composition_chart(view: CompositionView) -> alt.Chart:
-    """Draw one bar per split, divided into its building blocks in their usual order."""
+    """Draw one bar per split, divided into its holdings and coloured by their kind."""
     data = alt.InlineData(
         values=[
-            {"split": p.split, "block": p.block, "percent": p.percent, "order": p.order}
+            {
+                "split": p.split,
+                "holding": p.holding,
+                "kind": p.kind,
+                "percent": p.percent,
+                "order": p.order,
+            }
             for p in view.points
         ]
     )
-    blocks = list(view.blocks)
+    kinds = list(view.kinds)
     chart: alt.Chart = (
         alt.Chart(data, height=alt.Step(BAR_HEIGHT))
-        .mark_bar()
+        .mark_bar(stroke=SEPARATOR, strokeWidth=SEPARATOR_WIDTH)
         .encode(
             y=alt.Y("split:N", sort=list(view.splits), title=None),
             x=alt.X(
@@ -103,16 +112,17 @@ def composition_chart(view: CompositionView) -> alt.Chart:
                 scale=alt.Scale(domain=[0, view.x_max]),
             ),
             color=alt.Color(
-                "block:N",
+                "kind:N",
                 title=None,
-                sort=blocks,
-                scale=alt.Scale(domain=blocks, range=list(BLOCK_COLOURS)),
-                legend=alt.Legend(orient="bottom", columns=LEGEND_COLUMNS),
+                sort=kinds,
+                scale=alt.Scale(domain=kinds, range=list(KIND_COLOURS)),
+                legend=alt.Legend(orient="bottom", columns=len(kinds)),
             ),
             order=alt.Order("order:Q"),
             tooltip=[
                 alt.Tooltip("split:N", title=view.split_title),
-                alt.Tooltip("block:N", title=view.block_title),
+                alt.Tooltip("holding:N", title=view.holding_title),
+                alt.Tooltip("kind:N", title=view.kind_title),
                 alt.Tooltip("percent:Q", title=view.percent_title),
             ],
         )

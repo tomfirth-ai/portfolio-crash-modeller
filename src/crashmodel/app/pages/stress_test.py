@@ -55,9 +55,9 @@ episode = EPISODES_BY_KEY[key]
 st.write(presenter.EPISODE_STORIES[episode.key])
 
 with st.spinner(presenter.FETCHING):
-    panel = loaders.load_panel()
-if panel.unavailable:
-    st.warning(presenter.offline_banner(panel.unavailable), icon=":material/cloud_off:")
+    panel = loaders.load_panel(stress.models_held(slots))
+if unavailable := stress.unavailable_holdings(slots, panel):
+    st.warning(presenter.offline_banner(unavailable), icon=":material/cloud_off:")
     st.button(presenter.TRY_AGAIN, icon=":material/refresh:", on_click=loaders.try_again)
 
 results = stress.outcomes(slots, episode, panel, Rebalancing(management))
@@ -79,6 +79,7 @@ st.table([presenter.table_row(outcome, episode) for outcome in results], hide_in
 chart = presenter.chart_view(results)
 if chart.points:
     st.subheader(presenter.CHART_HEADING, anchor=False)
+    st.caption(presenter.SIMULATED)
     st.altair_chart(value_chart(chart), width="stretch")
 
 st.subheader(presenter.DATA_HEADING, anchor=False)

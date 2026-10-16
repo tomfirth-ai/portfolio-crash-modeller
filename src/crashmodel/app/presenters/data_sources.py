@@ -10,8 +10,8 @@ from crashmodel.data.reference_data import REFERENCE_SERIES, ReferenceSeries
 TITLE = "Data sources"
 
 INTRODUCTION = (
-    "The app uses two kinds of data: open data stored with it, and share returns fetched when "
-    "it runs."
+    "The app uses two kinds of data: open data stored with it, and share data fetched when it "
+    "runs. Every fund and index is modelled from them; no index values or fund prices are used."
 )
 
 STORED_HEADING = "Stored with the app"
@@ -29,10 +29,12 @@ BOND_METHOD = (
 
 FETCHED_HEADING = "Fetched when the app runs"
 FETCHED_INTRODUCTION = (
-    f"Share returns come from the [Kenneth R. French Data Library]({LIBRARY_URL}). They are free "
-    "to download, but no licence is given to pass them on, so the app fetches them when it runs, "
-    "keeps them in memory for up to a day and never stores them. The check below shows whether "
-    "each file can be reached from wherever the app is running."
+    f"The share models are built from the [Kenneth R. French Data Library]({LIBRARY_URL})'s "
+    "portfolios of companies grouped by size, with each portfolio's number of firms and their "
+    "average market value. They are free to download, but no licence is given to pass them on, "
+    "so the app fetches them when it runs, keeps them in memory for up to a day and never stores "
+    "them. The check below shows whether each file can be reached from wherever the app is "
+    "running."
 )
 
 CHECK_BUTTON = "Check the sources"

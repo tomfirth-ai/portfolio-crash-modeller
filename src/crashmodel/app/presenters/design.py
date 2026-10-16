@@ -1,19 +1,21 @@
-"""What the Design page says: what each box means, each split's total, and what is still needed."""
+"""What the Design page says: what each split holds, its total, and what is still needed."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
 from crashmodel.app.journey import DESIGN
-from crashmodel.app.presenters.blocks import BLOCK_LABELS
+from crashmodel.app.presenters.holdings import KIND_LABELS, holding_kind, holding_name, short_name
 from crashmodel.app.presenters.names import markdown_text
-from crashmodel.app.splits import EXAMPLE_SPLITS, WHOLE, Slot, display_names
-from crashmodel.data.blocks import Block
+from crashmodel.app.splits import EXAMPLE_SPLITS, WHOLE, Slot, Split, display_names
+from crashmodel.data.catalogue import HoldingId
+from crashmodel.data.models import AssetKind
 
 TITLE = DESIGN.title
 INTRODUCTION = (
-    "Split £100 between the building blocks, in whole percentages that add up to 100. You can "
-    "compare up to four splits; switch one off to leave it out."
+    "Choose up to six funds or indexes for each split, then give each a whole percentage so that "
+    "they add up to 100. Every one is modelled from published research and open data, after its "
+    "ongoing charge. You can compare up to four splits; switch one off to leave it out."
 )
 START_OWN = "Start your own"
 SHOW_EXAMPLES = "Back to the examples"
@@ -22,10 +24,18 @@ NAME = "Name"
 TEMPLATE = "Fill from an example"
 TEMPLATE_PLACEHOLDER = "Choose an example"
 TEMPLATE_NAMES = tuple(split.name for split in EXAMPLE_SPLITS)
+HOLDINGS = "Funds and indexes"
+HOLDINGS_PLACEHOLDER = "Search by name or ticker"
+HOLDINGS_HELP = (
+    "Search by ticker, fund or index. Each fund is modelled from the index it tracks, after its "
+    "ongoing charge. An index on its own is modelled before any charges."
+)
+MAX_HOLDINGS = 6
 COMPOSITION_HEADING = "What each split holds"
 COMPOSITION_X_TITLE = "Share of £100 (%)"
 COMPOSITION_SPLIT = "Split"
-COMPOSITION_BLOCK = "Building block"
+COMPOSITION_HOLDING = "Holding"
+COMPOSITION_KIND = "Kind"
 COMPOSITION_PERCENT = "Share (%)"
 NEXT = "Stress-test these splits"
 NOTHING_INCLUDED = "Switch on at least one split to stress-test it."
@@ -44,9 +54,9 @@ class TotalBadge:
     icon: str
 
 
-def block_label(block: Block) -> str:
-    """Label a block's percentage box, such as "Cash (%)"."""
-    return f"{BLOCK_LABELS[block]} (%)"
+def percent_label(holding: HoldingId) -> str:
+    """Label a holding's percentage box, such as "VWRP (%)"."""
+    return f"{short_name(holding)} (%)"
 
 
 def total_badge(slot: Slot) -> TotalBadge:
@@ -77,10 +87,11 @@ def next_blocker(slots: Sequence[Slot]) -> str | None:
 
 @dataclass(frozen=True, kw_only=True)
 class CompositionPoint:
-    """How much of one split is in one block, for the chart."""
+    """How much of one split is in one holding, for the chart."""
 
     split: str
-    block: str
+    holding: str
+    kind: str
     percent: int
     order: int
 
@@ -93,27 +104,40 @@ class CompositionView:
     splits: tuple[str, ...]
     x_max: int = WHOLE
     """The axis always reaches 100, so a split that adds up to less shows its gap."""
-    blocks: tuple[str, ...] = tuple(BLOCK_LABELS[block] for block in Block)
+    kinds: tuple[str, ...] = tuple(KIND_LABELS[kind] for kind in AssetKind)
     x_title: str = COMPOSITION_X_TITLE
     split_title: str = COMPOSITION_SPLIT
-    block_title: str = COMPOSITION_BLOCK
+    holding_title: str = COMPOSITION_HOLDING
+    kind_title: str = COMPOSITION_KIND
     percent_title: str = COMPOSITION_PERCENT
 
 
 def composition_view(slots: Sequence[Slot]) -> CompositionView:
-    """Show what each included split holds, block by block, in the blocks' usual order."""
+    """Show what each included split holds: shares first, then bonds, then cash."""
     shown = [
         (name, slot.split)
         for slot, name in zip(slots, display_names(slots), strict=True)
         if slot.included
     ]
     points = tuple(
-        CompositionPoint(split=name, block=BLOCK_LABELS[block], percent=percent, order=order)
+        CompositionPoint(
+            split=name, holding=holding_name(holding), kind=kind, percent=percent, order=order
+        )
         for name, split in shown
-        for order, block in enumerate(Block)
-        if (percent := split.percentages.get(block, 0))
+        for order, (holding, kind, percent) in enumerate(_by_kind(split))
     )
     largest = max((split.total for _, split in shown), default=WHOLE)
     return CompositionView(
         points=points, splits=tuple(name for name, _ in shown), x_max=max(WHOLE, largest)
     )
+
+
+def _by_kind(split: Split) -> list[tuple[HoldingId, str, int]]:
+    """A split's holdings with their kinds, shares first, leaving out any at 0%."""
+    kinds = list(CompositionView.kinds)
+    held = [
+        (holding, holding_kind(holding), percent)
+        for holding, percent in split.percentages.items()
+        if percent
+    ]
+    return sorted(held, key=lambda item: kinds.index(item[1]))

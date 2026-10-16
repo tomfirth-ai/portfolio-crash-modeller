@@ -57,8 +57,13 @@ def portfolio_text(
     values: Values = steady,
     header: Sequence[str] | None = None,
 ) -> str:
-    """Return synthetic file text for ``file``, with ``months`` monthly rows from ``start``."""
-    columns = header if header is not None else US_HEADER if file == US_BY_SIZE else SIX_HEADER
+    """Return synthetic file text for ``file``, with ``months`` monthly rows from ``start``.
+
+    As in the real files, the US layout pads each value on the left and ends with the copyright
+    line, while the developed and emerging layout pads on the right and ends with its last row.
+    """
+    us = file == US_BY_SIZE
+    columns = header if header is not None else US_HEADER if us else SIX_HEADER
     keys = [start + offset for offset in range(months)]
     vintage = f"{keys[-1].year:04d}{keys[-1].month:02d}"
 
@@ -69,9 +74,8 @@ def portfolio_text(
             for column in columns:
                 value = None if column == "<= 0" else values(column, month)[field]
                 cells.append(MISSING if value is None else f"{value:{number}}")
-            rows.append(
-                ",".join([f"{month.year:04d}{month.month:02d}", *(c.rjust(WIDTH) for c in cells)])
-            )
+            padded = [cell.rjust(WIDTH) if us else cell.ljust(WIDTH) for cell in cells]
+            rows.append(",".join([f"{month.year:04d}{month.month:02d}", *padded]))
         return ["", "", f"  {title}", ",".join(["", *columns]), *rows]
 
     lines = [
@@ -85,7 +89,7 @@ def portfolio_text(
         f"{start.year:04d}," + ",".join("1.00".rjust(WIDTH) for _ in columns),
         *section(FIRMS_SECTION, 1, number="g"),
         *section(SIZE_SECTION, 2),
-        "",
-        "Copyright 2026 Eugene F. Fama and Kenneth R. French",
     ]
+    if us:
+        lines += ["", "Copyright 2026 Eugene F. Fama and Kenneth R. French"]
     return CRLF.join(lines) + CRLF

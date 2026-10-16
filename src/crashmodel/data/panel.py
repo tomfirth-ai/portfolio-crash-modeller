@@ -1,70 +1,83 @@
-"""Every building block's monthly returns in pounds, ready for the engine.
+"""Every index model's monthly returns in pounds, ready for the engine.
 
-UK government bonds and cash come from the open series stored with the app. Shares come from the
-French library files fetched at runtime, converted from dollars at the stored month-end rates. A
-share block whose file could not be fetched is listed as unavailable, so a split holding it can say
-why it has no result instead of failing.
+UK gilts and sterling cash come from the open series stored with the app. Share models are built
+from the French library's size portfolio files fetched at runtime, then converted from dollars at
+the stored month-end rates. A share model whose files could not all be fetched, or did not combine,
+is listed as unavailable, so a split holding it can say why it has no result instead of failing.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from crashmodel.data.blocks import SHARE_BLOCKS, Block
-from crashmodel.data.french import DEVELOPED_MARKETS, US_MARKET, FrenchFile, MarketReturns, Vintage
+from crashmodel.data.french import PortfolioFile, Portfolios, Vintage
+from crashmodel.data.models import SHARE_MODEL_FILES, IndexModel, share_model_returns
 from crashmodel.data.reference_data import CASH_RETURN, GILT_YIELD, USD_PER_GBP, stored
 from crashmodel.engine.bonds import par_bond_returns
 from crashmodel.engine.currency import to_home_currency
 from crashmodel.engine.months import MonthlySeries
 
-SHARE_FILES: Mapping[Block, FrenchFile] = {
-    Block.GLOBAL_SHARES: DEVELOPED_MARKETS,
-    Block.US_SHARES: US_MARKET,
-}
-
 
 @dataclass(frozen=True, kw_only=True)
 class Panel:
-    """The monthly returns in pounds of every block that has data.
+    """The monthly returns in pounds of every model that has data.
 
     Attributes:
-        returns: Each available block's monthly returns in pounds, as decimals.
-        unavailable: Blocks whose data could not be fetched.
-        vintages: For share blocks with data, which monthly update of the library it comes from.
-        dollar_returns: For share blocks with data, their returns in US dollars, before
+        returns: Each available model's monthly returns in pounds, as decimals.
+        unavailable: Share models whose data could not be fetched or read.
+        vintages: For each fetched file, which monthly update of the library it comes from.
+        dollar_returns: For share models with data, their returns in US dollars, before
             conversion into pounds.
     """
 
-    returns: Mapping[Block, MonthlySeries]
-    unavailable: frozenset[Block]
-    vintages: Mapping[Block, Vintage]
-    dollar_returns: Mapping[Block, MonthlySeries] = field(default_factory=dict)
+    returns: Mapping[IndexModel, MonthlySeries]
+    unavailable: frozenset[IndexModel]
+    vintages: Mapping[PortfolioFile, Vintage]
+    dollar_returns: Mapping[IndexModel, MonthlySeries] = field(default_factory=dict)
 
 
-def stored_returns() -> dict[Block, MonthlySeries]:
-    """Return the blocks built only from data stored with the app: UK bonds and cash."""
-    return {Block.UK_BONDS: par_bond_returns(stored(GILT_YIELD)), Block.CASH: stored(CASH_RETURN)}
+def stored_returns() -> dict[IndexModel, MonthlySeries]:
+    """Return the models built only from data stored with the app: UK gilts and sterling cash."""
+    return {
+        IndexModel.UK_GILTS: par_bond_returns(stored(GILT_YIELD)),
+        IndexModel.STERLING_CASH: stored(CASH_RETURN),
+    }
 
 
-def build_panel(markets: Mapping[Block, MarketReturns | None]) -> Panel:
-    """Combine the stored blocks with whichever share files could be fetched.
+def build_panel(files: Mapping[PortfolioFile, Portfolios | None]) -> Panel:
+    """Combine the stored models with every share model whose files were fetched.
 
     Args:
-        markets: For each share block, its fetched returns in dollars, or ``None`` if the
-            file could not be fetched.
+        files: Each file that was asked for, with its portfolios, or ``None`` if it could not be
+            fetched. A share model that needs a file not asked for is left out: it is neither built
+            nor unavailable.
     """
     usd_per_gbp = stored(USD_PER_GBP)
+    fetched = {file: portfolios for file, portfolios in files.items() if portfolios is not None}
     returns = stored_returns()
-    vintages: dict[Block, Vintage] = {}
-    dollar_returns: dict[Block, MonthlySeries] = {}
-    for block in SHARE_BLOCKS:
-        market = markets.get(block)
-        if market is not None:
-            returns[block] = to_home_currency(market.returns, usd_per_gbp)
-            vintages[block] = market.vintage
-            dollar_returns[block] = market.returns
+    dollar_returns: dict[IndexModel, MonthlySeries] = {}
+    unavailable: set[IndexModel] = set()
+    for model, needed in SHARE_MODEL_FILES.items():
+        if not files.keys() >= set(needed):
+            continue
+        built = _built(model, fetched, usd_per_gbp) if fetched.keys() >= set(needed) else None
+        if built is None:
+            unavailable.add(model)
+        else:
+            dollar_returns[model], returns[model] = built
     return Panel(
         returns=returns,
-        unavailable=frozenset(SHARE_BLOCKS - returns.keys()),
-        vintages=vintages,
+        unavailable=frozenset(unavailable),
+        vintages={file: portfolios.vintage for file, portfolios in fetched.items()},
         dollar_returns=dollar_returns,
     )
+
+
+def _built(
+    model: IndexModel, fetched: Mapping[PortfolioFile, Portfolios], usd_per_gbp: MonthlySeries
+) -> tuple[MonthlySeries, MonthlySeries] | None:
+    """Return a share model's returns in dollars and pounds, or ``None`` if it cannot be built."""
+    try:
+        dollars = share_model_returns(model, fetched)
+        return dollars, to_home_currency(dollars, usd_per_gbp)
+    except ValueError:
+        return None

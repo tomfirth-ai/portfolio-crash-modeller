@@ -14,9 +14,8 @@ from crashmodel.app.components import footer
 from crashmodel.app.presenters import data_sources, design, home, stress_test
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.app.splits import EXAMPLE_SPLITS
-from crashmodel.app.state import widget_key
+from crashmodel.app.state import percent_key, widget_key
 from crashmodel.data import client, diagnostics
-from crashmodel.data.blocks import SHARE_BLOCKS, Block
 from crashmodel.data.reference_data import REFERENCE_SERIES
 from crashmodel.engine.episodes import COVID
 from tests.app.copy_rules import copy_problems
@@ -81,9 +80,9 @@ def rendered_text(app: AppTest) -> list[str]:
     texts += [button.label for button in app.button]
     for group in button_groups(app):
         texts += [group.proto.label, *group.options]
-    for kind in ("text_input", "number_input", "toggle", "selectbox"):
+    for kind in ("text_input", "number_input", "toggle", "selectbox", "multiselect"):
         texts += [text for widget in getattr(app, kind) for text in (widget.label, widget.help)]
-    for menu in app.selectbox:
+    for menu in [*app.selectbox, *app.multiselect]:
         texts += [*menu.options, menu.placeholder]
     texts += [bar.proto.text for bar in app.get("progress")]
     texts += [link.proto.label for link in app.get("page_link")]
@@ -140,7 +139,7 @@ def stress_test_page(monkeypatch: pytest.MonkeyPatch, library: FakeLibrary) -> A
 def design_page_with_a_problem() -> AppTest:
     """The Design page with one split that does not add up, so every message shows."""
     app = run_app(DESIGN_PAGE)
-    app.number_input(key=widget_key(1, Block.UK_BONDS)).set_value(45).run()
+    app.number_input(key=percent_key(1, "uk_gilt")).set_value(45).run()
     app.toggle(key=widget_key(3, "included")).set_value(False).run()
     return app
 
@@ -179,7 +178,7 @@ def test_without_share_prices_bonds_and_cash_still_have_results(
 ) -> None:
     app = stress_test_page(monkeypatch, FakeLibrary(online=False))
 
-    assert app.warning[0].value == stress_test.offline_banner(SHARE_BLOCKS)
+    assert app.warning[0].value == stress_test.offline_banner(["ftse_all_world"])
     falls = column(app, "Worst fall in the crash")
     assert [name for name, fall in falls.items() if fall != "No data"] == ["Cash only"]
     assert len(app.get("vega_lite_chart")) == 1

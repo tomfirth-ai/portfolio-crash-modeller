@@ -6,83 +6,214 @@ import pytest
 
 from crashmodel.data import french
 from crashmodel.data.french import (
-    DEVELOPED_MARKETS,
-    US_MARKET,
+    BIG,
+    DEVELOPED_BY_SIZE,
+    FIRMS_SECTION,
+    PORTFOLIO_FILES,
+    SIZE_SECTION,
+    US_BY_SIZE,
+    PortfolioFile,
     SourceUnavailableError,
-    parse_market_returns,
+    fetch_portfolios,
+    parse_portfolios,
     read_zipped_csv,
 )
 from crashmodel.engine.months import Month
-from tests.data.french_text import CYCLE, Layout, Row, french_text, zipped
+from tests.data.french_portfolio_text import (
+    CRLF,
+    FIRST_MONTH,
+    US_HEADER,
+    Cell,
+    Values,
+    portfolio_text,
+    steady,
+)
+from tests.data.french_text import zipped
 
-START = Month(2007, 1)
+LAST_MONTH = FIRST_MONTH + 23
 LOCAL_HEADER_BYTES = 30
 """The fixed part of a zip member's header; its name follows, then its compressed data."""
 
 
-@pytest.mark.parametrize("layout", ["us", "developed"])
-def test_both_layouts_give_monthly_total_returns_and_the_vintage(layout: Layout) -> None:
-    result = parse_market_returns(french_text(layout, start=START))
-    assert (result.returns.start, len(result.returns)) == (START, 24)
-    assert result.returns[START] == pytest.approx((1.00 + 0.25) / 100)
-    assert result.returns[START + 1] == pytest.approx((-2.00 + 0.25) / 100)
-    assert result.vintage.month == START + 23
-    assert result.vintage.database == ("CRSP" if layout == "us" else "Bloomberg")
-
-
-def test_the_annual_section_is_never_read_as_months() -> None:
-    assert parse_market_returns(french_text("us")).returns.end == START + 23
+@pytest.mark.parametrize("file", PORTFOLIO_FILES, ids=lambda file: file.name)
+def test_each_file_gives_its_portfolios_returns_firms_and_sizes(file: PortfolioFile) -> None:
+    read = parse_portfolios(portfolio_text(file), file)
+    assert set(read.portfolios) == set(file.portfolios)
+    for portfolio in read.portfolios.values():
+        assert (portfolio.returns.start, portfolio.returns.end) == (FIRST_MONTH, LAST_MONTH)
+        assert portfolio.returns.values[:4] == pytest.approx((0.01, -0.02, 0.03, -0.01))
+        assert set(portfolio.firms.values) == {10}
+        assert set(portfolio.average_size.values) == {100}
+    assert (read.vintage.month, read.vintage.database) == (LAST_MONTH, "Synthetic")
 
 
 @pytest.mark.parametrize(
     "text",
     [
-        french.BYTE_ORDER_MARK + french_text("us"),
-        french_text("us").replace("\r\n", "\n"),
-        french_text("developed").replace("\r\n", "\r"),
+        french.BYTE_ORDER_MARK + portfolio_text(US_BY_SIZE),
+        portfolio_text(US_BY_SIZE).replace(CRLF, "\n"),
+        portfolio_text(US_BY_SIZE).replace(CRLF, "\r"),
     ],
+    ids=["byte order mark", "LF", "CR"],
 )
 def test_byte_order_marks_and_any_line_ending_are_accepted(text: str) -> None:
-    assert len(parse_market_returns(text).returns) == 24
+    assert len(parse_portfolios(text, US_BY_SIZE).portfolios["Hi 10"].returns) == 24
 
 
-def replace_row(layout: Layout, index: int, row: Row) -> str:
-    rows = [CYCLE[i % len(CYCLE)] for i in range(24)]
-    rows[index] = row
-    return french_text(layout, rows=rows)
+def test_a_column_the_app_does_not_use_may_be_missing_throughout() -> None:
+    """The real US file's first column, firms with no market value, is always missing."""
+    assert "<= 0" in US_HEADER
+    assert "<= 0" not in US_BY_SIZE.portfolios
+    parse_portfolios(portfolio_text(US_BY_SIZE), US_BY_SIZE)
+
+
+def missing_until(late: str, first: Month) -> Values:
+    def values(column: str, month: Month) -> Cell:
+        if column == late and month < first:
+            return None, 0, None
+        return steady(column, month)
+
+    return values
+
+
+def test_a_portfolio_that_starts_late_begins_at_its_first_complete_month() -> None:
+    late = Month(2007, 4)
+    text = portfolio_text(DEVELOPED_BY_SIZE, values=missing_until(BIG[0], late))
+    read = parse_portfolios(text, DEVELOPED_BY_SIZE)
+    assert read.portfolios[BIG[0]].returns.start == late
+    assert read.portfolios[BIG[1]].returns.start == FIRST_MONTH
+
+
+def gap_in(column: str, gap: Month) -> Values:
+    def values(name: str, month: Month) -> Cell:
+        return (None, 10, 100) if name == column and month == gap else steady(name, month)
+
+    return values
+
+
+def replaced(text: str, old: str, new: str) -> str:
+    assert old in text
+    return text.replace(old, new, 1)
+
+
+def six(*, months: int = 24, values: Values = steady) -> str:
+    return portfolio_text(DEVELOPED_BY_SIZE, months=months, values=values)
+
+
+def every_month(cell: Cell) -> Values:
+    def values(_column: str, _month: Month) -> Cell:
+        return cell
+
+    return values
+
+
+def implausible(field: int, value: float) -> Values:
+    def values(column: str, month: Month) -> Cell:
+        cell = list(steady(column, month))
+        if column == BIG[0] and month == FIRST_MONTH + 5:
+            cell[field] = value
+        return cell[0], cell[1], cell[2]
+
+    return values
 
 
 @pytest.mark.parametrize(
     ("text", "message"),
     [
-        ("", "vintage"),
-        (french_text("us").replace("using the", "from the"), "vintage"),
-        (french_text("us").replace(",Mkt-RF,SMB,HML,RF", ",Mkt-RF,SMB,HML,RMW,RF"), "header"),
-        (replace_row("us", 3, (-99.99, 0.0, 0.0, 0.25)), "missing data"),
-        (replace_row("developed", 3, (1.0, 0.0, 0.0, -999.0)), "missing data"),
-        (replace_row("us", 3, (75.0, 0.0, 0.0, 0.25)), "market return"),
-        (replace_row("us", 3, (1.0, 0.0, 0.0, 4.0)), "risk-free"),
-        (french_text("us").replace("200703,", "200713,"), "month must be from 1 to 12"),
-        (french_text("us").replace("200703,", "200704,", 1), "no gaps"),
-        (french_text("us").replace("   1.00,   0.50", "    nan,   0.50", 1), "plain number"),
-        (french_text("us").replace("   0.25\r\n", "   0.25,   9.99\r\n", 1), "number of fields"),
-        (french_text("us").replace("200703,", "  2007,"), "YYYYMM"),
-        ("\r\n".join(french_text("us").split("\r\n")[:12]), "does not end"),
-        (french_text("us", rows=CYCLE * 2), "too few"),
-        (french_text("us", rows=[(0.10, 0.0, 0.0, 0.05)] * 12), "decimals, not percent"),
+        pytest.param(six()[six().index(CRLF) + 2 :], "vintage", id="no vintage line"),
+        pytest.param("", "vintage", id="empty file"),
+        pytest.param(
+            replaced(six(), "  " + SIZE_SECTION, "  Average Size"), "missing", id="missing section"
+        ),
+        pytest.param(
+            replaced(six(), "," + ",".join(("SMALL LoBM", "ME1 BM2")), ",SMALL,ME1 BM2"),
+            "lacks",
+            id="missing column",
+        ),
+        pytest.param(six().rstrip(CRLF).rsplit(CRLF, 2)[0], "different months", id="cut short"),
+        pytest.param(
+            replaced(six(), "200701,", "200701,1.00,"), "wrong number of fields", id="extra field"
+        ),
+        pytest.param(replaced(six(), "200701,", "2007-1,"), "YYYYMM", id="not a month"),
+        pytest.param(six(months=11), "too few", id="too few months"),
+        pytest.param(replaced(six(), "200703,", "200713,"), "from 1 to 12", id="month 13"),
+        pytest.param(six().replace("200703,", "200704,"), "no gaps", id="skipped month"),
+        pytest.param(six().replace("200704,", "200703,"), "does not follow", id="repeated month"),
+        pytest.param(replaced(six(), "1.00", "nan"), "plain number", id="not a number"),
+        pytest.param(
+            six(values=gap_in(BIG[1], FIRST_MONTH + 6)), "missing data", id="gap after the start"
+        ),
+        pytest.param(
+            six(values=every_month((None, 0, None))), "no complete month", id="nothing complete"
+        ),
+        pytest.param(six(values=implausible(0, -100.0)), "plausible range", id="lost everything"),
+        pytest.param(six(values=implausible(0, 300.0)), "plausible range", id="garbled gain"),
+        pytest.param(six(values=implausible(1, 10.5)), "whole number", id="part of a firm"),
+        pytest.param(
+            six(values=every_month((0.001, 10, 100))), "decimals", id="decimals not percent"
+        ),
     ],
 )
 def test_anything_unexpected_is_refused(text: str, message: str) -> None:
     with pytest.raises(ValueError, match=message):
-        parse_market_returns(text)
+        parse_portfolios(text, DEVELOPED_BY_SIZE)
+
+
+def test_sections_covering_different_months_are_refused() -> None:
+    text = six()
+    firms = text.index(FIRMS_SECTION)
+    last_row = f"{CRLF}{LAST_MONTH.year:04d}{LAST_MONTH.month:02d},"
+    cut = text.index(last_row, firms)
+    shorter = text[:cut] + text[text.index(CRLF, cut + 2) :]
+    with pytest.raises(ValueError, match="different months"):
+        parse_portfolios(shorter, DEVELOPED_BY_SIZE)
+
+
+def test_a_negative_firm_size_is_refused() -> None:
+    with pytest.raises(ValueError, match="negative"):
+        parse_portfolios(six(values=implausible(2, -5.0)), DEVELOPED_BY_SIZE)
+
+
+def client_answering(response: httpx.Response) -> httpx.Client:
+    return httpx.Client(transport=httpx.MockTransport(lambda _request: response))
+
+
+def test_a_file_is_fetched_and_read() -> None:
+    content = zipped(portfolio_text(US_BY_SIZE), "Portfolios_Formed_on_ME.csv")
+    with client_answering(httpx.Response(200, content=content)) as client:
+        read = fetch_portfolios(client, US_BY_SIZE)
+    assert set(read.portfolios) == set(US_BY_SIZE.portfolios)
+
+
+@pytest.mark.parametrize(
+    ("response", "message"),
+    [
+        (httpx.Response(404), "HTTP 404"),
+        (httpx.Response(200, content=zipped("not a portfolio file")), "not as expected"),
+    ],
+)
+def test_a_bad_answer_makes_the_source_unavailable(response: httpx.Response, message: str) -> None:
+    with client_answering(response) as client, pytest.raises(SourceUnavailableError, match=message):
+        fetch_portfolios(client, DEVELOPED_BY_SIZE)
+
+
+def test_a_failed_connection_makes_the_source_unavailable() -> None:
+    def refuse(_request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(refuse)) as client,
+        pytest.raises(SourceUnavailableError, match="download failed"),
+    ):
+        fetch_portfolios(client, DEVELOPED_BY_SIZE)
 
 
 def damaged_zip() -> bytes:
     """A compressed zip with a few bytes of its compressed data flipped, as a bad download has."""
-    member = "F-F_Research_Data_Factors.csv"
+    member = "Portfolios_Formed_on_ME.csv"
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(member, french_text("us"))
+        archive.writestr(member, portfolio_text(US_BY_SIZE))
     content = bytearray(buffer.getvalue())
     data = LOCAL_HEADER_BYTES + len(member)
     content[data + 10 : data + 16] = bytes(byte ^ 0xFF for byte in content[data + 10 : data + 16])
@@ -100,7 +231,7 @@ def test_the_csv_is_read_from_the_zip_in_memory() -> None:
         (damaged_zip(), "not a readable zip"),
         (b"x" * (french.MAX_DOWNLOAD_BYTES + 1), "too large"),
         (zipped("text", member="notes.txt"), "exactly one CSV"),
-        (zipped("café"), "not plain text"),
+        (zipped("caf\u00e9"), "not plain text"),
     ],
 )
 def test_a_download_that_is_not_one_ascii_csv_in_a_zip_is_refused(
@@ -114,37 +245,3 @@ def test_an_oversized_csv_inside_the_zip_is_refused(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(french, "MAX_CSV_BYTES", 100)
     with pytest.raises(ValueError, match="CSV file is too large"):
         read_zipped_csv(zipped("x" * 200))
-
-
-def client_answering(response: httpx.Response) -> httpx.Client:
-    return httpx.Client(transport=httpx.MockTransport(lambda _request: response))
-
-
-def test_a_file_is_fetched_and_read() -> None:
-    response = httpx.Response(200, content=zipped(french_text("developed")))
-    with client_answering(response) as client:
-        result = french.fetch_market_returns(client, DEVELOPED_MARKETS)
-    assert len(result.returns) == 24
-
-
-@pytest.mark.parametrize(
-    ("response", "message"),
-    [
-        (httpx.Response(404), "HTTP 404"),
-        (httpx.Response(200, content=b"<html>maintenance</html>"), "not as expected"),
-    ],
-)
-def test_a_bad_answer_makes_the_source_unavailable(response: httpx.Response, message: str) -> None:
-    with client_answering(response) as client, pytest.raises(SourceUnavailableError, match=message):
-        french.fetch_market_returns(client, US_MARKET)
-
-
-def test_a_failed_connection_makes_the_source_unavailable() -> None:
-    def refuse(_request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectTimeout("slow")
-
-    with (
-        httpx.Client(transport=httpx.MockTransport(refuse)) as client,
-        pytest.raises(SourceUnavailableError, match="download failed"),
-    ):
-        french.fetch_market_returns(client, US_MARKET)

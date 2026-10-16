@@ -22,9 +22,15 @@ Swinkels (2019), *Data* 4(3), 91. Only the method is used; none of that dataset 
 
 ## Data fetched at runtime
 
-Share returns come from the [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html):
-its developed-markets and US market factor files. They are free to download, but no licence is given
-to redistribute them, so the app fetches them when it runs, keeps them in memory for up to a day, and
-never writes them to disk or commits them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)).
-Nothing computed from them appears in this repository. The app's Data sources page checks that each
-file can be reached.
+The share models ([ADR 0005](docs/decisions/0005-real-funds-modelled.md)) are built from the
+[Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html)'s
+portfolios of companies grouped by size: `Portfolios_Formed_on_ME` (US companies in tenths by market
+value, built from CRSP), and `Developed_6_Portfolios_ME_BE-ME` and
+`Emerging_Markets_6_Portfolios_ME_BE-ME` (big and small companies, built from Bloomberg). The app
+fetches a file only when a split needs it. The files are free to download, but no licence is given
+to redistribute them, so the app keeps them in memory for up to a day, and never writes them to disk
+or commits them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)). Nothing computed from them
+appears in this repository. The app's Data sources page checks that each file can be reached.
+
+Fund names, tickers, ongoing charges and launch dates are facts typed in by hand from each fund's
+key information document, with the document's date. No index values or fund prices are used.

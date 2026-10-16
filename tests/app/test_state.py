@@ -12,8 +12,16 @@ from crashmodel.app.splits import (
     empty_slots,
     example_slots,
 )
-from crashmodel.app.state import INCLUDED, NAME, TEMPLATE, SessionState, widget_key
-from crashmodel.data.blocks import Block
+from crashmodel.app.state import (
+    HOLDINGS,
+    INCLUDED,
+    NAME,
+    SLOTS,
+    TEMPLATE,
+    SessionState,
+    percent_key,
+    widget_key,
+)
 
 
 def started() -> SessionState:
@@ -37,16 +45,57 @@ def test_starting_again_keeps_the_visitors_splits() -> None:
 def test_widgets_show_each_slot_and_write_their_changes_back() -> None:
     session = started()
     assert session[widget_key(1, NAME)] == "Balanced"
-    assert session[widget_key(1, Block.US_SHARES)] == 0
+    assert session[widget_key(1, HOLDINGS)] == ["ftse_all_world", "uk_gilt"]
+    assert session[percent_key(1, "uk_gilt")] == 40
 
     session[widget_key(1, NAME)] = "Mine"
-    session[widget_key(1, Block.UK_BONDS)] = 45
     session[widget_key(1, INCLUDED)] = False
     state.commit(session, 1)
+    session[percent_key(1, "uk_gilt")] = 45
+    state.set_percent(session, 1, "uk_gilt")
 
-    mine = Split(name="Mine", percentages={Block.GLOBAL_SHARES: 60, Block.UK_BONDS: 45})
+    mine = Split(name="Mine", percentages={"ftse_all_world": 60, "uk_gilt": 45})
     assert state.slots(session)[1] == Slot(split=mine, included=False)
     assert state.slots(session)[0] == example_slots()[0]
+
+
+def choose(session: SessionState, index: int, holdings: list[str]) -> dict[str, int]:
+    session[widget_key(index, HOLDINGS)] = holdings
+    state.choose_holdings(session, index)
+    return dict(state.slots(session)[index].split.percentages)
+
+
+def test_a_new_holding_gets_whatever_brings_the_split_up_to_100() -> None:
+    session = started()
+    state.start_own(session)
+    assert choose(session, 0, ["sp500"]) == {"sp500": 100}
+    assert choose(session, 0, ["sp500", "bank_rate"]) == {"sp500": 100, "bank_rate": 0}
+
+    session[percent_key(0, "sp500")] = 70
+    state.set_percent(session, 0, "sp500")
+    assert choose(session, 0, ["sp500", "bank_rate", "uk_gilt"]) == {
+        "sp500": 70,
+        "bank_rate": 0,
+        "uk_gilt": 30,
+    }
+
+
+def test_removing_a_holding_keeps_the_others_and_their_order() -> None:
+    session = started()
+    assert choose(session, 0, ["bank_rate", "ftse_all_world"]) == {
+        "bank_rate": 20,
+        "ftse_all_world": 20,
+    }
+    assert list(state.slots(session)[0].split.percentages) == ["bank_rate", "ftse_all_world"]
+
+
+def test_a_session_keeps_its_splits_when_a_holding_leaves_the_catalogue() -> None:
+    session = started()
+    kept = Split(name="Mine", percentages={"sp500": 60, "withdrawn": 40})
+    session[SLOTS] = (Slot(split=kept), *example_slots()[1:])
+    state.ensure_started(session)
+    assert state.slots(session)[0].split.percentages == {"sp500": 60}
+    assert state.slots(session)[1:] == example_slots()[1:]
 
 
 def test_writing_back_unchanged_widgets_leaves_the_examples_as_they_were() -> None:
@@ -79,5 +128,5 @@ def test_starting_your_own_and_going_back_to_the_examples() -> None:
 def test_a_split_cannot_be_changed_once_made() -> None:
     percentages: Any = state.slots(started())[1].split.percentages
     with pytest.raises(TypeError):
-        percentages[Block.CASH] = 50
+        percentages["bank_rate"] = 50
     assert BALANCED.total == 100

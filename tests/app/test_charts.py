@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from crashmodel.app.charts import (
-    BLOCK_COLOURS,
+    KIND_COLOURS,
     LEGEND_COLUMNS,
     SPLIT_COLOURS,
     SPLIT_DASHES,
@@ -58,16 +58,25 @@ def test_the_legend_wraps_into_rows_that_fit_a_phone() -> None:
     assert legend == {"orient": "bottom", "columns": LEGEND_COLUMNS}
 
 
-def test_the_composition_chart_stacks_each_splits_blocks_in_order() -> None:
+def test_the_composition_chart_stacks_each_splits_holdings_coloured_by_kind() -> None:
     view = CompositionView(
-        points=(CompositionPoint(split="Mine", block="Cash", percent=100, order=3),),
+        points=(
+            CompositionPoint(split="Mine", holding="VWRP", kind="Shares", percent=100, order=0),
+        ),
         splits=("Mine",),
     )
-    encoding = composition_chart(view).to_dict()["encoding"]
+    chart = composition_chart(view).to_dict()
+    encoding = chart["encoding"]
     assert encoding["x"]["stack"] == "zero"
     assert encoding["order"]["field"] == "order"
-    assert encoding["color"]["scale"]["range"] == list(BLOCK_COLOURS)
+    assert encoding["color"]["field"] == "kind"
+    assert encoding["color"]["scale"] == {
+        "domain": ["Shares", "Bonds", "Cash"],
+        "range": list(KIND_COLOURS),
+    }
     assert encoding["x"]["scale"]["domain"] == [0, 100]
+    assert [tip["field"] for tip in encoding["tooltip"]] == ["split", "holding", "kind", "percent"]
+    assert chart["mark"]["strokeWidth"] > 0
 
 
 LIGHT_BACKGROUND, DARK_BACKGROUND = "#FFFFFF", "#0E1117"
@@ -88,11 +97,11 @@ def contrast(first: str, second: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-@pytest.mark.parametrize("colour", [*SPLIT_COLOURS, *BLOCK_COLOURS])
+@pytest.mark.parametrize("colour", [*SPLIT_COLOURS, *KIND_COLOURS])
 def test_every_chart_colour_stands_out_on_light_and_dark_pages(colour: str) -> None:
     assert contrast(colour, LIGHT_BACKGROUND) >= GRAPHICS_CONTRAST
     assert contrast(colour, DARK_BACKGROUND) >= GRAPHICS_CONTRAST
 
 
-def test_blocks_and_splits_never_share_a_colour() -> None:
-    assert not set(BLOCK_COLOURS) & set(SPLIT_COLOURS)
+def test_kinds_and_splits_never_share_a_colour() -> None:
+    assert not set(KIND_COLOURS) & set(SPLIT_COLOURS)

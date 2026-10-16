@@ -3,11 +3,10 @@ import pytest
 from crashmodel.app.presenters import design
 from crashmodel.app.presenters.names import markdown_text
 from crashmodel.app.splits import Slot, Split, display_names, empty_slots, example_slots
-from crashmodel.data.blocks import Block
 
 
 def slot(name: str = "Mine", *, included: bool = True, cash: int = 0, bonds: int = 0) -> Slot:
-    percentages = {Block.CASH: cash, Block.UK_BONDS: bonds}
+    percentages = {"bank_rate": cash, "uk_gilt": bonds}
     return Slot(split=Split(name=name, percentages=percentages), included=included)
 
 
@@ -46,8 +45,8 @@ def test_at_least_one_split_must_be_included() -> None:
     assert design.next_blocker(slots) == design.NOTHING_INCLUDED
 
 
-def test_each_box_is_labelled_with_its_block_and_unit() -> None:
-    assert design.block_label(Block.UK_BONDS) == "UK government bonds (%)"
+def test_each_box_is_labelled_with_its_holding_and_unit() -> None:
+    assert design.percent_label("sp500") == "S&P 500 (%)"
 
 
 def test_blank_names_take_their_place_and_repeats_among_included_splits_are_numbered() -> None:
@@ -78,11 +77,15 @@ def test_typed_names_are_shown_exactly_as_typed(typed: str, escaped: str) -> Non
     assert markdown_text(typed) == escaped
 
 
-def test_the_composition_shows_each_included_splits_blocks_in_their_usual_order() -> None:
-    slots = [slot("Mine", cash=40, bonds=60), slot("Off", included=False, cash=100)]
+def test_the_composition_shows_shares_then_bonds_then_cash_leaving_out_zeros() -> None:
+    mine = Split(
+        name="Mine", percentages={"bank_rate": 30, "uk_gilt": 20, "sp500": 50, "msci_world": 0}
+    )
+    slots = [Slot(split=mine), slot("Off", included=False, cash=100)]
     view = design.composition_view(slots)
     assert (view.splits, view.x_max) == (("Mine",), 100)
-    assert [(point.block, point.percent, point.order) for point in view.points] == [
-        ("UK government bonds", 60, 2),
-        ("Cash", 40, 3),
+    assert [(point.holding, point.kind, point.percent, point.order) for point in view.points] == [
+        ("S&P 500 (modelled)", "Shares", 50, 0),
+        ("10-year UK gilt (modelled)", "Bonds", 20, 1),
+        ("Bank Rate (modelled)", "Cash", 30, 2),
     ]

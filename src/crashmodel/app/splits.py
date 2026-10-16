@@ -1,29 +1,30 @@
-"""Splits of money between the building blocks, the four places that hold them, and the examples.
+"""Splits of money between funds and indexes, the four places that hold them, and the examples.
 
-A split's percentages are whole numbers, so "adds up to 100" is exact. The examples are there to
-show the tool working; they are not advice.
+A split's percentages are whole numbers, so "adds up to 100" is exact. The examples hold indexes,
+never named funds, and are there to show the tool working; they are not advice.
 """
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from crashmodel.data.blocks import Block
+from crashmodel.data.catalogue import HoldingId
 
 WHOLE = 100
 
 
 @dataclass(frozen=True, kw_only=True)
 class Split:
-    """A named split of money between building blocks.
+    """A named split of money between funds and indexes.
 
     Attributes:
         name: What the visitor calls it.
-        percentages: Whole percentages by block. Blocks not listed hold nothing.
+        percentages: Whole percentages by holding, in the order the visitor chose them. A holding
+            may be at 0% while the visitor works out the split.
     """
 
     name: str
-    percentages: Mapping[Block, int]
+    percentages: Mapping[HoldingId, int]
 
     def __post_init__(self) -> None:
         """Keep a read-only copy of the percentages, so a split never changes once made."""
@@ -39,17 +40,19 @@ class Split:
         """Whether the percentages add up to exactly 100."""
         return self.total == WHOLE
 
-    def weights(self) -> dict[Block, float]:
-        """Each held block's share as a fraction, for the engine."""
-        return {block: percent / WHOLE for block, percent in self.percentages.items() if percent}
+    def weights(self) -> dict[HoldingId, float]:
+        """Each holding's share as a fraction, for the engine, leaving out any at 0%."""
+        return {
+            holding: percent / WHOLE for holding, percent in self.percentages.items() if percent
+        }
 
 
 CAUTIOUS = Split(
-    name="Cautious", percentages={Block.GLOBAL_SHARES: 20, Block.UK_BONDS: 60, Block.CASH: 20}
+    name="Cautious", percentages={"ftse_all_world": 20, "uk_gilt": 60, "bank_rate": 20}
 )
-BALANCED = Split(name="Balanced", percentages={Block.GLOBAL_SHARES: 60, Block.UK_BONDS: 40})
-ADVENTUROUS = Split(name="Adventurous", percentages={Block.GLOBAL_SHARES: 100})
-CASH_ONLY = Split(name="Cash only", percentages={Block.CASH: 100})
+BALANCED = Split(name="Balanced", percentages={"ftse_all_world": 60, "uk_gilt": 40})
+ADVENTUROUS = Split(name="Adventurous", percentages={"ftse_all_world": 100})
+CASH_ONLY = Split(name="Cash only", percentages={"bank_rate": 100})
 
 EXAMPLE_SPLITS = (CAUTIOUS, BALANCED, ADVENTUROUS, CASH_ONLY)
 """The example journey every visitor starts with. Its position also fixes each split's colour."""

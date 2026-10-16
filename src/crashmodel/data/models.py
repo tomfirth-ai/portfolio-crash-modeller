@@ -7,7 +7,7 @@ What each model is called, and which real indexes it stands for, lives with the 
 presenters; this module only builds them.
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -15,6 +15,7 @@ from crashmodel.data.french import (
     BIG,
     DEVELOPED_BY_SIZE,
     EMERGING_BY_SIZE,
+    PORTFOLIO_FILES,
     SMALL,
     US_BY_SIZE,
     US_SIZE_DECILES,
@@ -121,3 +122,9 @@ def share_model_returns(model: IndexModel, files: FetchedFiles) -> MonthlySeries
         KeyError: If ``model`` is not a share model, or a file it needs is missing.
     """
     return _SHARE_RECIPES[model].build(files)
+
+
+def files_for(models: Iterable[IndexModel]) -> tuple[PortfolioFile, ...]:
+    """Return the French files the share models among ``models`` need, once each, in order."""
+    needed = {file for model in models for file in SHARE_MODEL_FILES.get(model, ())}
+    return tuple(file for file in PORTFOLIO_FILES if file in needed)

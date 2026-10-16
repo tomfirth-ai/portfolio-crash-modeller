@@ -13,8 +13,8 @@ from crashmodel.app import loaders, state
 from crashmodel.app.charts import SPLIT_COLOURS
 from crashmodel.app.presenters import design, home, stress_test
 from crashmodel.app.splits import CAUTIOUS, EXAMPLE_SPLITS
-from crashmodel.app.state import INCLUDED, NAME, TEMPLATE, widget_key
-from crashmodel.data.blocks import Block
+from crashmodel.app.state import HOLDINGS, INCLUDED, NAME, TEMPLATE, percent_key, widget_key
+from crashmodel.data.models import IndexModel
 from crashmodel.data.panel import Panel
 from crashmodel.engine.episodes import COVID
 from crashmodel.engine.months import Month, MonthlySeries, month_range
@@ -32,15 +32,14 @@ from tests.app.running import (
 
 FIRST, LAST = Month(2007, 7), Month(2024, 12)
 SHARE_MOVES = {Month(2008, 10): -0.40, Month(2009, 3): 0.50}
-"""Global shares lose 40% in October 2008 and gain 50% in March 2009; nothing else ever moves."""
+"""FTSE All-World loses 40% in October 2008 and gains 50% in March 2009; nothing else moves."""
 
 
-def synthetic_panel() -> Panel:
+def synthetic_panel(_models: object = ()) -> Panel:
     months = list(month_range(FIRST, LAST))
     still = MonthlySeries(FIRST, (0.0,) * len(months))
     shares = MonthlySeries(FIRST, tuple(SHARE_MOVES.get(month, 0.0) for month in months))
-    returns = {Block.GLOBAL_SHARES: shares, Block.US_SHARES: still}
-    returns |= {Block.UK_BONDS: still, Block.CASH: still}
+    returns = dict.fromkeys(IndexModel, still) | {IndexModel.GLOBAL_LARGE: shares}
     return Panel(returns=returns, unavailable=frozenset(), vintages={})
 
 
@@ -50,17 +49,24 @@ def synthetic_returns(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def designed_half_and_half() -> AppTest:
-    """A visitor's own split, half in global shares and half in cash, sent to the Stress-test."""
+    """A visitor's own split, half in FTSE All-World and half in cash, sent to the Stress-test.
+
+    The first holding chosen starts at 100% and the second at 0%, so only the first is changed.
+    """
     app = click_through(run_app(), home.home_view().second_step, DESIGN_PAGE)
     click(app, design.START_OWN)
     app.text_input(key=widget_key(0, NAME)).input("Half and half").run()
-    app.number_input(key=widget_key(0, Block.GLOBAL_SHARES)).set_value(50).run()
-    app.number_input(key=widget_key(0, Block.CASH)).set_value(50).run()
+    app.multiselect(key=widget_key(0, HOLDINGS)).select("ftse_all_world").run()
+    assert app.number_input(key=percent_key(0, "ftse_all_world")).value == 100
+    app.multiselect(key=widget_key(0, HOLDINGS)).select("bank_rate").run()
+    assert app.number_input(key=percent_key(0, "bank_rate")).value == 0
+    app.number_input(key=percent_key(0, "ftse_all_world")).set_value(50).run()
+    app.number_input(key=percent_key(0, "bank_rate")).set_value(50).run()
     return click_through(app, design.NEXT, STRESS_TEST_PAGE)
 
 
 def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
-    """Half in global shares, half in cash, kept at its weights, through the 2007-09 window.
+    """Half in FTSE All-World, half in cash, kept at its weights, through the 2007-09 window.
 
     The split is worth 100 until September 2008. In October its shares lose 40%, which is 20 of
     every 100, so it falls 20% one month after that high. Put back to half and half, it holds 40 in
@@ -85,8 +91,8 @@ def test_a_visitor_designs_a_split_and_sees_it_through_the_2008_crash() -> None:
         "June 2012."
     ) in paragraphs
     assert (
-        "Of every £100 it had at its high, global shares lost £20.00 on the way down to its low "
-        "in the crash phase."
+        "Of every £100 it had at its high, FTSE All-World (modelled) lost £20.00 on the way down "
+        "to its low in the crash phase."
     ) in paragraphs
 
 
@@ -104,7 +110,7 @@ def test_a_split_left_alone_ends_where_its_drifted_weights_take_it() -> None:
 
 def test_a_split_that_does_not_add_up_holds_back_the_next_step() -> None:
     app = run_app(DESIGN_PAGE)
-    app.number_input(key=widget_key(1, Block.UK_BONDS)).set_value(45).run()
+    app.number_input(key=percent_key(1, "uk_gilt")).set_value(45).run()
 
     assert button(app, design.NEXT).disabled
     assert "Balanced adds up to 105%, not 100%." in captions(app)
@@ -143,11 +149,11 @@ def test_with_every_split_switched_off_the_stress_test_says_what_to_do() -> None
 def test_one_visitors_changes_never_reach_another() -> None:
     first = run_app(DESIGN_PAGE)
     first.text_input(key=widget_key(0, NAME)).input("Changed").run()
-    first.number_input(key=widget_key(0, Block.CASH)).set_value(0).run()
+    first.number_input(key=percent_key(0, "bank_rate")).set_value(0).run()
 
     second = run_app(DESIGN_PAGE)
     assert second.text_input(key=widget_key(0, NAME)).value == "Cautious"
-    assert second.number_input(key=widget_key(0, Block.CASH)).value == 20
+    assert second.number_input(key=percent_key(0, "bank_rate")).value == 20
 
 
 def test_a_visitors_splits_survive_a_visit_to_another_page() -> None:
@@ -182,9 +188,18 @@ def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
     app.selectbox(key=widget_key(0, TEMPLATE)).select(CAUTIOUS.name).run()
 
     assert app.text_input(key=widget_key(0, NAME)).value == CAUTIOUS.name
-    assert app.number_input(key=widget_key(0, Block.UK_BONDS)).value == 60
+    assert app.number_input(key=percent_key(0, "uk_gilt")).value == 60
     assert app.selectbox(key=widget_key(0, TEMPLATE)).value is None
 
     click(app, design.SHOW_EXAMPLES)
     names = [app.text_input(key=widget_key(index, NAME)).value for index in range(4)]
     assert names == [split.name for split in EXAMPLE_SPLITS]
+
+
+def test_removing_a_holding_takes_its_box_away_and_leaves_a_gap_to_fill() -> None:
+    app = run_app(DESIGN_PAGE)
+    app.multiselect(key=widget_key(1, HOLDINGS)).unselect("uk_gilt").run()
+
+    boxes = [box.key for box in app.number_input if (box.key or "").startswith("slot1.")]
+    assert boxes == [percent_key(1, "ftse_all_world")]
+    assert "Balanced adds up to 60%, not 100%." in captions(app)
