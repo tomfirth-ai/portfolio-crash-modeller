@@ -78,6 +78,10 @@ class SourceUnavailableError(Exception):
     """The share data could not be fetched or read, so it is not shown."""
 
 
+class SourceUnreachableError(SourceUnavailableError):
+    """The library's server could not be reached at all, so none of its files can be fetched."""
+
+
 @dataclass(frozen=True, kw_only=True)
 class PortfolioFile:
     """One of the library's files of portfolios of companies grouped by size.
@@ -137,10 +141,14 @@ def fetch_portfolios(client: httpx.Client, file: PortfolioFile) -> Portfolios:
     """Download and read one of the library's size portfolio files.
 
     Raises:
-        SourceUnavailableError: If the download fails or the file is not as expected.
+        SourceUnreachableError: If the server cannot be reached, or does not answer in time.
+        SourceUnavailableError: If the download fails in another way, or the file is not as
+            expected.
     """
     try:
         response = client.get(file.url)
+    except httpx.TransportError as error:
+        raise SourceUnreachableError(f"{file.name}: the server could not be reached") from error
     except httpx.HTTPError as error:
         raise SourceUnavailableError(f"{file.name}: the download failed") from error
     if not response.is_success:

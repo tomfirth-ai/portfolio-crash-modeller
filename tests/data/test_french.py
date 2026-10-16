@@ -1,5 +1,6 @@
 import io
 import zipfile
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -14,6 +15,7 @@ from crashmodel.data.french import (
     US_BY_SIZE,
     PortfolioFile,
     SourceUnavailableError,
+    SourceUnreachableError,
     fetch_portfolios,
     parse_portfolios,
     read_zipped_csv,
@@ -202,15 +204,32 @@ def test_a_bad_answer_makes_the_source_unavailable(response: httpx.Response, mes
         fetch_portfolios(client, DEVELOPED_BY_SIZE)
 
 
-def test_a_failed_connection_makes_the_source_unavailable() -> None:
-    def refuse(_request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("refused")
+@pytest.mark.parametrize(
+    ("failure", "expected", "message"),
+    [
+        (httpx.ConnectError("refused"), SourceUnreachableError, "could not be reached"),
+        (httpx.ReadTimeout("too slow"), SourceUnreachableError, "could not be reached"),
+        (httpx.TooManyRedirects("a loop"), SourceUnavailableError, "download failed"),
+    ],
+    ids=["refused", "timed out", "redirect loop"],
+)
+def test_a_failed_download_makes_the_source_unavailable(
+    failure: httpx.HTTPError, expected: type[SourceUnavailableError], message: str
+) -> None:
+    def fail(_request: httpx.Request) -> httpx.Response:
+        raise failure
 
     with (
-        httpx.Client(transport=httpx.MockTransport(refuse)) as client,
-        pytest.raises(SourceUnavailableError, match="download failed"),
+        httpx.Client(transport=httpx.MockTransport(fail)) as client,
+        pytest.raises(expected, match=message) as raised,
     ):
         fetch_portfolios(client, DEVELOPED_BY_SIZE)
+    assert type(raised.value) is expected
+
+
+def test_every_file_comes_from_one_server() -> None:
+    """So a server that cannot be reached for one file is not tried for the others."""
+    assert len({urlsplit(file.url).hostname for file in PORTFOLIO_FILES}) == 1
 
 
 def damaged_zip() -> bytes:

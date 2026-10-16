@@ -35,10 +35,12 @@ class FakeLibrary:
     Attributes:
         online: Whether it answers; when ``False``, every connection is refused.
         requests: The URL of every request it has received, in order.
+        moved: URLs it answers with "not found", as when a file has moved.
     """
 
     online: bool = True
     requests: list[str] = field(default_factory=list)
+    moved: set[str] = field(default_factory=set)
 
     def client(self) -> httpx.Client:
         """Return an HTTP client whose requests go to this fake server."""
@@ -50,7 +52,7 @@ class FakeLibrary:
         if not self.online:
             raise httpx.ConnectError("the fake library is offline")
         files = {file.url: file for file in PORTFOLIO_FILES}
-        if url not in files:
+        if url not in files or url in self.moved:
             return httpx.Response(404)
         months = LIBRARY_END - LIBRARY_START + 1
         text = portfolio_text(files[url], start=LIBRARY_START, months=months)

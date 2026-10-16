@@ -95,6 +95,25 @@ def test_the_held_share_models_are_unavailable_when_the_library_is_down(
     assert IndexModel.UK_GILTS in panel.returns
 
 
+def test_once_the_server_cannot_be_reached_its_other_files_are_not_tried(
+    library: FakeLibrary,
+) -> None:
+    library.online = False
+    panel = loaders.load_panel({IndexModel.GLOBAL_ALL_CAP, IndexModel.US_LARGE})
+    assert {IndexModel.GLOBAL_ALL_CAP, IndexModel.US_LARGE} <= panel.unavailable
+    assert len(library.requests) == 1
+
+
+def test_a_file_that_fails_on_its_own_leaves_the_others_to_be_fetched(
+    library: FakeLibrary,
+) -> None:
+    library.moved.add(US_BY_SIZE.url)
+    panel = loaders.load_panel({IndexModel.US_LARGE, IndexModel.GLOBAL_LARGE})
+    assert IndexModel.US_LARGE in panel.unavailable
+    assert IndexModel.GLOBAL_LARGE in panel.returns
+    assert library.requests == [US_BY_SIZE.url, DEVELOPED_BY_SIZE.url, EMERGING_BY_SIZE.url]
+
+
 def test_share_data_is_cached_in_memory_only() -> None:
     """French data may never be written to disk, so the cache must not persist it."""
     info = loaders._download._info

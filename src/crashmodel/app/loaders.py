@@ -2,7 +2,8 @@
 
 Share portfolios are downloaded from the Kenneth R. French Data Library at most once a day per file,
 only when a split needs them, and held in memory only. When a download fails, that file is not tried
-again for a few minutes, so a server that is down does not keep every visitor waiting.
+again for a few minutes, so a server that is down does not keep every visitor waiting; when the
+server cannot be reached at all, none of its files is tried.
 """
 
 import logging
@@ -16,9 +17,11 @@ import streamlit as st
 from crashmodel.data import client, diagnostics
 from crashmodel.data.diagnostics import SourceStatus
 from crashmodel.data.french import (
+    PORTFOLIO_FILES,
     PortfolioFile,
     Portfolios,
     SourceUnavailableError,
+    SourceUnreachableError,
     fetch_portfolios,
 )
 from crashmodel.data.models import IndexModel, files_for
@@ -90,6 +93,12 @@ def portfolios(file: PortfolioFile) -> Portfolios | None:
     try:
         return _download(file)
     except _RecentlyFailedError:
+        return None
+    except SourceUnreachableError as error:
+        _LOGGER.warning("The share data's server cannot be reached: %s", error)
+        # Every file is on that one server, so none is tried until the wait is over.
+        for other in PORTFOLIO_FILES:
+            _failures().record(other.url)
         return None
     except SourceUnavailableError as error:
         _LOGGER.warning("Share portfolios are unavailable: %s", error)
