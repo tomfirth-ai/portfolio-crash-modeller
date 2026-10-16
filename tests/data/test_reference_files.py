@@ -11,12 +11,15 @@ import pytest
 from crashmodel.data.panel import stored_returns
 from crashmodel.data.reference_data import (
     REFERENCE_SERIES,
+    SONIA_ATTRIBUTION,
+    STERLING_CASH_RETURN,
     USD_PER_GBP,
     ReferenceSeries,
     load,
     stored,
 )
 from crashmodel.engine.episodes import EPISODES, Episode
+from tools.privacy_scan import is_words_only
 
 FOLDER = Path(__file__).resolve().parents[2] / "src/crashmodel/data/reference"
 
@@ -41,6 +44,21 @@ def test_each_source_note_records_the_licence_and_attribution(series: ReferenceS
         assert required in note
     assert "**Retrieved:**" in note
     assert "SHA-256 `" in note
+    assert f"`{series.name}.csv`" in note
+
+
+def test_the_sterling_cash_note_carries_the_banks_sonia_statement_word_for_word() -> None:
+    note = (FOLDER / STERLING_CASH_RETURN.folder / "SOURCE.md").read_text(encoding="utf-8")
+    assert SONIA_ATTRIBUTION in note
+
+
+@pytest.mark.parametrize("series", REFERENCE_SERIES, ids=lambda series: series.name)
+def test_each_series_has_the_shape_the_privacy_scan_reads_for_words_only(
+    series: ReferenceSeries,
+) -> None:
+    """A name with digits, or a second column, would put the file's numbers back under the scan."""
+    path = f"src/crashmodel/data/reference/{series.path}"
+    assert is_words_only(path, (FOLDER / series.path).read_text(encoding="ascii"))
 
 
 @pytest.mark.parametrize("episode", EPISODES, ids=lambda episode: episode.key)

@@ -1,23 +1,28 @@
 """Every index model's monthly returns in pounds, ready for the engine.
 
-UK gilts and sterling cash come from the open series stored with the app. Share models are built
-from the French library's size portfolio files fetched at runtime, then converted from dollars at
-the stored month-end rates. A share model whose files could not all be fetched, or did not combine,
-is listed as unavailable, so a split holding it can say why it has no result instead of failing.
+UK gilts and sterling cash are built once from the open series stored with the app. Share models
+are built from the French library's size portfolio files fetched at runtime, then converted from
+dollars at the stored month-end rates. A share model whose files could not all be fetched, or did
+not combine, is listed as unavailable, so a split holding it can say why it has no result instead
+of failing.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import cache
+from types import MappingProxyType
 
 from crashmodel.data.french import PortfolioFile, Portfolios, Vintage
+from crashmodel.data.gilts import gilt_models, stored_curve_points
 from crashmodel.data.models import SHARE_MODEL_FILES, IndexModel, share_model_returns
-from crashmodel.data.reference_data import CASH_RETURN, GILT_YIELD, USD_PER_GBP, stored
-from crashmodel.engine.bonds import par_bond_returns
+from crashmodel.data.reference_data import (
+    FIVE_YEAR_PAR_YIELD,
+    STERLING_CASH_RETURN,
+    USD_PER_GBP,
+    stored,
+)
 from crashmodel.engine.currency import to_home_currency
 from crashmodel.engine.months import MonthlySeries
-
-TEN_YEARS = 10
-"""The term of the gilt the UK gilt model holds."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -38,12 +43,15 @@ class Panel:
     dollar_returns: Mapping[IndexModel, MonthlySeries] = field(default_factory=dict)
 
 
-def stored_returns() -> dict[IndexModel, MonthlySeries]:
-    """Return the models built only from data stored with the app: UK gilts and sterling cash."""
-    return {
-        IndexModel.UK_GILTS: par_bond_returns(stored(GILT_YIELD), TEN_YEARS),
-        IndexModel.STERLING_CASH: stored(CASH_RETURN),
-    }
+@cache
+def stored_returns() -> Mapping[IndexModel, MonthlySeries]:
+    """Return the models built only from data stored with the app: UK gilts and sterling cash.
+
+    The stored files never change while the app runs, so the models are built once.
+    """
+    cash = stored(STERLING_CASH_RETURN)
+    gilts = gilt_models(stored_curve_points(), stored(FIVE_YEAR_PAR_YIELD), cash)
+    return MappingProxyType({**gilts, IndexModel.STERLING_CASH: cash})
 
 
 def build_panel(files: Mapping[PortfolioFile, Portfolios | None]) -> Panel:
@@ -56,7 +64,7 @@ def build_panel(files: Mapping[PortfolioFile, Portfolios | None]) -> Panel:
     """
     usd_per_gbp = stored(USD_PER_GBP)
     fetched = {file: portfolios for file, portfolios in files.items() if portfolios is not None}
-    returns = stored_returns()
+    returns = dict(stored_returns())
     dollar_returns: dict[IndexModel, MonthlySeries] = {}
     unavailable: set[IndexModel] = set()
     for model, needed in SHARE_MODEL_FILES.items():

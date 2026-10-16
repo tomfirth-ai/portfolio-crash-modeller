@@ -51,8 +51,9 @@ FUND_INDEXES = (
     "MSCI ACWI",
     "FTSE Global All Cap",
     "MSCI ACWI IMI",
-    "10-year UK gilt",
-    "Bank Rate",
+    "FTSE Actuaries UK Conventional Gilts All Stocks",
+    "FTSE Actuaries UK Conventional Gilts Up to 5 Years",
+    "FTSE Actuaries UK Conventional Gilts Over 15 Years",
     "SONIA",
 )
 FUND_PROVIDERS = (

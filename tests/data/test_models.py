@@ -92,4 +92,4 @@ def test_every_model_is_a_kind_of_investment() -> None:
 
 def test_bond_and_cash_models_are_not_built_from_share_files() -> None:
     with pytest.raises(KeyError):
-        share_model_returns(IndexModel.UK_GILTS, FILES)
+        share_model_returns(IndexModel.UK_GILTS_ALL, FILES)

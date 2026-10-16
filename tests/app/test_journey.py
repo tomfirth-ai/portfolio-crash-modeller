@@ -58,10 +58,10 @@ def designed_half_and_half() -> AppTest:
     app.text_input(key=widget_key(0, NAME)).input("Half and half").run()
     app.multiselect(key=widget_key(0, HOLDINGS)).select("ftse_all_world").run()
     assert app.number_input(key=percent_key(0, "ftse_all_world")).value == 100
-    app.multiselect(key=widget_key(0, HOLDINGS)).select("bank_rate").run()
-    assert app.number_input(key=percent_key(0, "bank_rate")).value == 0
+    app.multiselect(key=widget_key(0, HOLDINGS)).select("sonia").run()
+    assert app.number_input(key=percent_key(0, "sonia")).value == 0
     app.number_input(key=percent_key(0, "ftse_all_world")).set_value(50).run()
-    app.number_input(key=percent_key(0, "bank_rate")).set_value(50).run()
+    app.number_input(key=percent_key(0, "sonia")).set_value(50).run()
     return click_through(app, design.NEXT, STRESS_TEST_PAGE)
 
 
@@ -110,7 +110,7 @@ def test_a_split_left_alone_ends_where_its_drifted_weights_take_it() -> None:
 
 def test_a_split_that_does_not_add_up_holds_back_the_next_step() -> None:
     app = run_app(DESIGN_PAGE)
-    app.number_input(key=percent_key(1, "uk_gilt")).set_value(45).run()
+    app.number_input(key=percent_key(1, "ftse_gilts_all_stocks")).set_value(45).run()
 
     assert button(app, design.NEXT).disabled
     assert "Balanced adds up to 105%, not 100%." in captions(app)
@@ -150,11 +150,11 @@ def test_with_every_split_switched_off_the_stress_test_says_what_to_do() -> None
 def test_one_visitors_changes_never_reach_another() -> None:
     first = run_app(DESIGN_PAGE)
     first.text_input(key=widget_key(0, NAME)).input("Changed").run()
-    first.number_input(key=percent_key(0, "bank_rate")).set_value(0).run()
+    first.number_input(key=percent_key(0, "sonia")).set_value(0).run()
 
     second = run_app(DESIGN_PAGE)
     assert second.text_input(key=widget_key(0, NAME)).value == "Cautious"
-    assert second.number_input(key=percent_key(0, "bank_rate")).value == 20
+    assert second.number_input(key=percent_key(0, "sonia")).value == 20
 
 
 def test_a_visitors_splits_survive_a_visit_to_another_page() -> None:
@@ -189,7 +189,7 @@ def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
     app.selectbox(key=widget_key(0, TEMPLATE)).select(CAUTIOUS.name).run()
 
     assert app.text_input(key=widget_key(0, NAME)).value == CAUTIOUS.name
-    assert app.number_input(key=percent_key(0, "uk_gilt")).value == 60
+    assert app.number_input(key=percent_key(0, "ftse_gilts_all_stocks")).value == 60
     assert app.selectbox(key=widget_key(0, TEMPLATE)).value is None
 
     click(app, design.SHOW_EXAMPLES)
@@ -199,7 +199,7 @@ def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
 
 def test_removing_a_holding_takes_its_box_away_and_leaves_a_gap_to_fill() -> None:
     app = run_app(DESIGN_PAGE)
-    app.multiselect(key=widget_key(1, HOLDINGS)).unselect("uk_gilt").run()
+    app.multiselect(key=widget_key(1, HOLDINGS)).unselect("ftse_gilts_all_stocks").run()
 
     boxes = [box.key for box in app.number_input if (box.key or "").startswith("slot1.")]
     assert boxes == [percent_key(1, "ftse_all_world")]

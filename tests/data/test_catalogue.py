@@ -33,6 +33,10 @@ def test_every_holding_has_its_own_id() -> None:
     assert len(HOLDINGS_BY_ID) == len(CATALOGUE)
 
 
+def test_every_tracked_index_has_a_holding_so_no_picker_group_is_empty() -> None:
+    assert {holding.index for holding in CATALOGUE} == set(TRACKED_INDEXES)
+
+
 def test_every_model_can_be_held_directly() -> None:
     assert {holding.model for holding in INDEXES} == set(IndexModel)
     assert all(holding.fund is None and holding.charge_fraction == 0 for holding in INDEXES)

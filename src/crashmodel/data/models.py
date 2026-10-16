@@ -38,10 +38,14 @@ class IndexModel(StrEnum):
     holds."""
     GLOBAL_ALL_CAP = "global_all_cap"
     """Companies of every size in developed and emerging countries, as FTSE Global All Cap holds."""
-    UK_GILTS = "uk_gilts"
-    """A 10-year UK government bond, bought new each month."""
+    UK_GILTS_ALL = "uk_gilts_all"
+    """UK government bonds of every term, as the FTSE Actuaries All Stocks gilt index holds."""
+    UK_GILTS_SHORT = "uk_gilts_short"
+    """UK government bonds with up to 5 years left to run."""
+    UK_GILTS_LONG = "uk_gilts_long"
+    """UK government bonds with over 15 years left to run."""
     STERLING_CASH = "sterling_cash"
-    """Cash earning the Bank of England's Bank Rate."""
+    """Cash earning SONIA, compounded daily, with Bank Rate before SONIA began in 1997."""
 
 
 class AssetKind(StrEnum):
@@ -57,7 +61,9 @@ MODEL_KINDS: Mapping[IndexModel, AssetKind] = {
     IndexModel.DEVELOPED_LARGE: AssetKind.SHARES,
     IndexModel.GLOBAL_LARGE: AssetKind.SHARES,
     IndexModel.GLOBAL_ALL_CAP: AssetKind.SHARES,
-    IndexModel.UK_GILTS: AssetKind.BONDS,
+    IndexModel.UK_GILTS_ALL: AssetKind.BONDS,
+    IndexModel.UK_GILTS_SHORT: AssetKind.BONDS,
+    IndexModel.UK_GILTS_LONG: AssetKind.BONDS,
     IndexModel.STERLING_CASH: AssetKind.CASH,
 }
 

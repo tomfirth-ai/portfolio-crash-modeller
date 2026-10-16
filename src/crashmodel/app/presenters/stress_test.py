@@ -22,6 +22,7 @@ from crashmodel.app.splits import Slot, display_names, example_slots
 from crashmodel.app.stress import SplitOutcome
 from crashmodel.data.catalogue import HoldingId
 from crashmodel.data.french import PORTFOLIO_FILES, PortfolioFile, Vintage
+from crashmodel.data.reference_data import SONIA_ATTRIBUTION
 from crashmodel.engine.drawdown import CrashResult, Fall
 from crashmodel.engine.episodes import COVID, DOT_COM, GLOBAL_FINANCIAL_CRISIS, Episode
 from crashmodel.engine.portfolio import STARTING_VALUE, Rebalancing
@@ -55,16 +56,17 @@ SIMULATED = (
 CAVEAT = (
     "These figures are in pounds before inflation. Each fund's ongoing charge is taken off; tax on "
     "dividends, dealing costs and platform charges are not. Income a fund pays out is counted as "
-    "reinvested. The models group companies by size rather than following each index's own rules, "
-    "so their figures will differ from any fund's or index's own. They use month-end values, so a "
+    "reinvested. The models group companies by size, and spread gilts evenly across their terms, "
+    "rather than following each index's own rules, so their figures will differ from any fund's "
+    "or index's own. They use month-end values, so a "
     "fall within a month could have been deeper. Getting back to an earlier high in pounds is not "
     "the same as getting back your spending power."
 )
 BANK_OF_ENGLAND_CREDIT = (
-    "UK gilts are modelled from the Bank of England's 10-year par gilt yield, using Swinkels' "
-    "published bond return method, and sterling cash earns the Bank of England's Bank Rate. Bank "
-    "of England data: contains public sector information licensed under the Open Government "
-    "Licence v3.0."
+    "UK gilts are modelled from the Bank of England's gilt yield curve, short-dated gilts using "
+    "Swinkels' published bond return method, and sterling cash earns SONIA, with Bank Rate before "
+    "1997; the monthly returns are worked out by this app. Bank of England data: contains public "
+    f"sector information licensed under the Open Government Licence v3.0. {SONIA_ATTRIBUTION}"
 )
 CHART_X_TITLE = "Month end"
 CHART_Y_TITLE = "Value of £100 (£)"

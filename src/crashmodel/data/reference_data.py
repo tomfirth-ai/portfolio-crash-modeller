@@ -82,42 +82,6 @@ USD_PER_GBP = ReferenceSeries(
     ),
 )
 
-GILT_YIELD = ReferenceSeries(
-    folder="boe-gilt-yield",
-    name="ten_year_par_yield",
-    description="The 10-year nominal par gilt yield at the end of each month, in percent",
-    plausible_range=(0.01, 20.0),
-    decimal_places=4,
-    credit=Credit(
-        publisher="Bank of England",
-        dataset="Yield from British Government Stock, 10-year nominal par yield, end of month",
-        url=BANK_OF_ENGLAND_DATABASE,
-        licence=OPEN_GOVERNMENT_LICENCE,
-        licence_url=OPEN_GOVERNMENT_LICENCE_URL,
-        attribution=(
-            "Contains public sector information licensed under the Open Government Licence v3.0."
-        ),
-    ),
-)
-
-CASH_RETURN = ReferenceSeries(
-    folder="boe-bank-rate",
-    name="cash_return",
-    description="The monthly return on cash earning Bank Rate, accrued daily",
-    plausible_range=(0.0, 0.02),
-    decimal_places=10,
-    credit=Credit(
-        publisher="Bank of England",
-        dataset="Official Bank Rate, daily",
-        url=BANK_OF_ENGLAND_DATABASE,
-        licence=OPEN_GOVERNMENT_LICENCE,
-        licence_url=OPEN_GOVERNMENT_LICENCE_URL,
-        attribution=(
-            "Contains public sector information licensed under the Open Government Licence v3.0."
-        ),
-    ),
-)
-
 OPEN_GOVERNMENT_ATTRIBUTION = (
     "Contains public sector information licensed under the Open Government Licence v3.0."
 )
@@ -181,26 +145,24 @@ STERLING_CASH_RETURN = ReferenceSeries(
     decimal_places=10,
     credit=STERLING_CASH_CREDIT,
 )
-OVERNIGHT_RATE = ReferenceSeries(
+MONTH_END_BANK_RATE = ReferenceSeries(
     folder="boe-sterling-cash",
-    name="overnight_rate",
-    description="The overnight rate at the end of each month, SONIA or Bank Rate before it, in "
-    "percent",
+    name="bank_rate",
+    description="Bank Rate at the end of each month, in percent",
     plausible_range=(0.0, 20.0),
     decimal_places=4,
     credit=STERLING_CASH_CREDIT,
 )
+"""The overnight point of the gilt curve. SONIA's month ends jump about, more so before 2006."""
 
 REFERENCE_SERIES = (
     USD_PER_GBP,
-    GILT_YIELD,
-    CASH_RETURN,
     FIVE_YEAR_ZERO_YIELD,
     TEN_YEAR_ZERO_YIELD,
     TWENTY_YEAR_ZERO_YIELD,
     FIVE_YEAR_PAR_YIELD,
     STERLING_CASH_RETURN,
-    OVERNIGHT_RATE,
+    MONTH_END_BANK_RATE,
 )
 
 

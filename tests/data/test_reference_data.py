@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from crashmodel.data.reference_data import (
-    CASH_RETURN,
+    STERLING_CASH_RETURN,
     USD_PER_GBP,
     load,
     parse_series,
@@ -36,9 +36,9 @@ def test_a_malformed_series_is_refused(text: str, message: str) -> None:
 
 
 def test_a_series_is_loaded_from_its_folder(tmp_path: Path) -> None:
-    (tmp_path / CASH_RETURN.folder).mkdir()
-    (tmp_path / CASH_RETURN.path).write_text("month,cash_return\n2020-01,0.0010000000\n")
-    assert load(CASH_RETURN, tmp_path) == MonthlySeries(Month(2020, 1), (0.001,))
+    (tmp_path / STERLING_CASH_RETURN.folder).mkdir()
+    (tmp_path / STERLING_CASH_RETURN.path).write_text("month,cash_return\n2020-01,0.0010000000\n")
+    assert load(STERLING_CASH_RETURN, tmp_path) == MonthlySeries(Month(2020, 1), (0.001,))
 
 
 def test_each_series_names_its_file_and_header() -> None:
@@ -53,5 +53,5 @@ def test_the_stored_series_live_in_the_packages_reference_folder() -> None:
 
 
 def test_the_packaged_copy_of_a_series_is_read_once() -> None:
-    assert stored(CASH_RETURN) is stored(CASH_RETURN)
-    assert stored(CASH_RETURN) == load(CASH_RETURN)
+    assert stored(STERLING_CASH_RETURN) is stored(STERLING_CASH_RETURN)
+    assert stored(STERLING_CASH_RETURN) == load(STERLING_CASH_RETURN)

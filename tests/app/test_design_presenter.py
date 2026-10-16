@@ -6,7 +6,7 @@ from crashmodel.app.splits import Slot, Split, display_names, empty_slots, examp
 
 
 def slot(name: str = "Mine", *, included: bool = True, cash: int = 0, bonds: int = 0) -> Slot:
-    percentages = {"bank_rate": cash, "uk_gilt": bonds}
+    percentages = {"sonia": cash, "ftse_gilts_all_stocks": bonds}
     return Slot(split=Split(name=name, percentages=percentages), included=included)
 
 
@@ -79,13 +79,14 @@ def test_typed_names_are_shown_exactly_as_typed(typed: str, escaped: str) -> Non
 
 def test_the_composition_shows_shares_then_bonds_then_cash_leaving_out_zeros() -> None:
     mine = Split(
-        name="Mine", percentages={"bank_rate": 30, "uk_gilt": 20, "sp500": 50, "msci_world": 0}
+        name="Mine",
+        percentages={"sonia": 30, "ftse_gilts_all_stocks": 20, "sp500": 50, "msci_world": 0},
     )
     slots = [Slot(split=mine), slot("Off", included=False, cash=100)]
     view = design.composition_view(slots)
     assert (view.splits, view.x_max) == (("Mine",), 100)
     assert [(point.holding, point.kind, point.percent, point.order) for point in view.points] == [
         ("S&P 500 (modelled)", "Shares", 50, 0),
-        ("10-year UK gilt (modelled)", "Bonds", 20, 1),
-        ("Bank Rate (modelled)", "Cash", 30, 2),
+        ("FTSE All Stocks gilts (modelled)", "Bonds", 20, 1),
+        ("SONIA (modelled)", "Cash", 30, 2),
     ]

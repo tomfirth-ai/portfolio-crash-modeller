@@ -27,11 +27,9 @@ import httpx
 
 from crashmodel.data import client as http_client
 from crashmodel.data.reference_data import (
-    CASH_RETURN,
     FIVE_YEAR_PAR_YIELD,
     FIVE_YEAR_ZERO_YIELD,
-    GILT_YIELD,
-    OVERNIGHT_RATE,
+    MONTH_END_BANK_RATE,
     STERLING_CASH_RETURN,
     TEN_YEAR_ZERO_YIELD,
     TWENTY_YEAR_ZERO_YIELD,
@@ -54,7 +52,6 @@ H10_SERIES = "RXI$US_N.B.UK"
 IADB_URL = "https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp"
 IADB_FIRST_DATE = "01/Jan/1975"
 IADB_DATE_FORMAT = "%d %b %Y"
-GILT_YIELD_CODE = "IUMMNPY"
 BANK_RATE_CODE = "IUDBEDR"
 SONIA_CODE = "IUDSOIA"
 YIELD_CURVE_CODES = {
@@ -124,7 +121,10 @@ def parse_iadb(text: str, code: str) -> Observations:
     observations: Observations = []
     for line in filter(None, lines[1:]):
         day, _, value = line.partition(",")
-        observations.append((datetime.strptime(day, IADB_DATE_FORMAT).date(), float(value)))
+        try:
+            observations.append((datetime.strptime(day, IADB_DATE_FORMAT).date(), float(value)))
+        except ValueError:
+            raise DownloadError(f"{code}: the row {line!r} is not a date and a number") from None
     return observations
 
 
@@ -194,59 +194,47 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
     h10_zip, h10 = _fetch(client, H10_URL)
     with zipfile.ZipFile(io.BytesIO(h10_zip)) as archive:
         daily_rates = parse_h10(archive.read(H10_MEMBER), H10_SERIES)
-    gilt_yields, gilt = _iadb(client, GILT_YIELD_CODE)
     bank_rate, bank_rate_download = _iadb(client, BANK_RATE_CODE)
     sonia, sonia_download = _iadb(client, SONIA_CODE)
-    overnight = spliced(bank_rate, sonia)
-    last_overnight = min(last, last_published_month(sonia))
+    cash_rates = spliced(bank_rate, sonia)
+    last_cash = min(last, last_published_month(sonia))
     outputs: list[Output] = [
         (
             USD_PER_GBP,
-            _up_to(month_end_rates(daily_rates), min(last, last_published_month(daily_rates))),
+            _up_to(
+                _month_ends(daily_rates, H10_SERIES),
+                min(last, last_published_month(daily_rates)),
+            ),
             [h10],
             f"The last daily rate in each calendar month, from series {H10_SERIES} in the "
             f"release's XML file ({H10_MEMBER}), written to 4 decimal places as published.",
-        ),
-        (
-            GILT_YIELD,
-            _up_to(month_end_rates(gilt_yields), last),
-            [gilt],
-            _yield_method(GILT_YIELD_CODE),
-        ),
-        (
-            CASH_RETURN,
-            monthly_cash_returns(bank_rate, last),
-            [bank_rate_download],
-            f"The daily Official Bank Rate (series {BANK_RATE_CODE}) from the Bank's Interactive "
-            f"Database, turned into a monthly return on cash. {_COMPOUNDING}",
         ),
     ]
     for series, code in YIELD_CURVE_CODES.items():
         yields, download = _iadb(client, code)
         outputs.append(
-            (series, _up_to(month_end_rates(yields), last), [download], _yield_method(code))
+            (series, _up_to(_month_ends(yields, code), last), [download], _yield_method(code))
         )
     sonia_began = f"{sonia[0][0].day} {sonia[0][0]:%B %Y}"
-    overnight_sources = (
-        f"Daily SONIA (series {SONIA_CODE}) from its first day, {sonia_began}, and the daily "
-        f"Official Bank Rate (series {BANK_RATE_CODE}) before it, from the Bank's Interactive "
-        "Database"
-    )
     outputs += [
         (
             STERLING_CASH_RETURN,
-            monthly_cash_returns(overnight, last_overnight),
+            monthly_cash_returns(cash_rates, last_cash),
             [bank_rate_download, sonia_download],
-            f"{overnight_sources}, turned into a monthly return on cash. {_COMPOUNDING} The last "
-            "month is the last whose final rate had been published. The returns are worked out "
-            "by this project, not by the Bank.",
+            f"Daily SONIA (series {SONIA_CODE}) from its first day, {sonia_began}, and the daily "
+            f"Official Bank Rate (series {BANK_RATE_CODE}) before it, from the Bank's Interactive "
+            f"Database, turned into a monthly return on cash. {_COMPOUNDING} The last month is "
+            "the last whose final rate had been published. The returns are worked out by this "
+            "project, not by the Bank.",
         ),
         (
-            OVERNIGHT_RATE,
-            _up_to(month_end_rates(overnight), last_overnight),
-            [bank_rate_download, sonia_download],
-            f"{overnight_sources}: the last rate in each calendar month, written to 4 decimal "
-            "places.",
+            MONTH_END_BANK_RATE,
+            _up_to(
+                _month_ends(bank_rate, BANK_RATE_CODE), min(last, last_published_month(bank_rate))
+            ),
+            [bank_rate_download],
+            f"The daily Official Bank Rate (series {BANK_RATE_CODE}) from the Bank's Interactive "
+            "Database: the last rate in each calendar month, written to 4 decimal places.",
         ),
     ]
     by_folder: defaultdict[str, list[Output]] = defaultdict(list)
@@ -279,6 +267,14 @@ def _yield_method(code: str) -> str:
         f"The end-of-month yield (series {code}) from the Bank's Interactive Database, written to "
         "4 decimal places. The Bank drops trailing zeros."
     )
+
+
+def _month_ends(observations: Observations, code: str) -> MonthlySeries:
+    """The last rate in each month, refusing a month the publisher left out."""
+    try:
+        return month_end_rates(observations)
+    except ValueError as error:
+        raise DownloadError(f"{code}: {error}") from None
 
 
 def _iadb(client: httpx.Client, code: str) -> tuple[Observations, Download]:

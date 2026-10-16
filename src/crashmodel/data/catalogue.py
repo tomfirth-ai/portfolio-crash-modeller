@@ -25,10 +25,17 @@ HOLDING_ID = re.compile(r"[a-z0-9_]+", re.ASCII)
 
 @dataclass(frozen=True, kw_only=True)
 class TrackedIndex:
-    """An index that funds track, and the model that stands for it."""
+    """An index that funds track, and the model that stands for it.
+
+    Attributes:
+        name: The index's full name, as its provider and the funds tracking it give it.
+        model: The model that stands for it.
+        short_name: A shorter name for sentences and labels, if the full one is long.
+    """
 
     name: str
     model: IndexModel
+    short_name: str | None = None
 
 
 S_AND_P_500 = TrackedIndex(name="S&P 500", model=IndexModel.US_LARGE)
@@ -38,10 +45,23 @@ FTSE_ALL_WORLD = TrackedIndex(name="FTSE All-World", model=IndexModel.GLOBAL_LAR
 MSCI_ACWI = TrackedIndex(name="MSCI ACWI", model=IndexModel.GLOBAL_LARGE)
 FTSE_GLOBAL_ALL_CAP = TrackedIndex(name="FTSE Global All Cap", model=IndexModel.GLOBAL_ALL_CAP)
 MSCI_ACWI_IMI = TrackedIndex(name="MSCI ACWI IMI", model=IndexModel.GLOBAL_ALL_CAP)
-UK_GILT = TrackedIndex(name="10-year UK gilt", model=IndexModel.UK_GILTS)
-BANK_RATE = TrackedIndex(name="Bank Rate", model=IndexModel.STERLING_CASH)
+FTSE_GILTS_ALL_STOCKS = TrackedIndex(
+    name="FTSE Actuaries UK Conventional Gilts All Stocks",
+    model=IndexModel.UK_GILTS_ALL,
+    short_name="FTSE All Stocks gilts",
+)
+FTSE_GILTS_UP_TO_5_YEARS = TrackedIndex(
+    name="FTSE Actuaries UK Conventional Gilts Up to 5 Years",
+    model=IndexModel.UK_GILTS_SHORT,
+    short_name="FTSE gilts up to 5 years",
+)
+FTSE_GILTS_OVER_15_YEARS = TrackedIndex(
+    name="FTSE Actuaries UK Conventional Gilts Over 15 Years",
+    model=IndexModel.UK_GILTS_LONG,
+    short_name="FTSE gilts over 15 years",
+)
 SONIA = TrackedIndex(name="SONIA", model=IndexModel.STERLING_CASH)
-"""The overnight rate that sterling money market funds aim to earn, modelled with Bank Rate."""
+"""The overnight rate that sterling money market funds aim to earn."""
 
 TRACKED_INDEXES = (
     S_AND_P_500,
@@ -51,8 +71,9 @@ TRACKED_INDEXES = (
     MSCI_ACWI,
     FTSE_GLOBAL_ALL_CAP,
     MSCI_ACWI_IMI,
-    UK_GILT,
-    BANK_RATE,
+    FTSE_GILTS_ALL_STOCKS,
+    FTSE_GILTS_UP_TO_5_YEARS,
+    FTSE_GILTS_OVER_15_YEARS,
     SONIA,
 )
 """Every index a holding is or tracks, in the order the picker groups them."""
@@ -138,8 +159,10 @@ INDEXES: tuple[Holding, ...] = (
     Holding(id="msci_acwi", index=MSCI_ACWI),
     Holding(id="ftse_global_all_cap", index=FTSE_GLOBAL_ALL_CAP),
     Holding(id="msci_acwi_imi", index=MSCI_ACWI_IMI),
-    Holding(id="uk_gilt", index=UK_GILT),
-    Holding(id="bank_rate", index=BANK_RATE),
+    Holding(id="ftse_gilts_all_stocks", index=FTSE_GILTS_ALL_STOCKS),
+    Holding(id="ftse_gilts_up_to_5_years", index=FTSE_GILTS_UP_TO_5_YEARS),
+    Holding(id="ftse_gilts_over_15_years", index=FTSE_GILTS_OVER_15_YEARS),
+    Holding(id="sonia", index=SONIA),
 )
 """Each index held directly, before any charges, in the order the picker lists them."""
 

@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 import pytest
 
 from crashmodel.data.french import (
@@ -15,7 +17,12 @@ from crashmodel.engine.months import Month
 from tests.data.french_portfolio_text import portfolio_text
 
 START = Month(2007, 1)
-STORED = {IndexModel.UK_GILTS, IndexModel.STERLING_CASH}
+STORED = {
+    IndexModel.UK_GILTS_ALL,
+    IndexModel.UK_GILTS_SHORT,
+    IndexModel.UK_GILTS_LONG,
+    IndexModel.STERLING_CASH,
+}
 
 
 def fetched(file: PortfolioFile, start: Month = START) -> Portfolios:
@@ -23,10 +30,27 @@ def fetched(file: PortfolioFile, start: Month = START) -> Portfolios:
 
 
 def test_gilts_and_cash_come_from_the_stored_series() -> None:
+    """The ladders start once the curve reaches 20 years, short gilts once the 5-year par yield
+    has two months, and cash once Bank Rate covers a whole month."""
     stored = stored_returns()
     assert set(stored) == STORED
-    assert stored[IndexModel.UK_GILTS].start == Month(1994, 1)
-    assert stored[IndexModel.STERLING_CASH].start == Month(1975, 2)
+    starts = {model: returns.start for model, returns in stored.items()}
+    assert starts == {
+        IndexModel.UK_GILTS_ALL: Month(1992, 4),
+        IndexModel.UK_GILTS_LONG: Month(1992, 4),
+        IndexModel.UK_GILTS_SHORT: Month(1994, 1),
+        IndexModel.STERLING_CASH: Month(1975, 2),
+    }
+
+
+def test_the_stored_models_are_built_once_and_cannot_be_changed() -> None:
+    assert stored_returns() is stored_returns()
+    assert isinstance(stored_returns(), MappingProxyType)
+
+
+def test_one_panels_share_models_never_reach_another() -> None:
+    build_panel({US_BY_SIZE: fetched(US_BY_SIZE)})
+    assert set(build_panel({}).returns) == STORED
 
 
 def test_share_models_are_converted_to_pounds_at_the_stored_rates() -> None:

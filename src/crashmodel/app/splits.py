@@ -48,11 +48,12 @@ class Split:
 
 
 CAUTIOUS = Split(
-    name="Cautious", percentages={"ftse_all_world": 20, "uk_gilt": 60, "bank_rate": 20}
+    name="Cautious",
+    percentages={"ftse_all_world": 20, "ftse_gilts_all_stocks": 60, "sonia": 20},
 )
-BALANCED = Split(name="Balanced", percentages={"ftse_all_world": 60, "uk_gilt": 40})
+BALANCED = Split(name="Balanced", percentages={"ftse_all_world": 60, "ftse_gilts_all_stocks": 40})
 ADVENTUROUS = Split(name="Adventurous", percentages={"ftse_all_world": 100})
-CASH_ONLY = Split(name="Cash only", percentages={"bank_rate": 100})
+CASH_ONLY = Split(name="Cash only", percentages={"sonia": 100})
 
 EXAMPLE_SPLITS = (CAUTIOUS, BALANCED, ADVENTUROUS, CASH_ONLY)
 """The example journey every visitor starts with. Its position also fixes each split's colour."""

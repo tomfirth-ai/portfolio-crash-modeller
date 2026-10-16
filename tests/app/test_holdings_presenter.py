@@ -78,7 +78,7 @@ def test_a_funds_help_gives_its_index_model_charge_and_launch() -> None:
 
 
 def test_an_index_bears_no_charges() -> None:
-    assert holding_help("bank_rate").endswith("No charges are taken off.")
+    assert holding_help("sonia").endswith("No charges are taken off.")
 
 
 def test_every_model_is_explained_and_every_holding_has_a_kind() -> None:

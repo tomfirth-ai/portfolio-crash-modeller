@@ -139,7 +139,7 @@ def stress_test_page(monkeypatch: pytest.MonkeyPatch, library: FakeLibrary) -> A
 def design_page_with_a_problem() -> AppTest:
     """The Design page with one split that does not add up, so every message shows."""
     app = run_app(DESIGN_PAGE)
-    app.number_input(key=percent_key(1, "uk_gilt")).set_value(45).run()
+    app.number_input(key=percent_key(1, "ftse_gilts_all_stocks")).set_value(45).run()
     app.toggle(key=widget_key(3, "included")).set_value(False).run()
     return app
 

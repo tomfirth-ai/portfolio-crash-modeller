@@ -82,7 +82,7 @@ def test_only_the_files_the_held_models_need_are_fetched(library: FakeLibrary) -
 
 
 def test_splits_of_gilts_and_cash_fetch_nothing(library: FakeLibrary) -> None:
-    loaders.load_panel({IndexModel.UK_GILTS, IndexModel.STERLING_CASH})
+    loaders.load_panel({IndexModel.UK_GILTS_ALL, IndexModel.STERLING_CASH})
     assert library.requests == []
 
 
@@ -90,9 +90,9 @@ def test_the_held_share_models_are_unavailable_when_the_library_is_down(
     library: FakeLibrary,
 ) -> None:
     library.online = False
-    panel = loaders.load_panel({IndexModel.US_LARGE, IndexModel.UK_GILTS})
+    panel = loaders.load_panel({IndexModel.US_LARGE, IndexModel.UK_GILTS_ALL})
     assert panel.unavailable == {IndexModel.US_LARGE}
-    assert IndexModel.UK_GILTS in panel.returns
+    assert IndexModel.UK_GILTS_ALL in panel.returns
 
 
 def test_once_the_server_cannot_be_reached_its_other_files_are_not_tried(

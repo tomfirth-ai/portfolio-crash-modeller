@@ -23,11 +23,11 @@ from tests.app.example_funds import use_example_funds
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 9), end=Month(2007, 10))
 ALL_IN = Split(name="All in", percentages={"sp500": 100})
-BONDS_ONLY = Split(name="Bonds", percentages={"uk_gilt": 100})
+BONDS_ONLY = Split(name="Bonds", percentages={"ftse_gilts_all_stocks": 100})
 MODELS = {
     "us_shares": IndexModel.US_LARGE,
     "world_shares": IndexModel.DEVELOPED_LARGE,
-    "gilts": IndexModel.UK_GILTS,
+    "gilts": IndexModel.UK_GILTS_ALL,
     "cash": IndexModel.STERLING_CASH,
 }
 """The models a test panel can give returns for, by a short name."""
@@ -100,7 +100,7 @@ def test_a_split_that_never_fell_says_so() -> None:
     )
 
 
-MIXED = Split(name="Mixed", percentages={"msci_world": 50, "uk_gilt": 50})
+MIXED = Split(name="Mixed", percentages={"msci_world": 50, "ftse_gilts_all_stocks": 50})
 
 
 def test_a_split_whose_data_could_not_be_fetched_says_which() -> None:
@@ -132,7 +132,7 @@ def test_the_offline_banner_names_the_holdings_whose_data_failed() -> None:
 
 
 def test_splits_that_do_not_add_up_are_left_out_and_slots_are_kept() -> None:
-    unfinished = Split(name="Unfinished", percentages={"uk_gilt": 90})
+    unfinished = Split(name="Unfinished", percentages={"ftse_gilts_all_stocks": 90})
     results = stress.outcomes(in_slots(unfinished, BONDS_ONLY), EPISODE, panel(gilts=(0.0,) * 4))
     assert [(outcome.split.name, outcome.slot) for outcome in results] == [("Bonds", 1)]
 
@@ -192,9 +192,9 @@ def test_months_money_and_month_names_are_written_in_words() -> None:
 
 
 def test_holdings_are_listed_as_in_a_sentence() -> None:
-    assert holding_list(["bank_rate"]) == "Bank Rate (modelled)"
-    assert holding_list(["msci_world", "sp500", "uk_gilt"]) == (
-        "MSCI World (modelled), S&P 500 (modelled) and 10-year UK gilt (modelled)"
+    assert holding_list(["sonia"]) == "SONIA (modelled)"
+    assert holding_list(["msci_world", "sp500", "ftse_gilts_all_stocks"]) == (
+        "MSCI World (modelled), S&P 500 (modelled) and FTSE All Stocks gilts (modelled)"
     )
 
 
@@ -218,7 +218,7 @@ def test_the_examples_note_shows_only_while_the_splits_are_the_examples() -> Non
 
 
 def test_included_splits_that_do_not_add_up_are_named_as_left_out() -> None:
-    over = Split(name="Over", percentages={"bank_rate": 105})
+    over = Split(name="Over", percentages={"sonia": 105})
     slots = [Slot(split=over), Slot(split=over, included=False), Slot(split=BONDS_ONLY)]
     assert stress_test.left_out_note(slots) == (
         "Over is left out, because it adds up to 105%, not 100%."
@@ -233,7 +233,7 @@ def test_splits_switched_off_are_not_run() -> None:
 
 
 def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> None:
-    starred = Split(name="*Mine*", percentages={"uk_gilt": 100})
+    starred = Split(name="*Mine*", percentages={"ftse_gilts_all_stocks": 100})
     [outcome] = stress.outcomes(in_slots(starred), EPISODE, panel(gilts=(0.0,) * 4))
     assert stress_test.card(outcome, EPISODE).title == r"\*Mine\*"
     assert stress_test.table_row(outcome, EPISODE)["Split"] == r"\*Mine\*"
@@ -241,12 +241,12 @@ def test_typed_names_are_escaped_in_words_and_table_but_not_on_the_chart() -> No
 
 
 def test_the_why_says_what_each_holding_lost_or_made_back_per_100_at_the_start() -> None:
-    mixed = Split(name="Mixed", percentages={"sp500": 60, "uk_gilt": 40})
+    mixed = Split(name="Mixed", percentages={"sp500": 60, "ftse_gilts_all_stocks": 40})
     returns = panel(us_shares=(-0.40, 0.0, 0.0, 0.0), gilts=(0.10, 0.0, 0.0, 0.0))
     [outcome] = stress.outcomes(in_slots(mixed), EPISODE, returns)
     assert stress_test.card(outcome, EPISODE).why == (
-        "Of every £100 it had at the start, S&P 500 (modelled) lost £24.00 and 10-year UK gilt "
-        "(modelled) made back £4.00 on the way down to its low in the crash phase.",
+        "Of every £100 it had at the start, S&P 500 (modelled) lost £24.00 and FTSE All Stocks "
+        "gilts (modelled) made back £4.00 on the way down to its low in the crash phase.",
     )
 
 
@@ -316,7 +316,7 @@ def test_each_way_of_managing_a_split_has_a_name() -> None:
 
 
 def test_a_fall_too_small_to_show_in_pence_needs_no_breakdown() -> None:
-    tiny = Split(name="Tiny", percentages={"sp500": 50, "uk_gilt": 50})
+    tiny = Split(name="Tiny", percentages={"sp500": 50, "ftse_gilts_all_stocks": 50})
     returns = panel(us_shares=(-0.00002, 0.0, 0.0, 0.0), gilts=(0.0,) * 4)
     [outcome] = stress.outcomes(in_slots(tiny), EPISODE, returns)
     assert outcome.run is not None
@@ -328,7 +328,7 @@ def test_a_fall_is_never_put_down_to_gains_alone() -> None:
     """Two holdings lose less than half a penny each per £100, while cash makes back a penny."""
     mixed = Split(
         name="Mixed",
-        percentages={"msci_world": 20, "uk_gilt": 60, "bank_rate": 20},
+        percentages={"msci_world": 20, "ftse_gilts_all_stocks": 60, "sonia": 20},
     )
     returns = panel(
         world_shares=(-0.0002, 0.0, 0.0, 0.0),

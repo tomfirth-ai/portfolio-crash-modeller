@@ -24,10 +24,13 @@ STORED_INTRODUCTION = (
 )
 STORED_COLUMNS = ("Data", "Publisher", "Licence", "Attribution")
 BOND_METHOD = (
-    "UK government bond returns are worked out from the gilt yield with the formula of "
-    "[Swinkels' government bond returns dataset](https://doi.org/10.25397/eur.8152748), "
-    "described in [Swinkels (2019)](https://doi.org/10.3390/data4030091). Only the method is "
-    "used; none of that dataset is stored."
+    "UK government bond returns are worked out from the Bank of England's gilt yield curve: a "
+    "ladder of gilts valued off the zero-coupon yields for all maturities and for over 15 years, "
+    "and for up to 5 years half a 5-year gilt, by the formula of "
+    "[Swinkels' government bond returns dataset](https://doi.org/10.25397/eur.8152748) described "
+    "in [Swinkels (2019)](https://doi.org/10.3390/data4030091), and half cash earning SONIA. Only "
+    "the method of that dataset is used; none of it is stored. The returns on cash and gilts are "
+    "worked out by this app, not by the Bank."
 )
 
 FETCHED_HEADING = "Fetched when the app runs"

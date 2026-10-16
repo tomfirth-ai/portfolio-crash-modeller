@@ -29,11 +29,24 @@ MODEL_DEFINITIONS = {
         "Modelled as companies of every size in developed and emerging countries, held in "
         "proportion to their market value, with dividends reinvested."
     ),
-    IndexModel.UK_GILTS: (
-        "Modelled as a 10-year UK government bond, bought new each month at the going yield. "
-        "Bonds lose value when interest rates rise and gain when they fall."
+    IndexModel.UK_GILTS_ALL: (
+        "Modelled as UK government bonds with up to 50 years left to run, each keeping the coupon "
+        "it was issued with, valued off the Bank of England's yield curve. Bonds lose value when "
+        "interest rates rise and gain when they fall, the longer-dated ones most."
     ),
-    IndexModel.STERLING_CASH: "Modelled as cash earning the Bank of England's Bank Rate.",
+    IndexModel.UK_GILTS_SHORT: (
+        "Modelled as half a 5-year UK government bond, bought new each month at the going yield, "
+        "and half cash earning SONIA. Short-dated bonds move little when interest rates change."
+    ),
+    IndexModel.UK_GILTS_LONG: (
+        "Modelled as UK government bonds with 15 to 50 years left to run, each keeping the coupon "
+        "it was issued with, valued off the Bank of England's yield curve. Long-dated bonds lose "
+        "the most when interest rates rise and gain the most when they fall."
+    ),
+    IndexModel.STERLING_CASH: (
+        "Modelled as cash earning SONIA, the rate banks pay each other overnight, compounded "
+        "daily, with the Bank of England's Bank Rate before SONIA began in 1997."
+    ),
 }
 
 KIND_LABELS = {AssetKind.SHARES: "Shares", AssetKind.BONDS: "Bonds", AssetKind.CASH: "Cash"}
@@ -48,7 +61,7 @@ def holding_label(holding_id: HoldingId) -> str:
     holding = HOLDINGS_BY_ID[holding_id]
     fund = holding.fund
     if fund is None:
-        return holding_name(holding_id)
+        return f"{holding.index.name} {MODELLED}"
     name = fund.name if fund.ticker is None else f"{fund.ticker}: {fund.name}"
     if holding.index.name.casefold() not in fund.name.casefold():
         name = f"{name}, tracking {holding.index.name}"
@@ -61,7 +74,7 @@ def holding_name(holding_id: HoldingId) -> str:
 
 
 def holding_list(holding_ids: Iterable[HoldingId]) -> str:
-    """Name holdings in a sentence, such as "VWRP (modelled) and Bank Rate (modelled)"."""
+    """Name holdings in a sentence, such as "VWRP (modelled) and SONIA (modelled)"."""
     return listed([holding_name(holding_id) for holding_id in holding_ids])
 
 
@@ -88,5 +101,5 @@ def short_name(holding_id: HoldingId) -> str:
     """Name a holding as briefly as can be, such as "VWRP" or "S&P 500"."""
     holding = HOLDINGS_BY_ID[holding_id]
     if holding.fund is None:
-        return holding.index.name
+        return holding.index.short_name or holding.index.name
     return holding.fund.ticker or holding.fund.name

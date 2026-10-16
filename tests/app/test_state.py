@@ -45,16 +45,16 @@ def test_starting_again_keeps_the_visitors_splits() -> None:
 def test_widgets_show_each_slot_and_write_their_changes_back() -> None:
     session = started()
     assert session[widget_key(1, NAME)] == "Balanced"
-    assert session[widget_key(1, HOLDINGS)] == ["ftse_all_world", "uk_gilt"]
-    assert session[percent_key(1, "uk_gilt")] == 40
+    assert session[widget_key(1, HOLDINGS)] == ["ftse_all_world", "ftse_gilts_all_stocks"]
+    assert session[percent_key(1, "ftse_gilts_all_stocks")] == 40
 
     session[widget_key(1, NAME)] = "Mine"
     session[widget_key(1, INCLUDED)] = False
     state.commit(session, 1)
-    session[percent_key(1, "uk_gilt")] = 45
-    state.set_percent(session, 1, "uk_gilt")
+    session[percent_key(1, "ftse_gilts_all_stocks")] = 45
+    state.set_percent(session, 1, "ftse_gilts_all_stocks")
 
-    mine = Split(name="Mine", percentages={"ftse_all_world": 60, "uk_gilt": 45})
+    mine = Split(name="Mine", percentages={"ftse_all_world": 60, "ftse_gilts_all_stocks": 45})
     assert state.slots(session)[1] == Slot(split=mine, included=False)
     assert state.slots(session)[0] == example_slots()[0]
 
@@ -69,24 +69,24 @@ def test_a_new_holding_gets_whatever_brings_the_split_up_to_100() -> None:
     session = started()
     state.start_own(session)
     assert choose(session, 0, ["sp500"]) == {"sp500": 100}
-    assert choose(session, 0, ["sp500", "bank_rate"]) == {"sp500": 100, "bank_rate": 0}
+    assert choose(session, 0, ["sp500", "sonia"]) == {"sp500": 100, "sonia": 0}
 
     session[percent_key(0, "sp500")] = 70
     state.set_percent(session, 0, "sp500")
-    assert choose(session, 0, ["sp500", "bank_rate", "uk_gilt"]) == {
+    assert choose(session, 0, ["sp500", "sonia", "ftse_gilts_all_stocks"]) == {
         "sp500": 70,
-        "bank_rate": 0,
-        "uk_gilt": 30,
+        "sonia": 0,
+        "ftse_gilts_all_stocks": 30,
     }
 
 
 def test_removing_a_holding_keeps_the_others_and_their_order() -> None:
     session = started()
-    assert choose(session, 0, ["bank_rate", "ftse_all_world"]) == {
-        "bank_rate": 20,
+    assert choose(session, 0, ["sonia", "ftse_all_world"]) == {
+        "sonia": 20,
         "ftse_all_world": 20,
     }
-    assert list(state.slots(session)[0].split.percentages) == ["bank_rate", "ftse_all_world"]
+    assert list(state.slots(session)[0].split.percentages) == ["sonia", "ftse_all_world"]
 
 
 def test_a_session_keeps_its_splits_when_a_holding_leaves_the_catalogue() -> None:
@@ -128,5 +128,5 @@ def test_starting_your_own_and_going_back_to_the_examples() -> None:
 def test_a_split_cannot_be_changed_once_made() -> None:
     percentages: Any = state.slots(started())[1].split.percentages
     with pytest.raises(TypeError):
-        percentages["bank_rate"] = 50
+        percentages["sonia"] = 50
     assert BALANCED.total == 100

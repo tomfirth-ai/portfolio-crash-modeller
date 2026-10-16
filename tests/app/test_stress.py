@@ -11,8 +11,8 @@ from tests.app.example_funds import use_example_funds
 
 EPISODE = Episode(key="test", start=Month(2007, 6), crash_end=Month(2007, 8), end=Month(2007, 9))
 US_ONLY = Slot(split=Split(name="US", percentages={"sp500": 100}))
-HALF_AND_HALF = Slot(split=Split(name="Half", percentages={"sp500": 50, "bank_rate": 50}))
-CASH_ONLY = Slot(split=Split(name="Cash", percentages={"bank_rate": 100}))
+HALF_AND_HALF = Slot(split=Split(name="Half", percentages={"sp500": 50, "sonia": 50}))
+CASH_ONLY = Slot(split=Split(name="Cash", percentages={"sonia": 100}))
 
 
 def series(*values: float) -> MonthlySeries:
@@ -47,7 +47,7 @@ def test_the_chosen_way_of_managing_each_split_reaches_the_engine() -> None:
 
 def test_a_split_that_fell_records_which_holdings_drove_the_fall() -> None:
     [outcome] = stress.outcomes([HALF_AND_HALF], EPISODE, panel())
-    assert outcome.drivers == {"sp500": -0.25, "bank_rate": 0.0}
+    assert outcome.drivers == {"sp500": -0.25, "sonia": 0.0}
 
 
 def test_a_split_holding_shares_is_also_run_with_their_returns_in_dollars() -> None:
@@ -76,7 +76,7 @@ def test_a_split_whose_share_data_could_not_be_fetched_says_so() -> None:
 def test_only_the_models_of_splits_that_will_run_are_loaded() -> None:
     left_out = Slot(split=Split(name="Off", percentages={"msci_world": 100}), included=False)
     unfinished = Slot(split=Split(name="Half done", percentages={"ftse_all_world": 50}))
-    at_zero = Slot(split=Split(name="Zero", percentages={"bank_rate": 100, "uk_gilt": 0}))
+    at_zero = Slot(split=Split(name="Zero", percentages={"sonia": 100, "ftse_gilts_all_stocks": 0}))
     held = stress.models_held([US_ONLY, left_out, unfinished, at_zero])
     assert held == {IndexModel.US_LARGE, IndexModel.STERLING_CASH}
 

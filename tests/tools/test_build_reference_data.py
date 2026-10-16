@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from crashmodel.data.reference_data import GILT_YIELD, USD_PER_GBP
+from crashmodel.data.reference_data import FIVE_YEAR_ZERO_YIELD, USD_PER_GBP
 from crashmodel.engine.months import Month, MonthlySeries
 from tools import build_reference_data as build
 from tools.build_reference_data import DownloadError
@@ -29,8 +29,10 @@ H10_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
   </frb:DataSet>
 </message:MessageGroup>
 """
-GILT_CSV = "DATE,IUMMNPY\n31 Dec 2019,2\n31 Jan 2020,1.5\n28 Feb 2020,1.25\n31 Mar 2020,1\n"
-BANK_RATE_CSV = "DATE,IUDBEDR\n02 Dec 2019,3.65\n02 Mar 2020,7.3\n01 Apr 2020,7.3\n"
+BANK_RATE_CSV = (
+    "DATE,IUDBEDR\n02 Dec 2019,3.65\n02 Jan 2020,3.65\n03 Feb 2020,3.65\n02 Mar 2020,7.3\n"
+    "01 Apr 2020,7.3\n"
+)
 SONIA_CSV = "DATE,IUDSOIA\n02 Jan 2020,7.3\n03 Feb 2020,7.3\n02 Mar 2020,7.3\n01 Apr 2020,7.3\n"
 """SONIA here begins on 2 January 2020, at twice Bank Rate, so the join shows."""
 RETRIEVED = date(2020, 4, 15)
@@ -41,7 +43,6 @@ def yield_csv(code: str) -> str:
 
 
 IADB_CSVS = {
-    "IUMMNPY": GILT_CSV,
     "IUDBEDR": BANK_RATE_CSV,
     "IUDSOIA": SONIA_CSV,
     **{code: yield_csv(code) for code in ("IUMSNZC", "IUMMNZC", "IUMLNZC", "IUMSNPY")},
@@ -83,9 +84,17 @@ def test_a_series_that_appears_twice_is_refused() -> None:
 
 
 def test_bank_of_england_csv_is_read_and_error_pages_refused() -> None:
-    assert build.parse_iadb(GILT_CSV, "IUMMNPY")[1] == (date(2020, 1, 31), 1.5)
+    assert build.parse_iadb(yield_csv("IUMSNZC"), "IUMSNZC")[1] == (date(2020, 1, 31), -0.25)
     with pytest.raises(DownloadError, match="Bank of England CSV"):
-        build.parse_iadb("<html>Error</html>", "IUMMNPY")
+        build.parse_iadb("<html>Error</html>", "IUMSNZC")
+
+
+def test_a_blank_value_or_a_missing_month_names_the_series() -> None:
+    with pytest.raises(DownloadError, match="IUMSNZC: the row '31 Jan 2020,'"):
+        build.parse_iadb("DATE,IUMSNZC\n31 Jan 2020,\n", "IUMSNZC")
+    january_and_march = [(date(2020, 1, 31), 1.0), (date(2020, 3, 31), 1.0)]
+    with pytest.raises(DownloadError, match="IUMSNZC"):
+        build._month_ends(january_and_march, "IUMSNZC")
 
 
 def test_months_that_have_not_ended_are_left_out() -> None:
@@ -96,17 +105,10 @@ def test_every_series_and_its_source_note_are_written(tmp_path: Path) -> None:
     with client_for(httpx.MockTransport(publishers)) as client:
         written = build.build(client, RETRIEVED, tmp_path)
 
-    assert len(written) == 14
+    assert len(written) == 10
     assert (tmp_path / "fed-h10/usd_per_gbp.csv").read_text() == (
         "month,usd_per_gbp\n2020-01,2.1000\n2020-02,2.2000\n2020-03,2.3000\n"
     )
-    assert (tmp_path / "boe-gilt-yield/ten_year_par_yield.csv").read_text().splitlines()[1:3] == [
-        "2019-12,2.0000",
-        "2020-01,1.5000",
-    ]
-    cash = (tmp_path / "boe-bank-rate/cash_return.csv").read_text().splitlines()
-    # 3.65% a year is 0.0001 a day, compounded: 31 and 29 days, then a day at 3.65% and 30 at 7.3%.
-    assert cash[1:] == ["2020-01,0.0031046545", "2020-02,0.0029040637", "2020-03,0.0061180343"]
     source = (tmp_path / "fed-h10/SOURCE.md").read_text()
     assert "Public domain" in source
     assert "Retrieved:** 2020-04-15" in source
@@ -136,8 +138,8 @@ def test_cash_earns_bank_rate_until_sonia_begins_and_sonia_after(tmp_path: Path)
     folder = tmp_path / "boe-sterling-cash"
     cash = (folder / "cash_return.csv").read_text().splitlines()
     assert cash[1:] == ["2020-01,0.0061180343", "2020-02,0.0058162693", "2020-03,0.0062186360"]
-    overnight = (folder / "overnight_rate.csv").read_text().splitlines()
-    assert overnight[1:] == ["2019-12,3.6500", "2020-01,7.3000", "2020-02,7.3000", "2020-03,7.3000"]
+    bank_rate = (folder / "bank_rate.csv").read_text().splitlines()
+    assert bank_rate[1:] == ["2019-12,3.6500", "2020-01,3.6500", "2020-02,3.6500", "2020-03,7.3000"]
     note = (folder / "SOURCE.md").read_text()
     assert '"SONIA" are registered trade marks of the Bank of England' in note
     assert "2 January 2020" in note
@@ -152,7 +154,10 @@ def test_a_later_rate_takes_over_from_the_day_it_begins() -> None:
 
 def test_a_folder_holds_series_from_one_dataset_only() -> None:
     values = MonthlySeries(Month(2020, 1), (1.0,))
-    outputs: list[build.Output] = [(USD_PER_GBP, values, [], "x"), (GILT_YIELD, values, [], "y")]
+    outputs: list[build.Output] = [
+        (USD_PER_GBP, values, [], "x"),
+        (FIVE_YEAR_ZERO_YIELD, values, [], "y"),
+    ]
     with pytest.raises(ValueError, match="same dataset"):
         build.render_source(outputs, RETRIEVED)
 
@@ -176,7 +181,7 @@ def test_main_builds_into_the_given_folder(
 
     argv = ["--retrieved", "2020-04-15", "--output", str(tmp_path)]
     assert build.main(argv, make_client=make_client) == 0
-    assert capsys.readouterr().out.count("wrote ") == 14
+    assert capsys.readouterr().out.count("wrote ") == 10
 
 
 def test_main_reports_a_failed_download(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
