@@ -3,8 +3,9 @@ import pytest
 
 from crashmodel.data import diagnostics
 from crashmodel.data.diagnostics import DataSource, Failure
+from crashmodel.data.french import PORTFOLIO_FILES
 
-SOURCE = DataSource("Example source", "https://data.example.com/series.csv", "Testing")
+SOURCE = DataSource("Example source", "https://data.example.com/series.csv")
 
 
 def client_returning(response: httpx.Response) -> httpx.Client:
@@ -62,7 +63,7 @@ def test_a_failed_request_is_unreachable_with_its_kind(
 
 
 def test_check_sources_checks_each_source_in_order() -> None:
-    other = DataSource("Other source", "https://other.example.com/", "Testing")
+    other = DataSource("Other source", "https://other.example.com/")
     with client_returning(httpx.Response(200)) as client:
         results = diagnostics.check_sources(client, [SOURCE, other])
 
@@ -72,3 +73,9 @@ def test_check_sources_checks_each_source_in_order() -> None:
 @pytest.mark.parametrize("source", diagnostics.HOSTED_SOURCES)
 def test_hosted_sources_use_https(source: DataSource) -> None:
     assert source.url.startswith("https://")
+
+
+def test_every_file_the_models_are_built_from_is_checked() -> None:
+    assert [source.url for source in diagnostics.HOSTED_SOURCES] == [
+        file.url for file in PORTFOLIO_FILES
+    ]

@@ -13,16 +13,15 @@ from enum import Enum, auto
 
 import httpx
 
-from crashmodel.data.french import DEVELOPED_BY_SIZE, EMERGING_BY_SIZE, US_BY_SIZE
+from crashmodel.data.french import PORTFOLIO_FILES
 
 
 @dataclass(frozen=True)
 class DataSource:
-    """A runtime data source and why the app needs it."""
+    """A data source the app fetches at runtime."""
 
     name: str
     url: str
-    purpose: str
 
 
 class Failure(Enum):
@@ -62,23 +61,11 @@ class SourceStatus:
         return self.failure is None
 
 
-HOSTED_SOURCES: tuple[DataSource, ...] = (
-    DataSource(
-        name="Kenneth R. French Data Library, US shares by size",
-        url=US_BY_SIZE.url,
-        purpose="The model of the S&P 500",
-    ),
-    DataSource(
-        name="Kenneth R. French Data Library, developed markets shares by size",
-        url=DEVELOPED_BY_SIZE.url,
-        purpose="The models of MSCI World, FTSE All-World and FTSE Global All Cap",
-    ),
-    DataSource(
-        name="Kenneth R. French Data Library, emerging markets shares by size",
-        url=EMERGING_BY_SIZE.url,
-        purpose="The models of FTSE All-World and FTSE Global All Cap",
-    ),
+HOSTED_SOURCES: tuple[DataSource, ...] = tuple(
+    DataSource(name=f"Kenneth R. French Data Library, {file.name}", url=file.url)
+    for file in PORTFOLIO_FILES
 )
+"""Every file the share models are built from."""
 
 
 def check_source(client: httpx.Client, source: DataSource) -> SourceStatus:

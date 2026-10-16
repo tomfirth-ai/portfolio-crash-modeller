@@ -3,8 +3,11 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from crashmodel.data.diagnostics import Failure, SourceStatus
+from crashmodel.app.presenters.format import listed
+from crashmodel.data.catalogue import TRACKED_INDEXES
+from crashmodel.data.diagnostics import DataSource, Failure, SourceStatus
 from crashmodel.data.french import LIBRARY_URL
+from crashmodel.data.models import SHARE_MODEL_FILES
 from crashmodel.data.reference_data import REFERENCE_SERIES, ReferenceSeries
 
 TITLE = "Data sources"
@@ -112,8 +115,19 @@ def status_row(result: SourceStatus) -> StatusRow:
         if result.elapsed_seconds is None
         else format_duration(result.elapsed_seconds),
         size="" if result.size_bytes is None else format_size(result.size_bytes),
-        used_for=result.source.purpose,
+        used_for=used_for(result.source),
     )
+
+
+def used_for(source: DataSource) -> str:
+    """Name the indexes whose models are built from a source, or nothing for any other source."""
+    models = {
+        model
+        for model, files in SHARE_MODEL_FILES.items()
+        if source.url in {file.url for file in files}
+    }
+    indexes = [index.name for index in TRACKED_INDEXES if index.model in models]
+    return f"The models of {listed(indexes)}" if indexes else ""
 
 
 def status_table(results: Sequence[SourceStatus]) -> list[dict[str, str]]:

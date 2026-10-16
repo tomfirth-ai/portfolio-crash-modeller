@@ -43,7 +43,7 @@ def generated_copy() -> list[str]:
     view = home.home_view()
     cards = [text for card in view.steps for text in (card.label, card.title, card.summary)]
     journey = [text for spec in JOURNEY for text in (spec.title, spec.summary)]
-    purposes = [source.purpose for source in HOSTED_SOURCES]
+    purposes = [data_sources.used_for(source) for source in HOSTED_SOURCES]
     headings = [view.eyebrow, view.headline, view.promise, view.first_step, view.status_note]
     results = [
         SourceStatus(source=HOSTED_SOURCES[0], failure=failure, status_code=503)

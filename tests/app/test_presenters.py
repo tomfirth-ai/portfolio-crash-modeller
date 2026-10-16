@@ -3,10 +3,10 @@ import pytest
 from crashmodel.app.journey import JOURNEY
 from crashmodel.app.presenters import data_sources, home
 from crashmodel.app.presenters.copy import DISCLAIMER, page_title
-from crashmodel.data.diagnostics import DataSource, Failure, SourceStatus
+from crashmodel.data.diagnostics import HOSTED_SOURCES, DataSource, Failure, SourceStatus
 from crashmodel.data.reference_data import GILT_YIELD, REFERENCE_SERIES
 
-SOURCE = DataSource("Example source", "https://data.example.com/", "Testing")
+SOURCE = DataSource("Example source", "https://data.example.com/")
 
 
 def test_the_journey_has_four_steps_in_order() -> None:
@@ -34,8 +34,17 @@ def test_reachable_sources_are_described_in_words_with_the_answer_first() -> Non
         "Status": "Reachable",
         "Response time": "1.2\u00a0s",
         "Size": "4\u00a0KB",
-        "Used for": "Testing",
+        "Used for": "",
     }
+
+
+def test_each_source_names_every_index_whose_model_is_built_from_it() -> None:
+    assert [data_sources.used_for(source) for source in HOSTED_SOURCES] == [
+        "The models of S&P 500",
+        "The models of MSCI World, FTSE Developed, FTSE All-World, MSCI ACWI, FTSE Global All Cap "
+        "and MSCI ACWI IMI",
+        "The models of FTSE All-World, MSCI ACWI, FTSE Global All Cap and MSCI ACWI IMI",
+    ]
 
 
 @pytest.mark.parametrize(
