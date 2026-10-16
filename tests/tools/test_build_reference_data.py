@@ -6,6 +6,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from crashmodel.data.reference_data import GILT_YIELD, USD_PER_GBP
+from crashmodel.engine.months import Month, MonthlySeries
 from tools import build_reference_data as build
 from tools.build_reference_data import DownloadError
 
@@ -29,7 +31,21 @@ H10_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
 """
 GILT_CSV = "DATE,IUMMNPY\n31 Dec 2019,2\n31 Jan 2020,1.5\n28 Feb 2020,1.25\n31 Mar 2020,1\n"
 BANK_RATE_CSV = "DATE,IUDBEDR\n02 Dec 2019,3.65\n02 Mar 2020,7.3\n01 Apr 2020,7.3\n"
+SONIA_CSV = "DATE,IUDSOIA\n02 Jan 2020,7.3\n03 Feb 2020,7.3\n02 Mar 2020,7.3\n01 Apr 2020,7.3\n"
+"""SONIA here begins on 2 January 2020, at twice Bank Rate, so the join shows."""
 RETRIEVED = date(2020, 4, 15)
+
+
+def yield_csv(code: str) -> str:
+    return f"DATE,{code}\n31 Dec 2019,0.5\n31 Jan 2020,-0.25\n28 Feb 2020,0.75\n31 Mar 2020,1\n"
+
+
+IADB_CSVS = {
+    "IUMMNPY": GILT_CSV,
+    "IUDBEDR": BANK_RATE_CSV,
+    "IUDSOIA": SONIA_CSV,
+    **{code: yield_csv(code) for code in ("IUMSNZC", "IUMMNZC", "IUMLNZC", "IUMSNPY")},
+}
 
 
 def zipped(member: str, content: bytes) -> bytes:
@@ -42,8 +58,7 @@ def zipped(member: str, content: bytes) -> bytes:
 def publishers(request: httpx.Request) -> httpx.Response:
     if request.url.path.endswith(".zip"):
         return httpx.Response(200, content=zipped("H10_data.xml", H10_XML))
-    code = request.url.params["SeriesCodes"]
-    return httpx.Response(200, text={"IUMMNPY": GILT_CSV, "IUDBEDR": BANK_RATE_CSV}[code])
+    return httpx.Response(200, text=IADB_CSVS[request.url.params["SeriesCodes"]])
 
 
 def client_for(handler: httpx.MockTransport) -> httpx.Client:
@@ -81,7 +96,7 @@ def test_every_series_and_its_source_note_are_written(tmp_path: Path) -> None:
     with client_for(httpx.MockTransport(publishers)) as client:
         written = build.build(client, RETRIEVED, tmp_path)
 
-    assert len(written) == 6
+    assert len(written) == 14
     assert (tmp_path / "fed-h10/usd_per_gbp.csv").read_text() == (
         "month,usd_per_gbp\n2020-01,2.1000\n2020-02,2.2000\n2020-03,2.3000\n"
     )
@@ -96,6 +111,50 @@ def test_every_series_and_its_source_note_are_written(tmp_path: Path) -> None:
     assert "Public domain" in source
     assert "Retrieved:** 2020-04-15" in source
     assert "SHA-256 `" in source
+
+
+def test_the_yield_curve_series_share_one_folder_and_note(tmp_path: Path) -> None:
+    with client_for(httpx.MockTransport(publishers)) as client:
+        build.build(client, RETRIEVED, tmp_path)
+
+    folder = tmp_path / "boe-yield-curve"
+    names = ("five_year_zero_yield", "ten_year_zero_yield", "twenty_year_zero_yield")
+    for name in (*names, "five_year_par_yield"):
+        rows = (folder / f"{name}.csv").read_text().splitlines()
+        assert rows[:3] == [f"month,{name}", "2019-12,0.5000", "2020-01,-0.2500"]
+    note = (folder / "SOURCE.md").read_text()
+    assert note.startswith("# Yields from British Government Securities")
+    assert all(f"`{name}.csv`" in note for name in names)
+    assert all(code in note for code in ("IUMSNZC", "IUMMNZC", "IUMLNZC", "IUMSNPY"))
+
+
+def test_cash_earns_bank_rate_until_sonia_begins_and_sonia_after(tmp_path: Path) -> None:
+    """Bank Rate of 3.65% (0.0001 a day) carries over 1 January; SONIA of 7.3% follows."""
+    with client_for(httpx.MockTransport(publishers)) as client:
+        build.build(client, RETRIEVED, tmp_path)
+
+    folder = tmp_path / "boe-sterling-cash"
+    cash = (folder / "cash_return.csv").read_text().splitlines()
+    assert cash[1:] == ["2020-01,0.0061180343", "2020-02,0.0058162693", "2020-03,0.0062186360"]
+    overnight = (folder / "overnight_rate.csv").read_text().splitlines()
+    assert overnight[1:] == ["2019-12,3.6500", "2020-01,7.3000", "2020-02,7.3000", "2020-03,7.3000"]
+    note = (folder / "SOURCE.md").read_text()
+    assert '"SONIA" are registered trade marks of the Bank of England' in note
+    assert "2 January 2020" in note
+    assert "not by the Bank" in note
+
+
+def test_a_later_rate_takes_over_from_the_day_it_begins() -> None:
+    earlier = [(date(2020, 1, 1), 1.0), (date(2020, 1, 3), 2.0)]
+    later = [(date(2020, 1, 3), 3.0), (date(2020, 1, 4), 4.0)]
+    assert build.spliced(earlier, later) == [(date(2020, 1, 1), 1.0), *later]
+
+
+def test_a_folder_holds_series_from_one_dataset_only() -> None:
+    values = MonthlySeries(Month(2020, 1), (1.0,))
+    outputs: list[build.Output] = [(USD_PER_GBP, values, [], "x"), (GILT_YIELD, values, [], "y")]
+    with pytest.raises(ValueError, match="same dataset"):
+        build.render_source(outputs, RETRIEVED)
 
 
 def test_a_failed_download_stops_the_build(tmp_path: Path) -> None:
@@ -117,7 +176,7 @@ def test_main_builds_into_the_given_folder(
 
     argv = ["--retrieved", "2020-04-15", "--output", str(tmp_path)]
     assert build.main(argv, make_client=make_client) == 0
-    assert capsys.readouterr().out.count("wrote ") == 6
+    assert capsys.readouterr().out.count("wrote ") == 14
 
 
 def test_main_reports_a_failed_download(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

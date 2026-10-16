@@ -118,7 +118,90 @@ CASH_RETURN = ReferenceSeries(
     ),
 )
 
-REFERENCE_SERIES = (USD_PER_GBP, GILT_YIELD, CASH_RETURN)
+OPEN_GOVERNMENT_ATTRIBUTION = (
+    "Contains public sector information licensed under the Open Government Licence v3.0."
+)
+SONIA_ATTRIBUTION = (
+    "SONIA and/or SONIA Compounded Index data licensed under the Open Government Licence v3.0 and "
+    'copyright the Governor and Company of the Bank of England. The trade marks "Bank of England" '
+    'and "SONIA" are registered trade marks of the Bank of England.'
+)
+"""The statement the Bank of England asks for wherever SONIA data is reused."""
+
+YIELD_CURVE_CREDIT = Credit(
+    publisher="Bank of England",
+    dataset="Yields from British Government Securities: nominal zero-coupon and par yields, end of "
+    "month",
+    url=BANK_OF_ENGLAND_DATABASE,
+    licence=OPEN_GOVERNMENT_LICENCE,
+    licence_url=OPEN_GOVERNMENT_LICENCE_URL,
+    attribution=OPEN_GOVERNMENT_ATTRIBUTION,
+)
+STERLING_CASH_CREDIT = Credit(
+    publisher="Bank of England",
+    dataset="SONIA (Sterling Overnight Index Average) and Official Bank Rate, daily",
+    url=BANK_OF_ENGLAND_DATABASE,
+    licence=OPEN_GOVERNMENT_LICENCE,
+    licence_url=OPEN_GOVERNMENT_LICENCE_URL,
+    attribution=f"{SONIA_ATTRIBUTION} {OPEN_GOVERNMENT_ATTRIBUTION}",
+)
+GILT_YIELD_RANGE = (-2.0, 20.0)
+"""Gilt yields have been as high as 15% and, briefly in 2020, a little below zero."""
+
+
+def _zero_yield(name: str, years: int) -> ReferenceSeries:
+    return ReferenceSeries(
+        folder="boe-yield-curve",
+        name=name,
+        description=f"The {years}-year nominal zero-coupon gilt yield at the end of each month, "
+        "continuously compounded, in percent",
+        plausible_range=GILT_YIELD_RANGE,
+        decimal_places=4,
+        credit=YIELD_CURVE_CREDIT,
+    )
+
+
+FIVE_YEAR_ZERO_YIELD = _zero_yield("five_year_zero_yield", 5)
+TEN_YEAR_ZERO_YIELD = _zero_yield("ten_year_zero_yield", 10)
+TWENTY_YEAR_ZERO_YIELD = _zero_yield("twenty_year_zero_yield", 20)
+FIVE_YEAR_PAR_YIELD = ReferenceSeries(
+    folder="boe-yield-curve",
+    name="five_year_par_yield",
+    description="The 5-year nominal par gilt yield at the end of each month, in percent",
+    plausible_range=GILT_YIELD_RANGE,
+    decimal_places=4,
+    credit=YIELD_CURVE_CREDIT,
+)
+STERLING_CASH_RETURN = ReferenceSeries(
+    folder="boe-sterling-cash",
+    name="cash_return",
+    description="The monthly return on cash earning SONIA, compounded daily, and Bank Rate "
+    "before SONIA began",
+    plausible_range=(0.0, 0.02),
+    decimal_places=10,
+    credit=STERLING_CASH_CREDIT,
+)
+OVERNIGHT_RATE = ReferenceSeries(
+    folder="boe-sterling-cash",
+    name="overnight_rate",
+    description="The overnight rate at the end of each month, SONIA or Bank Rate before it, in "
+    "percent",
+    plausible_range=(0.0, 20.0),
+    decimal_places=4,
+    credit=STERLING_CASH_CREDIT,
+)
+
+REFERENCE_SERIES = (
+    USD_PER_GBP,
+    GILT_YIELD,
+    CASH_RETURN,
+    FIVE_YEAR_ZERO_YIELD,
+    TEN_YEAR_ZERO_YIELD,
+    TWENTY_YEAR_ZERO_YIELD,
+    FIVE_YEAR_PAR_YIELD,
+    STERLING_CASH_RETURN,
+    OVERNIGHT_RATE,
+)
 
 
 def parse_series(series: ReferenceSeries, text: str) -> MonthlySeries:

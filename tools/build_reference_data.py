@@ -6,8 +6,9 @@ Run by hand when the data needs refreshing, never in CI, because it downloads fr
     python -m tools.build_reference_data --retrieved 2026-10-15
 
 Each series stops at the last complete month before the retrieval date, and is written as
-``YYYY-MM`` rows with a ``SOURCE.md`` beside it giving the publisher, licence, attribution,
-retrieval date and the SHA-256 of every file downloaded, so a rebuild can be checked.
+``YYYY-MM`` rows. Each folder holds the series from one publisher's dataset, with a ``SOURCE.md``
+giving how each file was made, the publisher, licence, attribution, retrieval date and the SHA-256
+of every file downloaded, so a rebuild can be checked.
 """
 
 import argparse
@@ -15,6 +16,7 @@ import hashlib
 import io
 import sys
 import zipfile
+from collections import defaultdict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -26,7 +28,13 @@ import httpx
 from crashmodel.data import client as http_client
 from crashmodel.data.reference_data import (
     CASH_RETURN,
+    FIVE_YEAR_PAR_YIELD,
+    FIVE_YEAR_ZERO_YIELD,
     GILT_YIELD,
+    OVERNIGHT_RATE,
+    STERLING_CASH_RETURN,
+    TEN_YEAR_ZERO_YIELD,
+    TWENTY_YEAR_ZERO_YIELD,
     USD_PER_GBP,
     ReferenceSeries,
     parse_series,
@@ -48,6 +56,18 @@ IADB_FIRST_DATE = "01/Jan/1975"
 IADB_DATE_FORMAT = "%d %b %Y"
 GILT_YIELD_CODE = "IUMMNPY"
 BANK_RATE_CODE = "IUDBEDR"
+SONIA_CODE = "IUDSOIA"
+YIELD_CURVE_CODES = {
+    FIVE_YEAR_ZERO_YIELD: "IUMSNZC",
+    TEN_YEAR_ZERO_YIELD: "IUMMNZC",
+    TWENTY_YEAR_ZERO_YIELD: "IUMLNZC",
+    FIVE_YEAR_PAR_YIELD: "IUMSNPY",
+}
+"""The month-end gilt yields the Bank estimates from its yield curve, by the series stored."""
+
+type Observations = list[tuple[date, float]]
+type Output = tuple[ReferenceSeries, MonthlySeries, list[Download], str]
+"""A series to write: its values, the downloads it came from, and how it was made."""
 
 
 class DownloadError(Exception):
@@ -92,7 +112,7 @@ def parse_h10(xml: bytes, series_name: str) -> list[tuple[date, float]]:
     return found[0]
 
 
-def parse_iadb(text: str, code: str) -> list[tuple[date, float]]:
+def parse_iadb(text: str, code: str) -> Observations:
     """Read one series from a Bank of England Interactive Database CSV.
 
     Raises:
@@ -101,7 +121,7 @@ def parse_iadb(text: str, code: str) -> list[tuple[date, float]]:
     lines = text.splitlines()
     if not lines or lines[0] != f"DATE,{code}":
         raise DownloadError(f"expected a Bank of England CSV for {code}")
-    observations: list[tuple[date, float]] = []
+    observations: Observations = []
     for line in filter(None, lines[1:]):
         day, _, value = line.partition(",")
         observations.append((datetime.strptime(day, IADB_DATE_FORMAT).date(), float(value)))
@@ -128,16 +148,31 @@ def render_series(series: ReferenceSeries, values: MonthlySeries) -> str:
     return f"{series.header}\n" + "".join(rows)
 
 
-def render_source(
-    series: ReferenceSeries, downloads: Sequence[Download], retrieved: date, method: str
-) -> str:
-    """Write the ``SOURCE.md`` that sits beside a series."""
-    credit = series.credit
+def spliced(earlier: Sequence[tuple[date, float]], later: Observations) -> Observations:
+    """Join two daily rates: ``earlier`` until the day ``later`` begins, then ``later``."""
+    return [observation for observation in earlier if observation[0] < later[0][0]] + later
+
+
+def render_source(outputs: Sequence[Output], retrieved: date) -> str:
+    """Write the ``SOURCE.md`` for a folder of series that share a publisher's dataset.
+
+    Raises:
+        ValueError: If the series do not share one credit.
+    """
+    credits = {series.credit for series, _, _, _ in outputs}
+    if len(credits) != 1:
+        raise ValueError("every series in a folder must come from the same dataset")
+    [credit] = credits
+    described = "".join(
+        f"  - `{series.name}.csv`, with the header `{series.header}`: {series.description}. "
+        f"{method}\n"
+        for series, _, _, method in outputs
+    )
+    downloads = dict.fromkeys(download for _, _, used, _ in outputs for download in used)
     files = "".join(f"  - {download.url}, SHA-256 `{download.sha256}`\n" for download in downloads)
     return (
-        f"# {series.description}\n\n"
-        f"- **File:** `{series.name}.csv`, with the header `{series.header}` and one row per "
-        "month, written YYYY-MM.\n"
+        f"# {credit.dataset}\n\n"
+        f"- **Files**, each with one row per month, written YYYY-MM:\n{described}"
         f"- **Publisher:** {credit.publisher}.\n"
         f"- **Dataset:** {credit.dataset}.\n"
         f"- **Where:** {credit.url}\n"
@@ -146,12 +181,11 @@ def render_source(
         f"- **Retrieved:** {retrieved.isoformat()}. Months from {Month.of(retrieved)} on are left "
         "out, because they had not ended.\n"
         f"- **Downloaded files:**\n{files}"
-        f"- **How it was made:** {method}\n"
     )
 
 
 def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
-    """Download every source, write each series and its ``SOURCE.md``, and return the files.
+    """Download every source, write each series and each folder's notes, and return the files.
 
     Raises:
         DownloadError: If a download fails or is not the expected file.
@@ -160,49 +194,97 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
     h10_zip, h10 = _fetch(client, H10_URL)
     with zipfile.ZipFile(io.BytesIO(h10_zip)) as archive:
         daily_rates = parse_h10(archive.read(H10_MEMBER), H10_SERIES)
-    rates = month_end_rates(daily_rates)
-    gilt_csv, gilt = _fetch(client, IADB_URL, _iadb_query(GILT_YIELD_CODE))
-    yields = month_end_rates(parse_iadb(gilt_csv.decode(), GILT_YIELD_CODE))
-    bank_rate_csv, bank_rate = _fetch(client, IADB_URL, _iadb_query(BANK_RATE_CODE))
-    cash = monthly_cash_returns(parse_iadb(bank_rate_csv.decode(), BANK_RATE_CODE), last)
-    outputs = [
+    gilt_yields, gilt = _iadb(client, GILT_YIELD_CODE)
+    bank_rate, bank_rate_download = _iadb(client, BANK_RATE_CODE)
+    sonia, sonia_download = _iadb(client, SONIA_CODE)
+    overnight = spliced(bank_rate, sonia)
+    last_overnight = min(last, last_published_month(sonia))
+    outputs: list[Output] = [
         (
             USD_PER_GBP,
-            _up_to(rates, min(last, last_published_month(daily_rates))),
+            _up_to(month_end_rates(daily_rates), min(last, last_published_month(daily_rates))),
             [h10],
             f"The last daily rate in each calendar month, from series {H10_SERIES} in the "
             f"release's XML file ({H10_MEMBER}), written to 4 decimal places as published.",
         ),
         (
             GILT_YIELD,
-            _up_to(yields, last),
+            _up_to(month_end_rates(gilt_yields), last),
             [gilt],
-            f"The end-of-month yield (series {GILT_YIELD_CODE}) from the Bank's Interactive "
-            "Database, written to 4 decimal places. The Bank drops trailing zeros.",
+            _yield_method(GILT_YIELD_CODE),
         ),
         (
             CASH_RETURN,
-            cash,
-            [bank_rate],
+            monthly_cash_returns(bank_rate, last),
+            [bank_rate_download],
             f"The daily Official Bank Rate (series {BANK_RATE_CODE}) from the Bank's Interactive "
-            "Database, turned into a monthly return on cash: interest accrues each calendar day "
-            "at the rate in force that day, rate / 100 / 365, and is credited at the month end. "
-            "The first month is the first with a rate on its first day.",
+            f"Database, turned into a monthly return on cash. {_COMPOUNDING}",
         ),
     ]
-    written: list[Path] = []
-    for series, values, downloads, method in outputs:
-        folder = output / series.folder
-        folder.mkdir(parents=True, exist_ok=True)
-        data_file, source_file = folder / f"{series.name}.csv", folder / "SOURCE.md"
-        text = render_series(series, values)
-        parse_series(series, text)  # The checks the app makes on loading, made before writing.
-        data_file.write_text(text, encoding="ascii")
-        source_file.write_text(
-            render_source(series, downloads, retrieved, method), encoding="utf-8"
+    for series, code in YIELD_CURVE_CODES.items():
+        yields, download = _iadb(client, code)
+        outputs.append(
+            (series, _up_to(month_end_rates(yields), last), [download], _yield_method(code))
         )
-        written += [data_file, source_file]
+    sonia_began = f"{sonia[0][0].day} {sonia[0][0]:%B %Y}"
+    overnight_sources = (
+        f"Daily SONIA (series {SONIA_CODE}) from its first day, {sonia_began}, and the daily "
+        f"Official Bank Rate (series {BANK_RATE_CODE}) before it, from the Bank's Interactive "
+        "Database"
+    )
+    outputs += [
+        (
+            STERLING_CASH_RETURN,
+            monthly_cash_returns(overnight, last_overnight),
+            [bank_rate_download, sonia_download],
+            f"{overnight_sources}, turned into a monthly return on cash. {_COMPOUNDING} The last "
+            "month is the last whose final rate had been published. The returns are worked out "
+            "by this project, not by the Bank.",
+        ),
+        (
+            OVERNIGHT_RATE,
+            _up_to(month_end_rates(overnight), last_overnight),
+            [bank_rate_download, sonia_download],
+            f"{overnight_sources}: the last rate in each calendar month, written to 4 decimal "
+            "places.",
+        ),
+    ]
+    by_folder: defaultdict[str, list[Output]] = defaultdict(list)
+    for written_output in outputs:
+        by_folder[written_output[0].folder].append(written_output)
+    written: list[Path] = []
+    for folder_name, folder_outputs in by_folder.items():
+        folder = output / folder_name
+        folder.mkdir(parents=True, exist_ok=True)
+        for series, values, _, _ in folder_outputs:
+            text = render_series(series, values)
+            parse_series(series, text)  # The checks the app makes on loading, made before writing.
+            data_file = folder / f"{series.name}.csv"
+            data_file.write_text(text, encoding="ascii")
+            written.append(data_file)
+        source_file = folder / "SOURCE.md"
+        source_file.write_text(render_source(folder_outputs, retrieved), encoding="utf-8")
+        written.append(source_file)
     return written
+
+
+_COMPOUNDING = (
+    "Each calendar day earns the rate in force that day, rate / 100 / 365, compounded daily. "
+    "The first month is the first with a rate on its first day."
+)
+
+
+def _yield_method(code: str) -> str:
+    return (
+        f"The end-of-month yield (series {code}) from the Bank's Interactive Database, written to "
+        "4 decimal places. The Bank drops trailing zeros."
+    )
+
+
+def _iadb(client: httpx.Client, code: str) -> tuple[Observations, Download]:
+    """Download and read one series from the Bank of England's Interactive Database."""
+    csv, download = _fetch(client, IADB_URL, _iadb_query(code))
+    return parse_iadb(csv.decode(), code), download
 
 
 def _up_to(values: MonthlySeries, last: Month) -> MonthlySeries:
