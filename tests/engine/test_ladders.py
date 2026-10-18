@@ -61,11 +61,32 @@ def test_longer_rungs_lose_more_when_yields_rise() -> None:
     assert long < short < 0
 
 
-def test_a_rungs_money_is_split_between_the_terms_long_enough_to_reach_it() -> None:
-    """Equal weights on two identical rungs give the same return as either one alone."""
-    curves = [flat(3.0), flat(4.0)]
-    alone = last_return(curves, [Rung(3, 1)], (5, 10))
-    assert last_return(curves, [Rung(3, 1), Rung(3, 2)], (5, 10)) == pytest.approx(alone)
+def test_a_rungs_face_value_is_split_between_the_terms_issued_for_at_least_its_time_left() -> None:
+    """The one-year rung holds gilts first issued at 1.5 and 5 years, half its face value each;
+    the two-year rung only 5-year gilts. All are zero-coupon, worth 1/2 and 1/4 of face, then face:
+    split, the ladder goes from 3/4 to 2, a return of 5/3; counted once per term, the one-year
+    rung would hold twice its face value, and the return would be 3 / (5/4) - 1 = 7/5."""
+    curves = [flat(0.0), flat(100 * math.log(2)), flat(0.0)]
+    assert last_return(curves, [Rung(1, 1), Rung(2, 1)], (1.5, 5)) == pytest.approx(5 / 3)
+
+
+def test_each_gilt_in_a_rung_holds_an_equal_share_and_keeps_its_own_coupon() -> None:
+    """The one-year rung holds, half each, a one-year gilt bought new on a curve with D(0.5) = 1
+    and D(1) = 0.8 (coupon 1/9 a half year, worth 1, then 11/9 on a curve at 0) and a gilt first
+    issued at 1.5 years, six months before, at exactly 4% (worth 0.02 * 1.8 + 0.8 = 0.836, then
+    1.04). Held only in the first, the return would be 2/9."""
+    sloped = ZeroCurve.from_points({0.5: 0.0, 1: 100 * math.log(1.25)})
+    curves = [flat(200 * math.log(1.02))] + [flat(0.0)] * 5 + [sloped, flat(0.0)]
+    expected = (11 / 18 + 0.52) / (1 / 2 + 0.418) - 1
+    assert last_return(curves, [Rung(1, 1)], (1, 1.5)) == pytest.approx(expected)
+
+
+def test_a_gilt_takes_the_par_coupon_of_its_own_issue_term() -> None:
+    """Issued at one year on a curve with D(0.5) = 1 and D(1) = 0.8, its coupon is 1/9 a half
+    year: (1/9) * 1.8 + 0.8 = 1. On a curve at 0 a month later it is worth 2/9 + 1, a return of
+    2/9; with the half-year term's coupon, 0, it would be 1 / 0.8 - 1 = 1/4."""
+    sloped = ZeroCurve.from_points({0.5: 0.0, 1: 100 * math.log(1.25)})
+    assert last_return([sloped, flat(0.0)], [Rung(1, 1)], (1,)) == pytest.approx(2 / 9)
 
 
 @pytest.mark.parametrize(

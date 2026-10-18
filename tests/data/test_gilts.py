@@ -24,13 +24,14 @@ def constant(value: float, start: Month = START, months: int = 24) -> MonthlySer
     return MonthlySeries(start, (value,) * months)
 
 
-def points(twenty_from: Month = START + 6) -> CurvePoints:
-    """Bank Rate at 3.65% (0.01% a day), yields at 4%, 5% and 6%; the 20-year point begins later."""
+def points(twenty_from: Month = START + 6, twenty_months: int | None = None) -> CurvePoints:
+    """Bank Rate at 3.65% (0.01% a day), yields at 4%, 5% and 6%; the 20-year point begins later
+    and, unless told otherwise, ends with the others."""
     return CurvePoints(
         overnight=constant(3.65, Month(1981, 1), 36),
         five_years=constant(4.0),
         ten_years=constant(5.0),
-        twenty_years=constant(6.0, twenty_from, 24 - (twenty_from - START)),
+        twenty_years=constant(6.0, twenty_from, twenty_months or 24 - (twenty_from - START)),
     )
 
 
@@ -64,20 +65,28 @@ def test_a_ladders_returns_start_the_month_after_the_20_year_point_begins() -> N
     assert (returns.start, returns.end) == (START + 7, START + 23)
 
 
+def test_a_ladder_ends_with_the_20_year_point_if_that_ends_first() -> None:
+    """Past it, every long rung would be valued at the 10-year yield."""
+    returns = ladder(ALL_MATURITIES, points(twenty_from=START + 6, twenty_months=12))
+    assert (returns.start, returns.end) == (START + 7, START + 17)
+
+
 def test_short_gilts_are_half_a_5_year_gilt_and_half_cash() -> None:
-    """At an unchanged 6% the gilt earns 6/1200 = 0.5% a month, as does the cash here."""
-    returns = short_gilts(constant(6.0), constant(0.005, START + 3, 10))
+    """At an unchanged 6% the gilt earns 6/1200 = 0.5% a month and the cash 0.1%: 0.3% together."""
+    returns = short_gilts(constant(6.0), constant(0.001, START + 3, 10))
     assert (returns.start, returns.end) == (START + 3, START + 12)
-    assert returns.values == pytest.approx((0.005,) * 10)
+    assert returns.values == pytest.approx((0.003,) * 10)
 
 
-def test_the_three_gilt_models_are_built_together() -> None:
-    models = gilt_models(points(), constant(6.0), constant(0.005))
-    assert set(models) == {
-        IndexModel.UK_GILTS_ALL,
-        IndexModel.UK_GILTS_SHORT,
-        IndexModel.UK_GILTS_LONG,
+def test_each_gilt_model_is_built_from_its_own_recipe() -> None:
+    curve_points, par, cash = points(), constant(6.0), constant(0.001)
+    models = gilt_models(curve_points, par, cash)
+    assert models == {
+        IndexModel.UK_GILTS_ALL: ladder(ALL_MATURITIES, curve_points),
+        IndexModel.UK_GILTS_SHORT: short_gilts(par, cash),
+        IndexModel.UK_GILTS_LONG: ladder(OVER_15_YEARS, curve_points),
     }
+    assert models[IndexModel.UK_GILTS_ALL] != models[IndexModel.UK_GILTS_LONG]
 
 
 def test_the_series_must_share_a_month() -> None:

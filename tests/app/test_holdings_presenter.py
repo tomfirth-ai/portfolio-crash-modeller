@@ -69,6 +69,14 @@ def test_a_short_name_is_the_ticker_or_else_the_name() -> None:
     assert short_name("msci_world") == "MSCI World"
 
 
+def test_an_index_with_a_short_name_keeps_its_full_name_in_the_picker() -> None:
+    """So that a search for any word of the index's name finds the index as well as its funds."""
+    assert holding_label("ftse_gilts_all_stocks") == (
+        "FTSE Actuaries UK Conventional Gilts All Stocks (modelled)"
+    )
+    assert holding_name("ftse_gilts_all_stocks") == "FTSE All Stocks gilts (modelled)"
+
+
 def test_a_funds_help_gives_its_index_model_charge_and_launch() -> None:
     assert holding_help("xmpl") == (
         f"Tracks the FTSE All-World index. {MODEL_DEFINITIONS[IndexModel.GLOBAL_LARGE]} Its "
