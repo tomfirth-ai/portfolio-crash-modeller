@@ -33,7 +33,7 @@ MINIMUM_CURVES = 2
 
 @dataclass(frozen=True)
 class Rung:
-    """Gilts with a given time left to run, and the share of the ladder's money they hold.
+    """Gilts with a given time left to run, and their share of the ladder's gilts at face value.
 
     Attributes:
         years_left: The time left to run, a whole number of half years.
@@ -45,7 +45,7 @@ class Rung:
     weight: float
 
     def __post_init__(self) -> None:
-        """Check that the rung is a whole number of half years and holds some money.
+        """Check that the rung is a whole number of half years and holds some gilts.
 
         Raises:
             ValueError: If it is not, or does not.
@@ -73,7 +73,7 @@ def ladder_returns(
     Args:
         curves: The zero curve at the end of each month from ``first``, with no gaps.
         first: The month of the first curve. Returns start the month after.
-        rungs: The times left to run the ladder holds, and their shares of its money.
+        rungs: The times left to run the ladder holds, and their shares of its gilts at face value.
         issue_terms: The terms, in years, that gilts are first issued at.
 
     Raises:
@@ -106,7 +106,7 @@ def ladder_returns(
 
 
 def _holdings(rung: Rung, issue_terms: Sequence[float]) -> list[_Holding]:
-    """Split a rung's money equally between the gilts issued long enough to have its time left."""
+    """Split a rung's face value equally between the gilts issued for at least its time left."""
     terms = [term for term in issue_terms if term >= rung.years_left]
     if not terms:
         raise ValueError(f"no gilt is issued for long enough to have {rung.years_left} years left")

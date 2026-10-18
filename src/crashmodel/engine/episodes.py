@@ -58,7 +58,8 @@ BOND_CRASH = Episode(
     key="2022-23", start=Month(2021, 12), crash_end=Month(2023, 10), end=Month(2024, 12)
 )
 """Starts as the Bank of England began raising Bank Rate in December 2021; the crash phase ends in
-October 2023, after the last rise, in August 2023, with gilt yields at their highest."""
+October 2023, after the last rise, in August 2023, when long-dated gilt yields reached their highest
+month end since the rises began and long-dated gilt prices their lowest."""
 
 EPISODES = (DOT_COM, GLOBAL_FINANCIAL_CRISIS, COVID, BOND_CRASH)
 """Every crash, oldest first."""

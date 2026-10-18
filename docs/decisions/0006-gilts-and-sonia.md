@@ -1,7 +1,8 @@
 # 6. Gilt funds and sterling cash from the Bank of England's curves
 
 Date: 16 October 2026. Status: accepted. Amends [ADR 0003](0003-stress-test-method.md), whose
-10-year gilt and Bank Rate cash it replaces, and [ADR 0005](0005-real-funds-modelled.md), whose
+10-year gilt and Bank Rate cash it replaces, [ADR 0004](0004-vertical-slices.md), whose gilt
+returns from the 10-year par yield it replaces, and [ADR 0005](0005-real-funds-modelled.md), whose
 UK gilt and sterling money market models it replaces.
 
 ## Context
@@ -72,8 +73,9 @@ Government Licence, so models of whole gilt indexes can be built from data the p
 
   The start comes as the Bank of England began raising Bank Rate, in December 2021, to fight the
   inflation that followed the pandemic and the energy shock after Russia's invasion of Ukraine. The
-  crash phase ends when gilt yields peaked, in October 2023. The window is shorter than the others,
-  so the five-year rule of ADR 0003 no longer applies to every window.
+  crash phase ends in October 2023, when long-dated gilt yields reached their highest month end
+  since the rises began and long-dated gilt prices their lowest. The window is shorter than the
+  others, so the five-year rule of ADR 0003 no longer applies to every window.
 
 ## Consequences
 

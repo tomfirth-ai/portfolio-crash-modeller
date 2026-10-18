@@ -62,11 +62,11 @@ SIMULATED = (
 CAVEAT = (
     "These figures are in pounds before inflation. Each fund's ongoing charge is taken off; tax on "
     "dividends, dealing costs and platform charges are not. Income a fund pays out is counted as "
-    "reinvested. The models group companies by size, and spread gilts evenly across their terms, "
-    "rather than following each index's own rules, so their figures will differ from any fund's "
-    "or index's own. They use month-end values, so a "
-    "fall within a month could have been deeper. Getting back to an earlier high in pounds is not "
-    "the same as getting back your spending power."
+    "reinvested. The models group companies by size and hold gilts in fixed shares by the time "
+    "they have left to run (short-dated gilts as half a 5-year gilt and half cash), rather than "
+    "following each index's own rules, so their figures will differ from any fund's or index's "
+    "own. They use month-end values, so a fall within a month could have been deeper. Getting "
+    "back to an earlier high in pounds is not the same as getting back your spending power."
 )
 BANK_OF_ENGLAND_CREDIT = (
     "UK gilts are modelled from the Bank of England's gilt yield curve, short-dated gilts using "

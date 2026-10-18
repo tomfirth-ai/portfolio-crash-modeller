@@ -44,8 +44,9 @@ MODEL_DEFINITIONS = {
         "the most when interest rates rise and gain the most when they fall."
     ),
     IndexModel.STERLING_CASH: (
-        "Modelled as cash earning SONIA, the rate banks pay each other overnight, compounded "
-        "daily, with the Bank of England's Bank Rate before SONIA began in 1997."
+        "Modelled as cash earning SONIA, the average rate banks pay to borrow sterling overnight "
+        "from other financial institutions, compounded daily, with the Bank of England's Bank "
+        "Rate before SONIA began in 1997."
     ),
 }
 

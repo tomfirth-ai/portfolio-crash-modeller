@@ -1,6 +1,8 @@
 # 4. Build in vertical slices, and what that changes in ADRs 0001 and 0002
 
-Date: 15 October 2026. Status: accepted.
+Date: 15 October 2026. Status: accepted. Amended by [ADR 0006](0006-gilts-and-sonia.md): gilts
+are now modelled from the Bank of England's zero-coupon yield curve, and Swinkels' formula is used
+only for the 5-year gilt in the short-dated model.
 
 ## Context
 
