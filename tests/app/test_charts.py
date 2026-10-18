@@ -64,6 +64,7 @@ def test_the_crash_phase_is_shaded_behind_the_lines_and_named() -> None:
     ]
     assert shade["encoding"]["x"]["timeUnit"] == "utcyearmonth"
     assert label["encoding"]["text"]["field"] == "label"
+    assert (label["mark"]["baseline"], label["mark"]["dy"] < 0) == ("bottom", True)
 
 
 def test_no_shading_without_a_crash_phase() -> None:

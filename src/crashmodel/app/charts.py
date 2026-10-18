@@ -34,7 +34,7 @@ CRASH_PHASE_COLOUR = "#888888"
 CRASH_PHASE_OPACITY = 0.12
 """A faint grey band behind the lines, which reads on light and dark pages alike."""
 CRASH_PHASE_LABEL_OFFSET = 4
-"""Pixels between the band's corner and its label."""
+"""Pixels between the band's corner and its label, which sits just above the plot."""
 LEGEND_COLUMNS = 2
 """Four splits in one row overflow a phone screen; two rows of two fit at any width."""
 
@@ -93,7 +93,11 @@ def value_chart(view: ValueChartView) -> alt.LayerChart:
 
 
 def _crash_phase(view: ValueChartView) -> list[alt.Chart]:
-    """Shade the crash phase behind the lines, and name it in the band's top corner."""
+    """Shade the crash phase behind the lines, and name it just above the band's left corner.
+
+    Every line starts at the top left of the band, at 100, so a label inside it would sit on
+    the lines.
+    """
     if view.crash_phase is None:
         return []
     first, last = view.crash_phase
@@ -106,9 +110,9 @@ def _crash_phase(view: ValueChartView) -> list[alt.Chart]:
     shade: alt.Chart = band.mark_rect(color=CRASH_PHASE_COLOUR, opacity=CRASH_PHASE_OPACITY)
     label: alt.Chart = band.mark_text(
         align="left",
-        baseline="top",
+        baseline="bottom",
         dx=CRASH_PHASE_LABEL_OFFSET,
-        dy=CRASH_PHASE_LABEL_OFFSET,
+        dy=-CRASH_PHASE_LABEL_OFFSET,
         color=CRASH_PHASE_COLOUR,
     ).encode(text="label:N", y=alt.value(0))
     return [shade, label]
