@@ -173,6 +173,15 @@ def test_every_fund_line_holds_plausible_facts_from_a_listed_provider(holding: H
     assert holding.index in TRACKED_INDEXES
 
 
+@pytest.mark.parametrize("holding", FUNDS_ONLY, ids=lambda holding: holding.id)
+def test_every_fund_is_named_with_its_manager_so_a_search_for_the_manager_finds_it(
+    holding: Holding,
+) -> None:
+    """The picker and the cards show only the name, or the ticker, never the provider field."""
+    fund = fund_of(holding)
+    assert fund.provider in fund.name
+
+
 @pytest.mark.parametrize("holding", CATALOGUE, ids=lambda holding: holding.id)
 def test_no_line_holds_an_isin(holding: Holding) -> None:
     """Fund identifiers stay out of the repository, as the hygiene check requires elsewhere."""
