@@ -219,6 +219,28 @@ def test_a_daily_month_is_kept_only_once_a_later_day_is_published(tmp_path: Path
 
 def test_a_value_out_of_range_is_caught_before_it_is_written(tmp_path: Path) -> None:
     implausible = H10_XML.replace(b'OBS_VALUE="2.2000"', b'OBS_VALUE="99.0000"')
-    with pytest.raises(ValueError, match="outside"):
+    with pytest.raises(DownloadError, match="outside"):
         build_with_h10(implausible, tmp_path)
     assert not (tmp_path / "fed-h10/usd_per_gbp.csv").exists()
+
+
+def test_a_failed_check_on_a_later_series_leaves_every_stored_file_as_it_was(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The 20-year yield comes after other files in its own folder and in others."""
+    with client_for(httpx.MockTransport(publishers)) as client:
+        build.build(client, RETRIEVED, tmp_path)
+    before = {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
+    def implausible(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("SeriesCodes") == "IUMLNZC":
+            return httpx.Response(200, text=yield_csv("IUMLNZC").replace(",1\n", ",25\n"))
+        return publishers(request)
+
+    def make_client() -> httpx.Client:
+        return client_for(httpx.MockTransport(implausible))
+
+    argv = ["--retrieved", "2020-05-15", "--output", str(tmp_path)]
+    assert build.main(argv, make_client=make_client) == 1
+    assert "twenty_year_zero_yield.csv" in capsys.readouterr().err
+    assert {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()} == before

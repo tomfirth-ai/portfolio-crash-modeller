@@ -188,7 +188,8 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
     """Download every source, write each series and each folder's notes, and return the files.
 
     Raises:
-        DownloadError: If a download fails or is not the expected file.
+        DownloadError: If a download fails or is not the expected file, or a series fails the
+            checks the app makes on loading it; then nothing is written.
     """
     last = last_complete_month(retrieved)
     h10_zip, h10 = _fetch(client, H10_URL)
@@ -237,23 +238,37 @@ def build(client: httpx.Client, retrieved: date, output: Path) -> list[Path]:
             "Database: the last rate in each calendar month, written to 4 decimal places.",
         ),
     ]
+    files = _rendered(outputs, retrieved, output)
+    for path, text, encoding in files:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding=encoding)
+    return [path for path, _, _ in files]
+
+
+def _rendered(outputs: list[Output], retrieved: date, output: Path) -> list[tuple[Path, str, str]]:
+    """Render every series and each folder's note, as (path, text, encoding), checking each series.
+
+    Every file is rendered and checked before any is written, so a failed check leaves the stored
+    data as it was, with each note still describing the files beside it.
+
+    Raises:
+        DownloadError: If a series fails the checks the app makes on loading it.
+    """
     by_folder: defaultdict[str, list[Output]] = defaultdict(list)
-    for written_output in outputs:
-        by_folder[written_output[0].folder].append(written_output)
-    written: list[Path] = []
+    for folder_output in outputs:
+        by_folder[folder_output[0].folder].append(folder_output)
+    files: list[tuple[Path, str, str]] = []
     for folder_name, folder_outputs in by_folder.items():
         folder = output / folder_name
-        folder.mkdir(parents=True, exist_ok=True)
         for series, values, _, _ in folder_outputs:
             text = render_series(series, values)
-            parse_series(series, text)  # The checks the app makes on loading, made before writing.
-            data_file = folder / f"{series.name}.csv"
-            data_file.write_text(text, encoding="ascii")
-            written.append(data_file)
-        source_file = folder / "SOURCE.md"
-        source_file.write_text(render_source(folder_outputs, retrieved), encoding="utf-8")
-        written.append(source_file)
-    return written
+            try:
+                parse_series(series, text)
+            except ValueError as error:
+                raise DownloadError(str(error)) from None
+            files.append((folder / f"{series.name}.csv", text, "ascii"))
+        files.append((folder / "SOURCE.md", render_source(folder_outputs, retrieved), "utf-8"))
+    return files
 
 
 _COMPOUNDING = (
