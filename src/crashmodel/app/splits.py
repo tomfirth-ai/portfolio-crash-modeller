@@ -47,16 +47,22 @@ class Split:
         }
 
 
-CAUTIOUS = Split(
-    name="Cautious",
+MOSTLY_BONDS = Split(
+    name="Mostly bonds",
     percentages={"ftse_all_world": 20, "ftse_gilts_all_stocks": 60, "sonia": 20},
 )
-BALANCED = Split(name="Balanced", percentages={"ftse_all_world": 60, "ftse_gilts_all_stocks": 40})
-ADVENTUROUS = Split(name="Adventurous", percentages={"ftse_all_world": 100})
+SHARES_AND_BONDS = Split(
+    name="Shares and bonds", percentages={"ftse_all_world": 60, "ftse_gilts_all_stocks": 40}
+)
+ALL_SHARES = Split(name="All shares", percentages={"ftse_all_world": 100})
 CASH_ONLY = Split(name="Cash only", percentages={"sonia": 100})
 
-EXAMPLE_SPLITS = (CAUTIOUS, BALANCED, ADVENTUROUS, CASH_ONLY)
-"""The example journey every visitor starts with. Its position also fixes each split's colour."""
+EXAMPLE_SPLITS = (MOSTLY_BONDS, SHARES_AND_BONDS, ALL_SHARES, CASH_ONLY)
+"""The example journey every visitor starts with. Its position also fixes each split's colour.
+
+The names say what each split holds, never who it might suit: a name such as "Cautious" is a risk
+profile, and would read as advice.
+"""
 
 SLOT_COUNT = 4
 """Up to four splits are compared at once."""
@@ -92,7 +98,7 @@ def display_names(slots: Sequence[Slot]) -> tuple[str, ...]:
     """Return a name for each slot's split, in order, that is never blank.
 
     A blank name becomes "Split 2" after its place. Among included splits a repeated name gets a
-    number, such as "Balanced (2)", so that a chart or table never mixes two splits up.
+    number, such as "All shares (2)", so that a chart or table never mixes two splits up.
     """
     shown: list[str] = []
     taken: set[str] = set()

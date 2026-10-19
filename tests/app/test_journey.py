@@ -12,7 +12,7 @@ from streamlit.testing.v1 import AppTest
 from crashmodel.app import loaders, state
 from crashmodel.app.charts import SPLIT_COLOURS
 from crashmodel.app.presenters import design, home, stress_test
-from crashmodel.app.splits import CAUTIOUS, EXAMPLE_SPLITS
+from crashmodel.app.splits import EXAMPLE_SPLITS, MOSTLY_BONDS
 from crashmodel.app.state import HOLDINGS, INCLUDED, NAME, TEMPLATE, percent_key, widget_key
 from crashmodel.data.models import IndexModel
 from crashmodel.data.panel import Panel
@@ -113,11 +113,13 @@ def test_a_split_that_does_not_add_up_holds_back_the_next_step() -> None:
     app.number_input(key=percent_key(1, "ftse_gilts_all_stocks")).set_value(45).run()
 
     assert button(app, design.NEXT).disabled
-    assert "Balanced adds up to 105%, not 100%." in captions(app)
+    assert "Shares and bonds adds up to 105%, not 100%." in captions(app)
 
     app.switch_page(STRESS_TEST_PAGE).run()
-    assert app.warning[0].value == "Balanced is left out, because it adds up to 105%, not 100%."
-    assert "Balanced" not in list(app.table[0].value["Split"])
+    assert app.warning[0].value == (
+        "Shares and bonds is left out, because it adds up to 105%, not 100%."
+    )
+    assert "Shares and bonds" not in list(app.table[0].value["Split"])
 
 
 def chart_colours(app: AppTest) -> list[str]:
@@ -153,7 +155,7 @@ def test_one_visitors_changes_never_reach_another() -> None:
     first.number_input(key=percent_key(0, "sonia")).set_value(0).run()
 
     second = run_app(DESIGN_PAGE)
-    assert second.text_input(key=widget_key(0, NAME)).value == "Cautious"
+    assert second.text_input(key=widget_key(0, NAME)).value == "Mostly bonds"
     assert second.number_input(key=percent_key(0, "sonia")).value == 20
 
 
@@ -186,9 +188,9 @@ def test_the_chosen_way_of_managing_splits_survives_a_visit_to_another_page() ->
 
 def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
     app = click(run_app(DESIGN_PAGE), design.START_OWN)
-    app.selectbox(key=widget_key(0, TEMPLATE)).select(CAUTIOUS.name).run()
+    app.selectbox(key=widget_key(0, TEMPLATE)).select(MOSTLY_BONDS.name).run()
 
-    assert app.text_input(key=widget_key(0, NAME)).value == CAUTIOUS.name
+    assert app.text_input(key=widget_key(0, NAME)).value == MOSTLY_BONDS.name
     assert app.number_input(key=percent_key(0, "ftse_gilts_all_stocks")).value == 60
     assert app.selectbox(key=widget_key(0, TEMPLATE)).value is None
 
@@ -203,4 +205,4 @@ def test_removing_a_holding_takes_its_box_away_and_leaves_a_gap_to_fill() -> Non
 
     boxes = [box.key for box in app.number_input if (box.key or "").startswith("slot1.")]
     assert boxes == [percent_key(1, "ftse_all_world")]
-    assert "Balanced adds up to 60%, not 100%." in captions(app)
+    assert "Shares and bonds adds up to 60%, not 100%." in captions(app)

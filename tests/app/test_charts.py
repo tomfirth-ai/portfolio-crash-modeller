@@ -18,10 +18,10 @@ from crashmodel.app.presenters.stress_test import ChartPoint, ValueChartView
 
 VIEW = ValueChartView(
     points=(
-        ChartPoint(split="Cautious", month="2007-06-01", value=100.0),
-        ChartPoint(split="Adventurous", month="2007-06-01", value=100.0),
+        ChartPoint(split="Mostly bonds", month="2007-06-01", value=100.0),
+        ChartPoint(split="All shares", month="2007-06-01", value=100.0),
     ),
-    splits=("Cautious", "Adventurous"),
+    splits=("Mostly bonds", "All shares"),
     slots=(0, 2),
     crash_phase=("2007-06-01", "2009-06-01"),
 )
@@ -40,7 +40,7 @@ def lines(spec: dict[str, Any]) -> dict[str, Any]:
 def test_each_split_keeps_the_colour_and_dash_of_its_slot() -> None:
     encoding = lines(value_chart(VIEW).to_dict())["encoding"]
     assert encoding["color"]["scale"] == {
-        "domain": ["Cautious", "Adventurous"],
+        "domain": ["Mostly bonds", "All shares"],
         "range": [SPLIT_COLOURS[0], SPLIT_COLOURS[2]],
     }
     assert encoding["strokeDash"]["scale"]["range"] == [

@@ -4,9 +4,9 @@ import pytest
 
 from crashmodel.app import state
 from crashmodel.app.splits import (
-    BALANCED,
-    CAUTIOUS,
     EXAMPLE_SPLITS,
+    MOSTLY_BONDS,
+    SHARES_AND_BONDS,
     Slot,
     Split,
     empty_slots,
@@ -44,7 +44,7 @@ def test_starting_again_keeps_the_visitors_splits() -> None:
 
 def test_widgets_show_each_slot_and_write_their_changes_back() -> None:
     session = started()
-    assert session[widget_key(1, NAME)] == "Balanced"
+    assert session[widget_key(1, NAME)] == "Shares and bonds"
     assert session[widget_key(1, HOLDINGS)] == ["ftse_all_world", "ftse_gilts_all_stocks"]
     assert session[percent_key(1, "ftse_gilts_all_stocks")] == 40
 
@@ -108,10 +108,10 @@ def test_writing_back_unchanged_widgets_leaves_the_examples_as_they_were() -> No
 def test_choosing_an_example_fills_the_slot_and_clears_the_menu() -> None:
     session = started()
     state.start_own(session)
-    session[widget_key(2, TEMPLATE)] = CAUTIOUS.name
+    session[widget_key(2, TEMPLATE)] = MOSTLY_BONDS.name
     state.use_template(session, 2)
 
-    assert state.slots(session)[2] == Slot(split=CAUTIOUS)
+    assert state.slots(session)[2] == Slot(split=MOSTLY_BONDS)
     assert session[widget_key(2, TEMPLATE)] is None
 
 
@@ -129,4 +129,4 @@ def test_a_split_cannot_be_changed_once_made() -> None:
     percentages: Any = state.slots(started())[1].split.percentages
     with pytest.raises(TypeError):
         percentages["sonia"] = 50
-    assert BALANCED.total == 100
+    assert SHARES_AND_BONDS.total == 100

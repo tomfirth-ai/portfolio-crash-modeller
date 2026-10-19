@@ -82,6 +82,10 @@ def test_copy_follows_the_rules(text: str) -> None:
         ("We recommend this", "reads as advice: 'recommend'"),
         ("You shouldn't worry", "reads as advice: 'shouldn'"),
         ("its suitability", "reads as advice: 'suitability'"),
+        ("A cautious mix", "reads as advice: 'cautious'"),
+        ("a low-risk choice", "reads as advice: 'low-risk'"),
+        ("guaranteed growth", "reads as advice: 'guaranteed'"),
+        ("right for you", "reads as advice: 'right for you'"),
     ],
 )
 def test_copy_rules_catch_each_kind_of_problem(text: str, problem: str) -> None:

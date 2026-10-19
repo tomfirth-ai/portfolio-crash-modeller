@@ -8,9 +8,12 @@ import re
 from tools.check_style import DASH_LOOKALIKES, find_american_spellings
 
 ADVICE = re.compile(
-    r"\b(?:best|ought|recommend\w*|safe(?:r|st|ly|ty)?|should\w*|suitab\w*)\b", re.IGNORECASE
+    r"\b(?:adventurous|best|cautious|guarantee\w*|ideal\w*|low[- ]risk|optimal\w*|ought"
+    r"|recommend\w*|right for you|risk[- ]free|safe(?:r|st|ly|ty)?|secure\w*|should\w*"
+    r"|suitab\w*)\b",
+    re.IGNORECASE,
 )
-"""Words that would present a split as advice, in any of their forms."""
+"""Words that would present a split as advice, or describe it as a risk profile, in any form."""
 
 STREAMLIT_DIRECTIVES = re.compile(r":material/\w+:|:[a-z]+(?:-badge|-background)?(?=\[)")
 """Streamlit's own Markdown for icons and colours, such as ``:gray-badge[``, which no one reads."""
