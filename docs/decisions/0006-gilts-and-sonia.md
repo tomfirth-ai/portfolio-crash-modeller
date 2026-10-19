@@ -24,11 +24,11 @@ Government Licence, so models of whole gilt indexes can be built from data the p
     `IUMMNZC` from January 1982, `IUMLNZC` from March 1992), which are continuously compounded, and
     the month-end 5-year nominal par yield (`IUMSNPY`, from December 1993).
   - `boe-sterling-cash/`: the monthly return on cash earning SONIA (`IUDSOIA`, from January 1997),
-    and Bank Rate (`IUDBEDR`) before it; and Bank Rate at each month end. SONIA is credited with the Bank's own statement: "SONIA and/or SONIA
-    Compounded Index data licensed under the Open Government Licence v3.0 and copyright the
-    Governor and Company of the Bank of England. The trade marks "Bank of England" and "SONIA" are
-    registered trade marks of the Bank of England." The monthly returns are worked out by the app,
-    not by the Bank.
+    and Bank Rate (`IUDBEDR`) before it; and Bank Rate at each month end. SONIA is credited with
+    the Bank's own statement: "SONIA and/or SONIA Compounded Index data licensed under the Open
+    Government Licence v3.0 and copyright the Governor and Company of the Bank of England. The
+    trade marks "Bank of England" and "SONIA" are registered trade marks of the Bank of England."
+    The monthly returns are worked out by the app, not by the Bank.
 - **Cash** earns each calendar day's rate, `rate / 100 / 365`, compounded daily, with the last
   published rate carried over weekends and holidays, much as SONIA's compounded index grows (that
   index compounds each business day, with simple interest over weekends and holidays). It replaces

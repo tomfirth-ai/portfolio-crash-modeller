@@ -1,6 +1,8 @@
 # 1. Architecture: a journey-first app over a pure engine and one data store
 
-Date: 14 October 2026. Status: accepted.
+Date: 14 October 2026. Status: accepted. Amended by [ADR 0004](0004-vertical-slices.md): the YAML
+definitions and the single SQLite store wait until a release needs them (tracking or local mode);
+until then the committed series are small CSV files read through one module.
 
 ## Context
 

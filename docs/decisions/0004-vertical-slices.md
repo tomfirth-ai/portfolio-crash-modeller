@@ -2,7 +2,7 @@
 
 Date: 15 October 2026. Status: accepted. Amended by [ADR 0006](0006-gilts-and-sonia.md): gilts
 are now modelled from the Bank of England's zero-coupon yield curve, and Swinkels' formula is used
-only for the 5-year gilt in the short-dated model.
+only for the 5-year gilt in the short-dated model. Notes added on 19 October 2026 (see the end).
 
 ## Context
 
@@ -37,3 +37,10 @@ be judged, by its owner or by anyone else.
 - Every slice is reviewed on the real host, so problems with data, hosting and usability show up
   early rather than at the end.
 - Some architecture arrives later than first planned, and is added when a slice needs it.
+
+## Notes, 19 October 2026
+
+- **The stand-ins were not built.** When a runtime fetch fails, the app says which data is missing,
+  offers a "Try again" button, and still gives results for every split that holds no shares.
+- **The app goes public after Slice 4** as release v0.1. Later slices ship as releases, each built
+  on a branch and reviewed in one pull request, as the [roadmap](../roadmap.md) sets out.

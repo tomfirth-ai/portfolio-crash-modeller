@@ -1,7 +1,8 @@
 # 2. Hosted data mode: commit only open data, fetch academic equity history at runtime
 
 Date: 14 October 2026. Status: accepted, and confirmed from the hosted app (see the end). Amended by
-[ADR 0004](0004-vertical-slices.md), which corrects the list of committable data and stages the fallback.
+[ADR 0004](0004-vertical-slices.md), which corrects the list of committable data and replaces the
+fallback, and by the note at the end.
 
 ## Context
 
@@ -47,3 +48,9 @@ Federal Reserve Board H.10 release. The decision stands.
 
 One local check that day timed out against the French library at the 10 second limit, so runtime
 fetches must keep failing gracefully, as described above.
+
+## Note, 19 October 2026
+
+The value and growth sleeves and the growth-led test named under Consequences were never built and
+are not on the roadmap. The labelled synthetic series promised for a failed fetch were not built
+either; [ADR 0004](0004-vertical-slices.md) records what the app does instead.
