@@ -5,6 +5,7 @@ import pytest
 from crashmodel.app import state
 from crashmodel.app.splits import (
     EXAMPLE_SPLITS,
+    MOST_SLOTS,
     MOSTLY_BONDS,
     SHARES_AND_BONDS,
     Slot,
@@ -120,6 +121,20 @@ def test_starting_your_own_and_going_back_to_the_examples() -> None:
     state.start_own(session)
     assert [slot.included for slot in state.slots(session)] == [True, False, False, False]
     assert all(slot.split.total == 0 for slot in state.slots(session))
+
+    state.show_examples(session)
+    assert state.slots(session) == example_slots()
+
+
+def test_splits_are_added_after_the_examples_up_to_six() -> None:
+    session = started()
+    for _ in range(MOST_SLOTS):
+        state.add_split(session)
+
+    added = state.slots(session)[len(EXAMPLE_SPLITS) :]
+    assert len(state.slots(session)) == MOST_SLOTS
+    assert [slot.split.name for slot in added] == ["Split 5", "Split 6"]
+    assert all(slot.included and slot.split.total == 0 for slot in added)
 
     state.show_examples(session)
     assert state.slots(session) == example_slots()

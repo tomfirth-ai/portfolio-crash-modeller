@@ -11,11 +11,12 @@ from crashmodel.app.presenters.design import CompositionView
 from crashmodel.app.presenters.stress_test import ValueChartView
 from crashmodel.engine.portfolio import STARTING_VALUE
 
-SPLIT_COLOURS = ("#0072B2", "#D55E00", "#009E73", "#9085E9")
-"""Blue, vermillion, bluish green and violet: distinct with colour blindness, and at least 3:1
-against both light and dark backgrounds."""
-SPLIT_DASHES = ((1, 0), (6, 3), (2, 2), (8, 3, 2, 3))
-"""Solid, dashed, dotted and dash-dot, so the lines differ without colour too."""
+SPLIT_COLOURS = ("#0072B2", "#D55E00", "#009E73", "#9085E9", "#CC79A7", "#AA3377")
+"""Blue, vermillion, bluish green, violet, reddish purple and wine: distinct with colour blindness,
+and at least 3:1 against both light and dark backgrounds."""
+SPLIT_DASHES = ((1, 0), (6, 3), (2, 2), (8, 3, 2, 3), (12, 4), (8, 3, 2, 3, 2, 3))
+"""Solid, dashed, dotted, dash-dot, long dash and dash-dot-dot, so the lines differ without colour
+too."""
 KIND_COLOURS = ("#CC6677", "#8F8F30", "#888888")
 """Rose for shares, olive for bonds and grey for cash, from Paul Tol's colour-blind-safe muted set
 and darkened where needed to stand out at least 3:1 on light and dark backgrounds. They share no
@@ -36,7 +37,7 @@ CRASH_PHASE_OPACITY = 0.12
 CRASH_PHASE_LABEL_OFFSET = 4
 """Pixels between the band's corner and its label, which sits just above the plot."""
 LEGEND_COLUMNS = 2
-"""Four splits in one row overflow a phone screen; two rows of two fit at any width."""
+"""Four or more splits in one row overflow a phone screen; two a row fit at any width."""
 
 
 def value_chart(view: ValueChartView) -> alt.LayerChart:

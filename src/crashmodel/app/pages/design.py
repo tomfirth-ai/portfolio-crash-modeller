@@ -1,4 +1,4 @@
-"""Design: up to four splits of money between funds and indexes, side by side."""
+"""Design: up to six splits of money between funds and indexes, side by side."""
 
 from itertools import batched
 
@@ -10,7 +10,7 @@ from crashmodel.app.journey import DESIGN
 from crashmodel.app.presenters import design as presenter
 from crashmodel.app.presenters.holdings import holding_help, holding_label
 from crashmodel.app.presenters.progress import progress
-from crashmodel.app.splits import WHOLE
+from crashmodel.app.splits import MOST_SLOTS, WHOLE
 from crashmodel.data.catalogue import HOLDINGS_BY_ID
 
 # Two cards a row keep each box wide enough for its label.
@@ -90,6 +90,15 @@ for row in batched(enumerate(slots), CARDS_PER_ROW):
                 )
             badge = presenter.total_badge(slot)
             st.badge(badge.text, icon=badge.icon, color=badge.colour)
+
+st.button(
+    presenter.ADD_SPLIT,
+    icon=":material/library_add:",
+    help=presenter.ADD_SPLIT_HELP,
+    disabled=len(slots) >= MOST_SLOTS,
+    on_click=state.add_split,
+    args=(session,),
+)
 
 composition = presenter.composition_view(slots)
 if composition.points:

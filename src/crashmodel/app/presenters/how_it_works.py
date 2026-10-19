@@ -24,7 +24,7 @@ class Section:
 WHAT_IT_SHOWS = Section(
     heading="What the app shows",
     paragraphs=(
-        "You choose up to four splits of funds and indexes, and the app shows how £100 in each "
+        "You choose up to six splits of funds and indexes, and the app shows how £100 in each "
         "would have done through four real crashes: the 2000-03 dot-com crash, the 2007-09 "
         "financial crisis, the 2020 Covid crash and the 2022-23 bond crash.",
         "Each crash has a crash phase, when markets fell, inside a longer window that shows "

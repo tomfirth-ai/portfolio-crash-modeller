@@ -1,11 +1,11 @@
-"""Splits of money between funds and indexes, the four places that hold them, and the examples.
+"""Splits of money between funds and indexes, the places that hold them, and the examples.
 
 A split's percentages are whole numbers, so "adds up to 100" is exact. The examples hold indexes,
 never named funds, and are there to show the tool working; they are not advice.
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 
 from crashmodel.data.catalogue import HoldingId
@@ -64,13 +64,13 @@ The names say what each split holds, never who it might suit: a name such as "Ca
 profile, and would read as advice.
 """
 
-SLOT_COUNT = 4
-"""Up to four splits are compared at once."""
+MOST_SLOTS = 6
+"""Up to six splits are compared at once: the four examples and two more."""
 
 
 @dataclass(frozen=True, kw_only=True)
 class Slot:
-    """One of the four places for a split. Its position fixes the split's colour on charts.
+    """One of the places for a split. Its position fixes the split's colour on charts.
 
     Attributes:
         split: The split it holds.
@@ -89,9 +89,14 @@ def example_slots() -> tuple[Slot, ...]:
 def empty_slots() -> tuple[Slot, ...]:
     """Return four empty places, named Split 1 to Split 4, with only the first included."""
     return tuple(
-        Slot(split=Split(name=f"Split {number}", percentages={}), included=number == 1)
-        for number in range(1, SLOT_COUNT + 1)
+        replace(empty_slot(number), included=number == 1)
+        for number in range(1, len(EXAMPLE_SPLITS) + 1)
     )
+
+
+def empty_slot(number: int) -> Slot:
+    """Return an included place holding nothing yet, named after its number, such as "Split 5"."""
+    return Slot(split=Split(name=f"Split {number}", percentages={}))
 
 
 def display_names(slots: Sequence[Slot]) -> tuple[str, ...]:

@@ -1,4 +1,4 @@
-"""The visitor's four splits, kept in their session.
+"""The visitor's splits, kept in their session.
 
 Streamlit forgets a widget's value once the visitor leaves its page. So each split is kept under a
 session key that no widget uses: the Design page copies the splits into its widgets before drawing
@@ -12,8 +12,10 @@ from typing import Any
 
 from crashmodel.app.splits import (
     EXAMPLE_SPLITS,
+    MOST_SLOTS,
     WHOLE,
     Slot,
+    empty_slot,
     empty_slots,
     example_slots,
 )
@@ -22,7 +24,7 @@ from crashmodel.data.catalogue import HOLDINGS_BY_ID, HoldingId
 type SessionState = MutableMapping[str | int, Any]
 
 SLOTS = "splits"
-"""The session key holding the four slots, which no widget uses. It changed when splits began to
+"""The session key holding the slots, which no widget uses. It changed when splits began to
 hold funds, so a session open during that deploy starts again from the examples."""
 CRASH = "crash"
 """The key of the Stress-test page's crash picker, which keeps its choice for the session."""
@@ -49,7 +51,7 @@ def ensure_started(state: SessionState) -> None:
 
 
 def slots(state: SessionState) -> tuple[Slot, ...]:
-    """Return the session's four slots."""
+    """Return the session's slots."""
     stored: tuple[Slot, ...] = state[SLOTS]
     return stored
 
@@ -112,13 +114,20 @@ def use_template(state: SessionState, index: int) -> None:
     state[widget_key(index, TEMPLATE)] = None
 
 
+def add_split(state: SessionState) -> None:
+    """Add an empty split after the others, unless there are already as many as can be compared."""
+    current = slots(state)
+    if len(current) < MOST_SLOTS:
+        state[SLOTS] = (*current, empty_slot(len(current) + 1))
+
+
 def show_examples(state: SessionState) -> None:
-    """Put the examples back in all four slots."""
+    """Put the four examples back, dropping any split added after them."""
     state[SLOTS] = example_slots()
 
 
 def start_own(state: SessionState) -> None:
-    """Empty all four slots, so the visitor can start from scratch."""
+    """Start again from four empty splits, so the visitor can begin from scratch."""
     state[SLOTS] = empty_slots()
 
 

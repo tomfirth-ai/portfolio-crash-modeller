@@ -26,7 +26,7 @@ SONIA.*
 
 ## What it does
 
-1. **Design** up to four splits from real index funds and ETFs from ten fund managers (S&P 500,
+1. **Design** up to six splits from real index funds and ETFs from ten fund managers (S&P 500,
    MSCI World, FTSE Developed, FTSE All-World, MSCI ACWI and FTSE Global All Cap trackers, gilt
    funds of every maturity and sterling cash ETFs that track SONIA), or start from four examples.
 2. **Stress-test** them side by side through the 2000-03 dot-com crash, the 2007-09 financial

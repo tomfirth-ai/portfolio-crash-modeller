@@ -12,7 +12,7 @@ from streamlit.testing.v1 import AppTest
 from crashmodel.app import loaders, state
 from crashmodel.app.charts import SPLIT_COLOURS
 from crashmodel.app.presenters import design, home, stress_test
-from crashmodel.app.splits import EXAMPLE_SPLITS, MOSTLY_BONDS
+from crashmodel.app.splits import EXAMPLE_SPLITS, MOST_SLOTS, MOSTLY_BONDS
 from crashmodel.app.state import HOLDINGS, INCLUDED, NAME, TEMPLATE, percent_key, widget_key
 from crashmodel.data.models import IndexModel
 from crashmodel.data.panel import Panel
@@ -135,12 +135,12 @@ def test_switching_a_split_off_leaves_the_others_their_colours() -> None:
     app.toggle(key=widget_key(0, INCLUDED)).set_value(False).run()
     app.switch_page(STRESS_TEST_PAGE).run()
 
-    assert chart_colours(app) == list(SPLIT_COLOURS[1:])
+    assert chart_colours(app) == list(SPLIT_COLOURS[1 : len(EXAMPLE_SPLITS)])
 
 
 def test_with_every_split_switched_off_the_stress_test_says_what_to_do() -> None:
     app = run_app(DESIGN_PAGE)
-    for index in range(len(SPLIT_COLOURS)):
+    for index in range(len(EXAMPLE_SPLITS)):
         app.toggle(key=widget_key(index, INCLUDED)).set_value(False).run()
 
     assert button(app, design.NEXT).disabled
@@ -197,6 +197,23 @@ def test_a_slot_is_filled_from_an_example_and_the_examples_come_back() -> None:
     click(app, design.SHOW_EXAMPLES)
     names = [app.text_input(key=widget_key(index, NAME)).value for index in range(4)]
     assert names == [split.name for split in EXAMPLE_SPLITS]
+
+
+def test_a_fifth_split_is_added_filled_and_stress_tested_in_its_own_colour() -> None:
+    app = click(run_app(DESIGN_PAGE), design.ADD_SPLIT)
+    assert button(app, design.NEXT).disabled
+    app.multiselect(key=widget_key(4, HOLDINGS)).select("sonia").run()
+    app.switch_page(STRESS_TEST_PAGE).run()
+
+    assert chart_colours(app) == list(SPLIT_COLOURS[:5])
+
+
+def test_no_more_than_six_splits_can_be_added() -> None:
+    app = click(click(run_app(DESIGN_PAGE), design.ADD_SPLIT), design.ADD_SPLIT)
+
+    names = [app.text_input(key=widget_key(index, NAME)).value for index in range(MOST_SLOTS)]
+    assert names == [*(split.name for split in EXAMPLE_SPLITS), "Split 5", "Split 6"]
+    assert button(app, design.ADD_SPLIT).disabled
 
 
 def test_removing_a_holding_takes_its_box_away_and_leaves_a_gap_to_fill() -> None:

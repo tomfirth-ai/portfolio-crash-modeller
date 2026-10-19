@@ -15,6 +15,7 @@ from crashmodel.app.charts import (
 )
 from crashmodel.app.presenters.design import CompositionPoint, CompositionView
 from crashmodel.app.presenters.stress_test import ChartPoint, ValueChartView
+from crashmodel.app.splits import MOST_SLOTS
 
 VIEW = ValueChartView(
     points=(
@@ -132,6 +133,10 @@ def contrast(first: str, second: str) -> float:
 def test_every_chart_colour_stands_out_on_light_and_dark_pages(colour: str) -> None:
     assert contrast(colour, LIGHT_PAGE) >= GRAPHICS_CONTRAST
     assert contrast(colour, DARK_PAGE) >= GRAPHICS_CONTRAST
+
+
+def test_every_slot_has_a_colour_and_a_dash_of_its_own() -> None:
+    assert len(set(SPLIT_COLOURS)) == len(set(SPLIT_DASHES)) == MOST_SLOTS
 
 
 def test_kinds_and_splits_never_share_a_colour() -> None:

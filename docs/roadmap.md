@@ -21,7 +21,7 @@ in one pull request and published with a release note, so the project grows in t
 
 | Release | A visitor can... | Status |
 |---|---|---|
-| **v0.1 Launch** | use Design and Stress-test in public, read how every figure is worked out, and find the code on GitHub | in progress |
+| **v0.1 Launch** | use Design and Stress-test in public with up to six splits, read how every figure is worked out, and find the code on GitHub | in progress |
 | **v0.2 Decide and Track** | lock in one split with a start date and an amount, then follow it month by month against inflation, cash and the splits not chosen; splits survive a reload and can be shared by link | planned |
 | **v0.3 Explained** | ask for each split's result to be explained in plain words | planned |
 | **v0.4 More markets** | add FTSE All-Share, FTSE 100, Nasdaq-100, Europe ex UK, Japan and emerging markets trackers | planned |

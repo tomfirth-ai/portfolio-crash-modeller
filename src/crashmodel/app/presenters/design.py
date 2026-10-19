@@ -15,12 +15,15 @@ TITLE = DESIGN.title
 INTRODUCTION = (
     "Choose up to six funds or indexes for each split, then give each a whole percentage so that "
     "they add up to 100. Every one is modelled from published research and open data: each fund "
-    "after its ongoing charge, and each index before any charges. You can compare up to four "
-    "splits; switch one off to leave it out. So far there are US, developed-world and world "
-    "shares, UK government bonds and sterling cash; more markets are planned."
+    "after its ongoing charge, and each index before any charges. You can compare up to six "
+    "splits: add one under the others, or switch one off to leave it out. So far there are US, "
+    "developed-world and world shares, UK government bonds and sterling cash; more markets are "
+    "planned."
 )
 START_OWN = "Start your own"
 SHOW_EXAMPLES = "Reset all to the examples"
+ADD_SPLIT = "Add a split"
+ADD_SPLIT_HELP = "Up to six splits can be compared at once."
 SESSION_NOTE = (
     "Your splits stay while this tab is open; reloading the page starts again from the examples."
 )
