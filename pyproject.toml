@@ -1,7 +1,7 @@
 [project]
 name = "crashmodel"
 version = "0.1.0"
-description = "Stress-test a portfolio split through real market crashes, then track the one you choose."
+description = "Stress-test splits of UK index funds, modelled from open data, through real market crashes."
 authors = [{ name = "Tom Firth" }]
 license = "MIT"
 license-files = ["LICENSE"]

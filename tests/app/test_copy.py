@@ -42,6 +42,7 @@ def presenter_constants() -> list[str]:
 def generated_copy() -> list[str]:
     view = home.home_view()
     cards = [text for card in view.steps for text in (card.label, card.title, card.summary)]
+    badges = [card.badge for card in view.steps if card.badge is not None]
     journey = [text for spec in JOURNEY for text in (spec.title, spec.summary)]
     purposes = [data_sources.used_for(source) for source in HOSTED_SOURCES]
     headings = [view.eyebrow, view.headline, view.promise, view.first_step, view.status_note]
@@ -56,6 +57,7 @@ def generated_copy() -> list[str]:
     return [
         *headings,
         *cards,
+        *badges,
         *journey,
         *purposes,
         *statuses,

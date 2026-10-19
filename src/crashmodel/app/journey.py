@@ -15,11 +15,13 @@ class StepSpec:
         title: Short title, used in navigation and on cards.
         icon: Streamlit Material icon shortcode.
         summary: One plain-English sentence saying what the visitor does in this step.
+        coming_next: Whether the step is still being built, so it is shown but not offered.
     """
 
     title: str
     icon: str
     summary: str
+    coming_next: bool = False
 
 
 DESIGN = StepSpec(
@@ -36,11 +38,13 @@ DECIDE = StepSpec(
     title="Decide",
     icon=":material/lock:",
     summary="Pick the split you are happy with and lock it in with a start date and an amount.",
+    coming_next=True,
 )
 TRACK = StepSpec(
     title="Track",
     icon=":material/monitoring:",
     summary="Follow how it is doing against inflation, cash and the splits you did not choose.",
+    coming_next=True,
 )
 
 JOURNEY: tuple[StepSpec, ...] = (DESIGN, STRESS_TEST, DECIDE, TRACK)

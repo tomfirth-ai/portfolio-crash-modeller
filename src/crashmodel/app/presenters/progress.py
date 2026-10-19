@@ -14,8 +14,10 @@ class Progress:
 
 
 def progress(step: StepSpec) -> Progress:
-    """Say which step of the journey a page is, such as "Step 2 of 4: Stress-test"."""
+    """Say which step of the journey a page is, such as "Step 2: Stress-test".
+
+    The bar measures the whole journey, so it shows how much is still to come; the words leave out
+    "of 4", which would offer steps that are still being built.
+    """
     number = JOURNEY.index(step) + 1
-    return Progress(
-        fraction=number / len(JOURNEY), text=f"Step {number} of {len(JOURNEY)}: {step.title}"
-    )
+    return Progress(fraction=number / len(JOURNEY), text=f"Step {number}: {step.title}")

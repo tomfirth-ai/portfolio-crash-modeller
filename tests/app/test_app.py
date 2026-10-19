@@ -40,6 +40,8 @@ def test_home_explains_the_journey() -> None:
     assert app.title[0].value == "How would your investments have coped with a crash?"
     steps = [subheader.value for subheader in app.subheader]
     assert steps == ["Design", "Stress-test", "Decide", "Track"]
+    badges = [text.value for text in app.markdown if home.COMING_NEXT in text.value]
+    assert len(badges) == 2
 
 
 def test_the_first_button_on_home_opens_the_stress_test(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -28,4 +28,8 @@ for row in batched(view.steps, CARDS_PER_ROW):
         with column:
             st.caption(card.label)
             st.subheader(card.title, icon=card.icon, anchor=False)
-            st.write(card.summary)
+            if card.badge is None:
+                st.write(card.summary)
+            else:
+                st.badge(card.badge, icon=":material/schedule:", color="gray")
+                st.caption(card.summary)

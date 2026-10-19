@@ -1,4 +1,4 @@
-"""Portfolio crash modeller: design a split, stress-test it through crashes, then track it."""
+"""Portfolio crash modeller: design splits of index funds and stress-test them through crashes."""
 
 from importlib.metadata import version
 

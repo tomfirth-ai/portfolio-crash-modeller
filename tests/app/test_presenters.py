@@ -19,6 +19,12 @@ def test_home_shows_every_step_from_the_journey_registry() -> None:
     assert [card.label for card in cards] == ["Step 1", "Step 2", "Step 3", "Step 4"]
 
 
+def test_home_offers_only_the_steps_built_so_far_and_marks_the_rest_coming_next() -> None:
+    cards = home.home_view().steps
+    assert [card.badge for card in cards] == [None, None, home.COMING_NEXT, home.COMING_NEXT]
+    assert "track" not in home.home_view().promise.casefold()
+
+
 def test_each_page_has_its_own_tab_title() -> None:
     assert page_title("Home") == "Home | Portfolio crash modeller"
 
