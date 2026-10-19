@@ -6,7 +6,7 @@ import streamlit as st
 
 from crashmodel.app import loaders, navigation, state, stress
 from crashmodel.app.charts import value_chart
-from crashmodel.app.journey import STRESS_TEST
+from crashmodel.app.journey import DESIGN, STRESS_TEST
 from crashmodel.app.presenters import stress_test as presenter
 from crashmodel.app.presenters.progress import progress
 from crashmodel.engine.episodes import EPISODES_BY_KEY, GLOBAL_FINANCIAL_CRISIS
@@ -95,3 +95,14 @@ st.subheader(presenter.DATA_HEADING, anchor=False)
 st.caption(presenter.CAVEAT)
 st.caption(presenter.BANK_OF_ENGLAND_CREDIT)
 st.caption(presenter.share_credit(panel.vintages))
+
+with st.container(border=True):
+    st.subheader(presenter.NEXT_HEADING, anchor=False)
+    st.write(presenter.NEXT_TEXT)
+    with st.container(horizontal=True):
+        st.page_link(navigation.design_page(), label=presenter.DESIGN_OWN, icon=DESIGN.icon)
+        st.page_link(
+            navigation.how_it_works_page(),
+            label=presenter.HOW_IT_WORKS,
+            icon=":material/menu_book:",
+        )

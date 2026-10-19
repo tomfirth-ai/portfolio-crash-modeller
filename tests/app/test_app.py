@@ -266,3 +266,12 @@ def test_how_it_works_explains_the_method_and_links_the_code() -> None:
     headings = [subheader.value for subheader in app.subheader]
     assert headings == [section.heading for section in how_it_works.sections(None)]
     assert any("/blob/main/docs/decisions/" in text.value for text in app.markdown)
+
+
+def test_the_stress_test_ends_with_where_to_go_next(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = stress_test_page(monkeypatch, FakeLibrary())
+
+    links = page_links(app)
+    assert links[stress_test.DESIGN_OWN].endswith("design")
+    assert links[stress_test.HOW_IT_WORKS].endswith("how-it-works")
+    assert stress_test.NEXT_HEADING in [subheader.value for subheader in app.subheader]

@@ -39,6 +39,13 @@ INTRODUCTION = (
 )
 EXAMPLES_NOTE = "These four splits are examples to show how it works. They are not advice."
 CHANGE_SPLITS = "Change the splits"
+NEXT_HEADING = "What next"
+NEXT_TEXT = (
+    "Design your own splits from real funds and indexes, then come back to see how they would "
+    "have coped. Choosing one split and tracking it month by month come next."
+)
+DESIGN_OWN = "Design your own splits"
+HOW_IT_WORKS = "How the figures are worked out"
 NO_SPLITS = "There is no split to test yet. Switch one on, and make it add up to 100%."
 CRASH_PICKER = "Crash"
 MANAGEMENT_PICKER = "How each split is managed"
