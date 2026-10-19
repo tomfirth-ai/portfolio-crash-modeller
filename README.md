@@ -1,42 +1,99 @@
 # Portfolio crash modeller
 
-**How would your investments have coped with a crash?** Try out different ways to split your
-money, see how each would have done in real crashes such as 2008 and 2020, then track the one you
-choose.
+**How would your investments have coped with a crash?** Build splits of real UK index funds and
+ETFs, and see how each would have come through four real market crashes, in pounds, modelled from
+open data.
+
+[![CI](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml/badge.svg)](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml)
+
+**Try it live:** the link is added here when the app goes public. The free host sleeps when no one
+has visited for a while, so the first visit can take a minute to wake it.
+
+**Status:** v0.1. Design and Stress-test are live; deciding on a split and tracking it come next
+(see the [roadmap](docs/roadmap.md)).
+
+![Four splits through the 2022-23 bond crash: long-dated gilts, all gilts, short-dated gilts and cash](docs/img/stress-test-chart.png)
+
+*Four splits through the 2022-23 bond crash: funds holding long-dated gilts, gilts of every
+maturity, short-dated gilts and cash, each modelled from the Bank of England's gilt yield curve and
+SONIA.*
 
 > **Not investment advice.** This is a learning and portfolio project. Past performance, real or
 > simulated, is not a reliable indicator of future results.
 
-## The journey
+## What it does
 
-1. **Design** a split: the index funds and ETFs you hold or are weighing up, in the proportions you
-   have in mind.
-2. **Stress-test** it through real historical crashes, side by side with other splits.
-3. **Decide** on one and lock it in with a start date and an amount.
-4. **Track** how it is doing against inflation, cash and the splits you did not choose.
+1. **Design** up to four splits from real index funds and ETFs from ten fund managers (S&P 500,
+   MSCI World, FTSE All-World and FTSE Global All Cap trackers, gilt funds of every maturity and
+   sterling cash ETFs that track SONIA), or start from four examples.
+2. **Stress-test** them side by side through the 2000-03 dot-com crash, the 2007-09 financial
+   crisis, the 2020 Covid crash and the 2022-23 bond crash. Each split gets its worst fall, how long
+   it took to reach its low and to get back, and what £100 became, with a story in words: which
+   holdings drove the fall, what the pound's moves against the dollar did, and how it would have
+   done if left alone rather than kept at its percentages.
+3. **Decide** on one and **track** it month by month: coming next.
 
-## Status
+![The story of each split in words: how far it fell, when it hit bottom and what £100 became](docs/img/stress-test-cards.png)
 
-Early build. You can design up to four splits from named index funds and ETFs, such as S&P 500,
-MSCI World and FTSE All-World trackers, gilt funds of every maturity and sterling money market
-funds, or start from four examples, and stress-test them through the 2000-03 dot-com crash, the
-2007-09 financial crisis, the 2020 Covid crash and the 2022-23 bond crash, in pounds. Every fund
-is modelled from the index it tracks, after the fund's own ongoing charge: shares from published
-research data, gilts from the Bank of England's yield curve and cash from SONIA; no index values
-or fund prices are used ([ADR 0005](docs/decisions/0005-real-funds-modelled.md),
-[ADR 0006](docs/decisions/0006-gilts-and-sonia.md)). Each split's story says what drove its fall,
-how far the pound's moves against the dollar helped or hurt, and how it would have done if left
-alone rather than rebalanced. More markets, deciding and tracking come next: see the
-[roadmap](docs/roadmap.md). A live demo link will appear here.
+## How the figures are made
 
-## How it is built
+No index values or fund prices are used: every fund is modelled from the index it tracks, after
+the fund's own ongoing charge, typed in from its key information document.
+
+- **Shares** are rebuilt from the Kenneth R. French Data Library's portfolios of companies grouped
+  by size, fetched when the app runs and never stored, and turned into pounds at the Federal
+  Reserve's month-end exchange rates.
+- **Gilts** are a ladder of gilts that keep the coupons they were issued with, priced off the Bank
+  of England's yield curve; **cash** earns SONIA, compounded daily.
+
+The app's How it works page explains this in plain words. The reasons for each choice are in the
+[decision records](docs/decisions/), and every data source and its licence is in
+[DATA_LICENCES.md](DATA_LICENCES.md).
+
+## Engineering highlights
+
+- **A pure engine.** Every financial calculation is a typed function with no I/O, tested against
+  hand-worked, round-number figures: yield curves and gilt pricing, rebuilding an index from
+  portfolios by size, currency conversion, charges, rebalancing, worst fall and recovery, and which
+  holdings drove a fall.
+- **Tested end to end.** About 1,400 tests run with network access blocked, with 100% branch
+  coverage of everything but the page scripts, which run under Streamlit's AppTest instead. Every
+  sentence a visitor can read is checked for British spelling and for wording that could read as
+  advice.
+- **Data you may publish, and nothing else.** Only openly licensed series are stored, each with its
+  source, licence and SHA-256 recorded beside it by a build tool. Restricted data is fetched when
+  the app runs, held in memory and never written to disk.
+- **Guard rails.** Hooks run strict typing, linting, style, hygiene and a privacy scan before every
+  commit and push, and CI repeats them with a secret scan of the full history.
+- **Decisions on record.** The method is set out in decision records, and the work is planned as
+  vertical slices, each tried on the live app before the next.
+
+## How this was built
+
+The project is built with [Claude Code](https://claude.com/claude-code) as the pair programmer,
+working under the rules in [CLAUDE.md](CLAUDE.md). The author sets scope through the roadmap and
+the decision records, approves each plan before it is built, and tries each slice on the live app;
+the hooks and CI hold every change to the same rules on privacy, data licences, types, tests and
+style. Commits carry Claude as co-author.
+
+## How the code is laid out
+
+```mermaid
+flowchart LR
+    french["French Data Library, fetched when the app runs"] --> data
+    open["Bank of England and Federal Reserve series, stored with the app"] --> data
+    data["data: index models, monthly returns in pounds"] --> stress["app/stress.py: runs each split"]
+    engine["engine: pure, typed calculations"] --> stress
+    stress --> presenters["presenters: words, tables and charts"]
+    presenters --> pages["pages: Streamlit layout"]
+```
 
 | Folder | What is there |
 |---|---|
-| [`src/crashmodel/engine/`](src/crashmodel/engine/) | The financial calculations, as pure, typed functions with no I/O: calendar months, currency conversion, cash and bond returns, zero-coupon yield curves, a ladder of gilts that keep their issue coupons, rebuilding an index from portfolios grouped by company size, fund charges, rebalancing or leaving a split alone, worst fall and recovery, which holdings drove a fall, and the crash windows. Each is tested against hand-worked figures. |
-| [`src/crashmodel/data/`](src/crashmodel/data/) | The open data stored with the app, the runtime fetch of share portfolios, the index models, the catalogue of funds and indexes, and every model's monthly returns in pounds. Sources and licences are in [DATA_LICENCES.md](DATA_LICENCES.md). |
+| [`src/crashmodel/engine/`](src/crashmodel/engine/) | The financial calculations: calendar months, currency conversion, cash and bond returns, zero-coupon yield curves, a ladder of gilts that keep their issue coupons, rebuilding an index from portfolios grouped by company size, fund charges, rebalancing or leaving a split alone, worst fall and recovery, which holdings drove a fall, and the crash windows. |
+| [`src/crashmodel/data/`](src/crashmodel/data/) | The open data stored with the app, the runtime fetch of share portfolios, the index models, the catalogue of funds and indexes, and every model's monthly returns in pounds. |
 | [`src/crashmodel/app/`](src/crashmodel/app/) | The Streamlit app. `stress.py` runs the visitor's splits through the engine; presenters turn the results into words and are unit tested; pages only lay them out. |
-| [`docs/decisions/`](docs/decisions/) | Why the method and the data are as they are. |
+| [`docs/`](docs/) | The roadmap, the decision records and how the privacy guard works. |
 | [`tools/`](tools/) | The build tool for the stored data, and the style, hygiene and privacy checks the hooks run. |
 
 ## Run it locally
@@ -50,22 +107,27 @@ uv run streamlit run streamlit_app.py
 
 ## Develop
 
+These are the checks CI runs:
+
 ```sh
-uv run pre-commit install            # once: installs the commit and push hooks
-uv run pre-commit run --all-files    # lint, format, types, style, hygiene and privacy checks
-uv run pytest                        # tests, with network access blocked and 100% coverage
+uv run python -m tools.check_style      # no dash lookalikes, British spelling
+uv run python -m tools.check_hygiene    # nothing private, binary or oversized is tracked
+uv run ruff check . && uv run ruff format --check .
+uv run mypy
+uv run pytest --cov                     # network blocked; fails below 100% coverage
 ```
 
-Together the last two run everything CI runs. The hooks also run a privacy scan, which compares
-staged files, commit messages and every commit you push with a denylist of personal details that
-you keep outside the repository, at `~/.config/crashmodel/denylist.txt` (one entry per line, with
-`#` for comment lines). It matches names, tickers, amounts and dates in the common forms they are
-written, and refuses to run without a denylist. It reads only the words of `uv.lock` and the stored
-monthly series, whose figures match amounts by chance, and skips the words of the fund names and
-tickers in the fund list, which may also be on your denylist. It is a safety net, not a guarantee,
-so still review what you commit.
+`uv run pre-commit install` runs them before every commit and push, together with a privacy scan
+that compares what you commit with a denylist of the maintainer's personal details, kept outside
+the repository. Without a denylist the scan refuses to run, so skip its three hooks with
+`SKIP=privacy-staged,privacy-message,privacy-push`. [docs/privacy.md](docs/privacy.md) explains how
+it works.
 
-## Licence
+## Names and licences
+
+Index and fund names only identify what each model describes. This project is not affiliated with,
+sponsored or endorsed by any index provider, fund manager or publisher of the data it uses; the
+app's footer lists the trade marks.
 
 The code is released under the [MIT licence](LICENSE). Data has its own terms: see
 [DATA_LICENCES.md](DATA_LICENCES.md).
