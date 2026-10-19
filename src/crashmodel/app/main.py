@@ -17,7 +17,8 @@ def main() -> None:
     the page. It therefore shows even when a page raises an error or stops early with ``st.stop``.
     """
     # The cards and tables are laid out for the centred column, whatever the screen width.
-    st.set_page_config(page_icon=":material/thunderstorm:", layout="centered")
+    # An emoji icon is drawn by the browser; a Material icon would be fetched from Google.
+    st.set_page_config(page_icon="📉", layout="centered")
     st.html(TOOLTIP_FIT)
     # Before any page runs, so a visitor who opens a link to a later step still has splits.
     state.ensure_started(st.session_state)

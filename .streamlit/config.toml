@@ -2,6 +2,12 @@
 # Do not send usage statistics from local runs. Streamlit Community Cloud collects them regardless.
 gatherUsageStats = false
 
+[client]
+# A public visitor sees an error's type only; the full traceback still reaches the host's logs.
+showErrorDetails = "type"
+# Visitors get the viewer's menu, without the developer options or the Deploy button.
+toolbarMode = "viewer"
+
 [runner]
 # Pages draw only what they ask for: no bare strings or expressions written to the page by magic.
 magicEnabled = false
