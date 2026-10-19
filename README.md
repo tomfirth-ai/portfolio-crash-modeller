@@ -4,6 +4,9 @@
 ETFs, and see how each would have come through four real market crashes, in pounds, modelled from
 open data.
 
+Python 3.12 and Streamlit over a pure, typed engine: about 1,400 tests at 100% branch coverage,
+strict mypy, and CI on every push.
+
 [![CI](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml/badge.svg)](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml)
 
 **Try it live:** the link is added here when the app goes public. The free host sleeps when no one
@@ -24,13 +27,13 @@ SONIA.*
 ## What it does
 
 1. **Design** up to four splits from real index funds and ETFs from ten fund managers (S&P 500,
-   MSCI World, FTSE All-World and FTSE Global All Cap trackers, gilt funds of every maturity and
-   sterling cash ETFs that track SONIA), or start from four examples.
+   MSCI World, FTSE Developed, FTSE All-World, MSCI ACWI and FTSE Global All Cap trackers, gilt
+   funds of every maturity and sterling cash ETFs that track SONIA), or start from four examples.
 2. **Stress-test** them side by side through the 2000-03 dot-com crash, the 2007-09 financial
    crisis, the 2020 Covid crash and the 2022-23 bond crash. Each split gets its worst fall, how long
    it took to reach its low and to get back, and what £100 became, with a story in words: which
-   holdings drove the fall, what the pound's moves against the dollar did, and how it would have
-   done if left alone rather than kept at its percentages.
+   holdings drove the fall and what the pound's moves against the dollar did. A switch shows every
+   split left alone rather than kept at its percentages.
 3. **Decide** on one and **track** it month by month: coming next.
 
 ![The story of each split in words: how far it fell, when it hit bottom and what £100 became](docs/img/stress-test-cards.png)
@@ -43,8 +46,9 @@ the fund's own ongoing charge, typed in from its key information document.
 - **Shares** are rebuilt from the Kenneth R. French Data Library's portfolios of companies grouped
   by size, fetched when the app runs and never stored, and turned into pounds at the Federal
   Reserve's month-end exchange rates.
-- **Gilts** are a ladder of gilts that keep the coupons they were issued with, priced off the Bank
-  of England's yield curve; **cash** earns SONIA, compounded daily.
+- **Gilts** of all maturities and of over 15 years are a ladder of gilts that keep the coupons
+  they were issued with, priced off the Bank of England's yield curve; short-dated gilts are half a
+  5-year gilt and half cash. **Cash** earns SONIA, compounded daily.
 
 The app's How it works page explains this in plain words. The reasons for each choice are in the
 [decision records](docs/decisions/), and every data source and its licence is in
@@ -64,7 +68,8 @@ The app's How it works page explains this in plain words. The reasons for each c
   source, licence and SHA-256 recorded beside it by a build tool. Restricted data is fetched when
   the app runs, held in memory and never written to disk.
 - **Guard rails.** Hooks run strict typing, linting, style, hygiene and a privacy scan before every
-  commit and push, and CI repeats them with a secret scan of the full history.
+  commit, and the privacy scan again before every push. CI runs the same checks except the privacy
+  scan, together with the tests and a secret scan of the full history.
 - **Decisions on record.** The method is set out in decision records, and the work is planned as
   vertical slices, each tried on the live app before the next.
 
@@ -117,9 +122,9 @@ uv run mypy
 uv run pytest --cov                     # network blocked; fails below 100% coverage
 ```
 
-`uv run pre-commit install` runs them before every commit and push, together with a privacy scan
-that compares what you commit with a denylist of the maintainer's personal details, kept outside
-the repository. Without a denylist the scan refuses to run, so skip its three hooks with
+`uv run pre-commit install` runs all but the tests before every commit, together with a privacy
+scan that compares each commit, and every commit you push, with a denylist of the maintainer's
+personal details, kept outside the repository. Without a denylist the scan refuses to run, so skip its three hooks with
 `SKIP=privacy-staged,privacy-message,privacy-push`. [docs/privacy.md](docs/privacy.md) explains how
 it works.
 

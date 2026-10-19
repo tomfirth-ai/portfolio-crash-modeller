@@ -17,7 +17,8 @@ Some files hold public figures or names that could match an entry by chance:
 - `uv.lock` and the stored monthly series are scanned for words only, since their figures can match
   an amount by chance;
 - in the fund list, the fund names and tickers are left out of the word scan, since a public fund
-  name could match an entry, while every other field must hold a listed index or fund manager.
+  name could match an entry; the index and manager fields may hold only the listed names, and the
+  charges and dates are scanned like any other number.
 
 ## Running it
 
