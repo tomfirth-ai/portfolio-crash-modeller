@@ -52,21 +52,35 @@ MODEL_DEFINITIONS = {
 
 KIND_LABELS = {AssetKind.SHARES: "Shares", AssetKind.BONDS: "Bonds", AssetKind.CASH: "Cash"}
 
+MODEL_WORDS = {
+    IndexModel.US_LARGE: "US shares",
+    IndexModel.DEVELOPED_LARGE: "developed-world shares",
+    IndexModel.GLOBAL_LARGE: "world shares, including emerging markets",
+    IndexModel.GLOBAL_ALL_CAP: "world shares of every size, including emerging markets",
+    IndexModel.UK_GILTS_ALL: "UK government bonds",
+    IndexModel.UK_GILTS_SHORT: "short-dated UK government bonds",
+    IndexModel.UK_GILTS_LONG: "long-dated UK government bonds",
+    IndexModel.STERLING_CASH: "sterling cash",
+}
+"""What each model holds, in the words a visitor might search for, such as "bonds" or "cash"."""
+
 
 def holding_label(holding_id: HoldingId) -> str:
-    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World... (modelled)".
+    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World...: world shares...".
 
     A fund whose name does not say which index it tracks has the index added, so that searching
-    the picker for an index finds every fund tracking it.
+    the picker for an index finds every fund tracking it. Every label ends with what its model
+    holds, in plain words, so that a search for "bonds" or "cash" finds them too.
     """
     holding = HOLDINGS_BY_ID[holding_id]
     fund = holding.fund
     if fund is None:
-        return f"{holding.index.name} {MODELLED}"
-    name = fund.name if fund.ticker is None else f"{fund.ticker}: {fund.name}"
-    if holding.index.name.casefold() not in fund.name.casefold():
-        name = f"{name}, tracking {holding.index.name}"
-    return f"{name} {MODELLED}"
+        name = holding.index.name
+    else:
+        name = fund.name if fund.ticker is None else f"{fund.ticker}: {fund.name}"
+        if holding.index.name.casefold() not in fund.name.casefold():
+            name = f"{name}, tracking {holding.index.name}"
+    return f"{name}: {MODEL_WORDS[holding.model]} {MODELLED}"
 
 
 def holding_name(holding_id: HoldingId) -> str:

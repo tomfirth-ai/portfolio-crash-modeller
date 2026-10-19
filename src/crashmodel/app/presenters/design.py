@@ -16,7 +16,8 @@ INTRODUCTION = (
     "Choose up to six funds or indexes for each split, then give each a whole percentage so that "
     "they add up to 100. Every one is modelled from published research and open data: each fund "
     "after its ongoing charge, and each index before any charges. You can compare up to four "
-    "splits; switch one off to leave it out."
+    "splits; switch one off to leave it out. So far there are US, developed-world and world "
+    "shares, UK government bonds and sterling cash; more markets come next."
 )
 START_OWN = "Start your own"
 SHOW_EXAMPLES = "Back to the examples"
@@ -26,10 +27,11 @@ TEMPLATE = "Fill from an example"
 TEMPLATE_PLACEHOLDER = "Choose an example"
 TEMPLATE_NAMES = tuple(split.name for split in EXAMPLE_SPLITS)
 HOLDINGS = "Funds and indexes"
-HOLDINGS_PLACEHOLDER = "Search by name or ticker"
+HOLDINGS_PLACEHOLDER = "Search by name, ticker or kind, such as bonds"
 HOLDINGS_HELP = (
-    "Search by ticker, fund or index. Each fund is modelled from the index it tracks, after its "
-    "ongoing charge. An index on its own is modelled before any charges."
+    "Search by ticker, fund, index or kind, such as shares, bonds or cash. Each fund is modelled "
+    "from the index it tracks, after its ongoing charge. An index on its own is modelled before "
+    "any charges."
 )
 MAX_HOLDINGS = 6
 COMPOSITION_HEADING = "What each split holds"
