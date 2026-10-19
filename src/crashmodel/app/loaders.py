@@ -1,9 +1,10 @@
 """Everything the pages load, cached so that they stay quick. The only Streamlit caching lives here.
 
 Share portfolios are downloaded from the Kenneth R. French Data Library at most once a day per file,
-only when a split needs them, and held in memory only. When a download fails, that file is not tried
-again for a few minutes, so a server that is down does not keep every visitor waiting; when the
-server cannot be reached at all, none of its files is tried.
+only when a split needs them, and held in memory only. When a download fails, the last good copy of
+that file, if there is one, is used instead, and the file is not tried again for a few minutes, so a
+server that is down does not keep every visitor waiting; when the server cannot be reached at all,
+none of its files is tried.
 """
 
 import logging
@@ -74,6 +75,34 @@ def _failures() -> FailureMemory:
     return FailureMemory()
 
 
+class LastGoodCopies:
+    """The last portfolios downloaded from each file, to fall back on when a refresh fails.
+
+    One store is shared by every visitor and held in memory only, so it is gone when the app
+    restarts; it is safe to use from several threads at once.
+    """
+
+    def __init__(self) -> None:
+        """Start with no copies."""
+        self._copies: dict[PortfolioFile, Portfolios] = {}
+        self._lock = threading.Lock()
+
+    def keep(self, file: PortfolioFile, portfolios: Portfolios) -> None:
+        """Keep ``portfolios`` as the last good copy of ``file``."""
+        with self._lock:
+            self._copies[file] = portfolios
+
+    def get(self, file: PortfolioFile) -> Portfolios | None:
+        """Return the last good copy of ``file``, or ``None`` if it was never downloaded."""
+        with self._lock:
+            return self._copies.get(file)
+
+
+@st.cache_resource(show_spinner=False)
+def _last_good() -> LastGoodCopies:
+    return LastGoodCopies()
+
+
 class _RecentlyFailedError(Exception):
     """The file failed to download a short while ago, so it is not tried yet."""
 
@@ -89,21 +118,26 @@ def _download(file: PortfolioFile) -> Portfolios:
 
 
 def portfolios(file: PortfolioFile) -> Portfolios | None:
-    """Return one file's portfolios, or ``None`` if it cannot be fetched just now."""
+    """Return one file's portfolios: a download from the last day, or else the last good copy.
+
+    Returns ``None`` if the file cannot be fetched just now and has never been downloaded.
+    """
     try:
-        return _download(file)
+        downloaded = _download(file)
     except _RecentlyFailedError:
-        return None
+        return _last_good().get(file)
     except SourceUnreachableError as error:
         _LOGGER.warning("The share data's server cannot be reached: %s", error)
         # Every file is on that one server, so none is tried until the wait is over.
         for other in PORTFOLIO_FILES:
             _failures().record(other.url)
-        return None
+        return _last_good().get(file)
     except SourceUnavailableError as error:
         _LOGGER.warning("Share portfolios are unavailable: %s", error)
         _failures().record(file.url)
-        return None
+        return _last_good().get(file)
+    _last_good().keep(file, downloaded)
+    return downloaded
 
 
 def load_panel(models: Iterable[IndexModel]) -> Panel:

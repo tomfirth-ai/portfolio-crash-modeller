@@ -119,3 +119,24 @@ def test_share_data_is_cached_in_memory_only() -> None:
     info = loaders._download._info
     assert isinstance(info, CachedDataFuncInfo)
     assert info.persist is None
+
+
+def test_when_a_refresh_fails_the_last_good_copy_is_used(library: FakeLibrary) -> None:
+    first = loaders.portfolios(US_BY_SIZE)
+    loaders._download.clear()  # The day is over, so the next request downloads again.
+    library.online = False
+
+    assert loaders.portfolios(US_BY_SIZE) == first
+    panel = loaders.load_panel({IndexModel.US_LARGE})
+    assert panel.unavailable == frozenset()
+    assert len(library.requests) == 2
+
+
+def test_a_file_never_downloaded_has_no_copy_to_fall_back_on(library: FakeLibrary) -> None:
+    library.online = False
+    assert loaders.portfolios(US_BY_SIZE) is None
+
+
+def test_a_new_store_holds_no_copies() -> None:
+    copies = loaders.LastGoodCopies()
+    assert copies.get(US_BY_SIZE) is None

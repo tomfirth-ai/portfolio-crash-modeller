@@ -40,7 +40,9 @@ be judged, by its owner or by anyone else.
 
 ## Notes, 19 October 2026
 
-- **The stand-ins were not built.** When a runtime fetch fails, the app says which data is missing,
-  offers a "Try again" button, and still gives results for every split that holds no shares.
+- **The stand-ins were not built.** The app keeps the last good copy of each share data file in
+  memory and uses it if a daily refresh fails. When a file has never been fetched, the app says
+  which data is missing, offers a "Try again" button, and still gives results for every split that
+  holds no shares.
 - **The app goes public after Slice 4** as release v0.1. Later slices ship as releases, each built
   on a branch and reviewed in one pull request, as the [roadmap](../roadmap.md) sets out.

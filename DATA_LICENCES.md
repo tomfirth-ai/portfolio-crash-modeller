@@ -30,8 +30,9 @@ portfolios of companies grouped by size: `Portfolios_Formed_on_ME` (US companies
 value, built from CRSP), and `Developed_6_Portfolios_ME_BE-ME` and
 `Emerging_Markets_6_Portfolios_ME_BE-ME` (big and small companies, built from Bloomberg). The app
 fetches a file only when a split needs it. The files are free to download, but no licence is given
-to redistribute them, so the app keeps them in memory for up to a day, and never writes them to disk
-or commits them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)). Nothing computed from them
+to redistribute them, so the app keeps them in memory only, and never writes them to disk or commits
+them ([ADR 0002](docs/decisions/0002-hosted-data-mode.md)). It refreshes each file once a day and,
+if a refresh fails, keeps using the copy it has. Nothing computed from them
 appears in this repository. The app's Data sources page checks that each file can be reached.
 
 Fund names, tickers, ongoing charges and launch dates are facts typed in by hand from each fund's
