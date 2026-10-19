@@ -22,6 +22,7 @@ step = progress(DESIGN)
 st.progress(step.fraction, text=step.text)
 st.title(presenter.TITLE)
 st.write(presenter.INTRODUCTION)
+st.caption(presenter.SESSION_NOTE)
 with st.container(horizontal=True):
     st.button(presenter.START_OWN, icon=":material/add:", on_click=state.start_own, args=(session,))
     st.button(

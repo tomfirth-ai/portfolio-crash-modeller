@@ -6,6 +6,9 @@ from crashmodel.app import navigation, state
 from crashmodel.app.components.footer import render_footer
 from crashmodel.app.presenters.copy import JOURNEY_SECTION, REFERENCE_SECTION, page_title
 
+TOOLTIP_FIT = "<style>div[role='tooltip'] { max-width: calc(100vw - 16px); }</style>"
+"""Streamlit lays its help tooltips out wider than a phone screen, cutting off their text."""
+
 
 def main() -> None:
     """Configure the app, then run the selected page above the shared footer.
@@ -15,6 +18,7 @@ def main() -> None:
     """
     # The cards and tables are laid out for the centred column, whatever the screen width.
     st.set_page_config(page_icon=":material/thunderstorm:", layout="centered")
+    st.html(TOOLTIP_FIT)
     # Before any page runs, so a visitor who opens a link to a later step still has splits.
     state.ensure_started(st.session_state)
     sources = navigation.data_sources_page()

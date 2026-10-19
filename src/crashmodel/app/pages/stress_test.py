@@ -50,7 +50,6 @@ with panel_box, st.container(horizontal=True):
         default=Rebalancing.MONTHLY.value,
         required=True,
         format_func=presenter.management_name,
-        help=presenter.MANAGEMENT_HELP,
         key=state.MANAGEMENT,
         persist_state="session",
         wrap=True,
@@ -73,6 +72,8 @@ chart = presenter.chart_view(results, episode)
 if chart.points:
     with panel_box:
         st.altair_chart(value_chart(chart), width="stretch")
+        # A caption rather than a tooltip, which a phone screen cuts off.
+        st.caption(presenter.MANAGEMENT_HELP)
         st.caption(presenter.SIMULATED)
 
 st.write(presenter.EPISODE_STORIES[episode.key])

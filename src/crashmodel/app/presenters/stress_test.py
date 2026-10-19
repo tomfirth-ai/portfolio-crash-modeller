@@ -64,7 +64,8 @@ TABLE_HEADING = "Side by side"
 DATA_HEADING = "Where the data comes from"
 SIMULATED = (
     "Simulated past performance: these figures come from models, not from any fund's or index's "
-    "own returns."
+    "own returns. Past performance, real or simulated, is not a reliable indicator of future "
+    "results."
 )
 CAVEAT = (
     "These figures are in pounds before inflation. Each fund's ongoing charge is taken off; tax on "
@@ -73,7 +74,9 @@ CAVEAT = (
     "they have left to run (short-dated gilts as half a 5-year gilt and half cash), rather than "
     "following each index's own rules, so their figures will differ from any fund's or index's "
     "own. They use month-end values, so a fall within a month could have been deeper. Getting "
-    "back to an earlier high in pounds is not the same as getting back your spending power."
+    "back to an earlier high in pounds is not the same as getting back your spending power. "
+    "Counting shares' returns in dollars rather than pounds is exact for US shares and approximate "
+    "for world shares, some of which were priced in other currencies."
 )
 BANK_OF_ENGLAND_CREDIT = (
     "UK gilts are modelled from the Bank of England's gilt yield curve, short-dated gilts using "
@@ -89,11 +92,12 @@ CHART_VALUE = "Value (£)"
 CRASH_PHASE_LABEL = "Crash phase"
 
 EPISODE_NAMES = {
-    DOT_COM.key: "2000-03 dot-com crash",
-    GLOBAL_FINANCIAL_CRISIS.key: "2007-09 financial crisis",
-    COVID.key: "2020 Covid crash",
-    BOND_CRASH.key: "2022-23 bond crash",
+    DOT_COM.key: "Dot-com 2000-03",
+    GLOBAL_FINANCIAL_CRISIS.key: "Financial crisis 2007-09",
+    COVID.key: "Covid 2020",
+    BOND_CRASH.key: "Bond crash 2022-23",
 }
+"""Short names for the crash picker, so two fit a row on a phone; each story names it in full."""
 EPISODE_STORIES = {
     DOT_COM.key: (
         "Technology shares had soared in the late 1990s. The bubble burst in March 2000, and the "

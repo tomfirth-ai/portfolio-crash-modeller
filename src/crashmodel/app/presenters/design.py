@@ -20,7 +20,10 @@ INTRODUCTION = (
     "shares, UK government bonds and sterling cash; more markets come next."
 )
 START_OWN = "Start your own"
-SHOW_EXAMPLES = "Back to the examples"
+SHOW_EXAMPLES = "Reset all to the examples"
+SESSION_NOTE = (
+    "Your splits stay while this tab is open; reloading the page starts again from the examples."
+)
 INCLUDE = "Include"
 NAME = "Name"
 TEMPLATE = "Fill from an example"

@@ -204,7 +204,7 @@ def test_a_card_reads_as_one_paragraph() -> None:
 
 
 def test_every_crash_has_a_name_and_a_story() -> None:
-    assert stress_test.episode_name(COVID.key) == "2020 Covid crash"
+    assert stress_test.episode_name(COVID.key) == "Covid 2020"
     assert (
         stress_test.EPISODE_NAMES.keys()
         == stress_test.EPISODE_STORIES.keys()

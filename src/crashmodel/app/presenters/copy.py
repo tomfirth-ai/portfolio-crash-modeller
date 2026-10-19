@@ -9,8 +9,9 @@ DISCLAIMER = (
 
 NOT_AFFILIATED = (
     "Index and fund names only identify what each model describes. This app is not affiliated "
-    "with, sponsored or endorsed by any index provider or fund manager, and shows no index values "
-    "or fund prices: every figure comes from a model built from published research and open data."
+    "with, sponsored or endorsed by any index provider, fund manager or publisher of the data it "
+    "uses, and shows no index values or fund prices: every figure comes from a model built from "
+    "published research and open data."
 )
 TRADE_MARKS = (
     "S&P 500 and SPDR are trade marks of Standard & Poor's Financial Services LLC, and SPDR is "
