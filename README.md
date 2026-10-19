@@ -9,8 +9,9 @@ strict mypy, and CI on every push.
 
 [![CI](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml/badge.svg)](https://github.com/tomfirth-ai/portfolio-crash-modeller/actions/workflows/ci.yml)
 
-**Try it live:** the link is added here when the app goes public. The free host sleeps when no one
-has visited for a while, so the first visit can take a minute to wake it.
+**Try it live: [portfolio-crash-modeller.streamlit.app](https://portfolio-crash-modeller.streamlit.app/)**.
+The free host sleeps when no one has visited for a while, so the first visit can take a minute to
+wake it.
 
 **Status:** v0.1. Design and Stress-test are live; deciding on a split and tracking it come next
 (see the [roadmap](docs/roadmap.md)).
