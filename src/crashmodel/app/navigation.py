@@ -9,7 +9,7 @@ from pathlib import Path
 import streamlit as st
 
 from crashmodel.app.journey import DESIGN, STRESS_TEST
-from crashmodel.app.presenters import data_sources
+from crashmodel.app.presenters import data_sources, how_it_works
 from crashmodel.app.presenters.copy import HOME_TITLE
 
 PAGES_DIRECTORY = Path(__file__).parent / "pages"
@@ -46,4 +46,14 @@ def data_sources_page() -> st.Page:
         title=data_sources.TITLE,
         icon=":material/database:",
         url_path="data-sources",
+    )
+
+
+def how_it_works_page() -> st.Page:
+    """How every figure is worked out, what the models leave out, and the project behind them."""
+    return st.Page(
+        PAGES_DIRECTORY / "how_it_works.py",
+        title=how_it_works.TITLE,
+        icon=":material/menu_book:",
+        url_path="how-it-works",
     )

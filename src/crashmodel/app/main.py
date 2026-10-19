@@ -22,7 +22,7 @@ def main() -> None:
         {
             "": [navigation.home_page()],
             JOURNEY_SECTION: [navigation.design_page(), navigation.stress_test_page()],
-            REFERENCE_SECTION: [sources],
+            REFERENCE_SECTION: [navigation.how_it_works_page(), sources],
         }
     )
     # Set after navigation: a title set earlier would replace every page's own tab title.

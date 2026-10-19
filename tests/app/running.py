@@ -11,6 +11,7 @@ PAGES = sorted((ROOT / "src/crashmodel/app/pages").glob("[!_]*.py"))
 DESIGN_PAGE = "src/crashmodel/app/pages/design.py"
 STRESS_TEST_PAGE = "src/crashmodel/app/pages/stress_test.py"
 DATA_SOURCES_PAGE = "src/crashmodel/app/pages/data_sources.py"
+HOW_IT_WORKS_PAGE = "src/crashmodel/app/pages/how_it_works.py"
 RUN_TIMEOUT_SECONDS = 30
 """Generous, because the first run imports the dataframe stack."""
 

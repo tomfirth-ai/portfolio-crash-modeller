@@ -11,7 +11,7 @@ from streamlit.testing.v1 import AppTest
 
 from crashmodel.app import state
 from crashmodel.app.components import footer
-from crashmodel.app.presenters import data_sources, design, home, stress_test
+from crashmodel.app.presenters import data_sources, design, home, how_it_works, stress_test
 from crashmodel.app.presenters.copy import DISCLAIMER, SOURCE_CODE
 from crashmodel.app.splits import EXAMPLE_SPLITS
 from crashmodel.app.state import percent_key, widget_key
@@ -22,6 +22,7 @@ from tests.app.copy_rules import copy_problems
 from tests.app.running import (
     DATA_SOURCES_PAGE,
     DESIGN_PAGE,
+    HOW_IT_WORKS_PAGE,
     PAGES,
     STRESS_TEST_PAGE,
     button,
@@ -203,6 +204,7 @@ def test_try_again_fetches_share_prices_once_the_library_is_back(
 RENDERED_PAGES: dict[str, Callable[[pytest.MonkeyPatch], AppTest]] = {
     "home": lambda _monkeypatch: run_app(),
     "data sources": checked_data_sources_page,
+    "how it works": lambda _monkeypatch: run_app(HOW_IT_WORKS_PAGE),
     "stress test": lambda monkeypatch: stress_test_page(monkeypatch, FakeLibrary()),
     "stress test offline": lambda monkeypatch: stress_test_page(
         monkeypatch, FakeLibrary(online=False)
@@ -255,3 +257,12 @@ def test_the_footer_leaves_out_the_source_link_when_no_repository_is_declared(
     monkeypatch.setattr(footer, "repository_url", lambda: None)
 
     assert SOURCE_CODE not in page_links(run_app())
+
+
+def test_how_it_works_explains_the_method_and_links_the_code() -> None:
+    app = run_app(HOW_IT_WORKS_PAGE)
+
+    assert app.title[0].value == how_it_works.TITLE
+    headings = [subheader.value for subheader in app.subheader]
+    assert headings == [section.heading for section in how_it_works.sections(None)]
+    assert any("/blob/main/docs/decisions/" in text.value for text in app.markdown)
