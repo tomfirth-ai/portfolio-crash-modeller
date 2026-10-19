@@ -17,7 +17,7 @@ INTRODUCTION = (
     "they add up to 100. Every one is modelled from published research and open data: each fund "
     "after its ongoing charge, and each index before any charges. You can compare up to four "
     "splits; switch one off to leave it out. So far there are US, developed-world and world "
-    "shares, UK government bonds and sterling cash; more markets come next."
+    "shares, UK government bonds and sterling cash; more markets are planned."
 )
 START_OWN = "Start your own"
 SHOW_EXAMPLES = "Reset all to the examples"

@@ -93,11 +93,11 @@ CRASH_PHASE_LABEL = "Crash phase"
 
 EPISODE_NAMES = {
     DOT_COM.key: "Dot-com 2000-03",
-    GLOBAL_FINANCIAL_CRISIS.key: "Financial crisis 2007-09",
+    GLOBAL_FINANCIAL_CRISIS.key: "Credit crisis 2007-09",
     COVID.key: "Covid 2020",
     BOND_CRASH.key: "Bond crash 2022-23",
 }
-"""Short names for the crash picker, so two fit a row on a phone; each story names it in full."""
+"""Short names for the crash picker, so two fit a row on a phone 360 pixels wide."""
 EPISODE_STORIES = {
     DOT_COM.key: (
         "Technology shares had soared in the late 1990s. The bubble burst in March 2000, and the "
@@ -201,7 +201,7 @@ def management_name(value: str) -> str:
 
 
 def episode_name(key: str) -> str:
-    """What the crash with this key is called, such as "2020 Covid crash"."""
+    """What the crash with this key is called, such as "Covid 2020"."""
     return EPISODE_NAMES[key]
 
 

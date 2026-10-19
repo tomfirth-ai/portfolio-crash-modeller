@@ -38,7 +38,8 @@ FETCHED_INTRODUCTION = (
     f"The share models are built from the [Kenneth R. French Data Library]({LIBRARY_URL})'s "
     "portfolios of companies grouped by size, with each portfolio's number of firms and their "
     "average market value. They are free to download, but no licence is given to pass them on, "
-    "so the app fetches them when it runs and keeps them in memory only, never stored. It "
+    "so the app fetches them when it runs and keeps them in memory only, never writing them to "
+    "disk. It "
     "refreshes each file once a day and, if a refresh fails, keeps using the copy it has. The "
     "check below shows whether each file can be reached from wherever the app is running."
 )

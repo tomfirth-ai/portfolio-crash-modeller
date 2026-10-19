@@ -31,8 +31,8 @@ WHAT_IT_SHOWS = Section(
         "whether each split got back to where it started. For each split you see its worst fall "
         "in the crash phase, how many months it took to reach its low and to get back, and what "
         "£100 became by the end of the window, in pounds before inflation.",
-        "A split can be kept at its percentages, put back to them at the end of every month, or "
-        "left alone, bought once and never changed.",
+        "A split is managed in one of two ways. Kept at its percentages: put back to them at the "
+        "end of every month. Left alone: bought once and never changed.",
     ),
 )
 SHARES = Section(
@@ -41,11 +41,13 @@ SHARES = Section(
         "Share indexes are rebuilt from the Kenneth R. French Data Library's portfolios of "
         "companies grouped by size, in the US, in developed countries and in emerging countries, "
         "each weighted by its companies' market value. The S&P 500 is modelled as the largest US "
-        "companies, MSCI World as the large and mid-sized companies of developed countries, and "
-        "FTSE Global All Cap as companies of every size, worldwide.",
+        "companies; MSCI World and FTSE Developed as the large and mid-sized companies of "
+        "developed countries; FTSE All-World and MSCI ACWI as those of developed and emerging "
+        "countries together; and FTSE Global All Cap and MSCI ACWI IMI as companies of every size, "
+        "worldwide.",
         "Their returns, in dollars, are turned into pounds at month-end exchange rates published "
-        "by the Federal Reserve. The share data is fetched when the app runs and is never stored "
-        "with it.",
+        "by the Federal Reserve. The share data is fetched when the app runs and is never written "
+        "to disk.",
     ),
 )
 GILTS_AND_CASH = Section(
@@ -88,7 +90,8 @@ PRIVACY = Section(
         "The app asks for nothing personal and keeps nothing you type: your splits stay only while "
         "your tab is open. It is hosted on Streamlit Community Cloud, which records anonymous "
         "usage under its own [privacy policy](https://streamlit.io/privacy-policy). The app itself "
-        "sets only Streamlit's security cookie.",
+        "sets only Streamlit's security cookie, and your browser remembers the sidebar and colour "
+        "theme you chose for this site.",
     ),
 )
 

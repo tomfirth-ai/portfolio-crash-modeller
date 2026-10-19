@@ -140,3 +140,23 @@ def test_a_file_never_downloaded_has_no_copy_to_fall_back_on(library: FakeLibrar
 def test_a_new_store_holds_no_copies() -> None:
     copies = loaders.LastGoodCopies()
     assert copies.get(US_BY_SIZE) is None
+
+
+def test_when_one_file_fails_on_its_own_its_last_good_copy_is_used(library: FakeLibrary) -> None:
+    first = loaders.portfolios(US_BY_SIZE)
+    loaders._download.clear()
+    library.moved.add(US_BY_SIZE.url)
+
+    assert loaders.portfolios(US_BY_SIZE) == first
+    assert loaders.load_panel({IndexModel.US_LARGE}).unavailable == frozenset()
+
+
+@pytest.mark.usefixtures("library")
+def test_a_newer_download_replaces_the_copy_kept_before_it() -> None:
+    older, newer = loaders.portfolios(US_BY_SIZE), loaders.portfolios(DEVELOPED_BY_SIZE)
+    assert older is not None
+    assert newer is not None
+    copies = loaders.LastGoodCopies()
+    copies.keep(US_BY_SIZE, older)
+    copies.keep(US_BY_SIZE, newer)
+    assert copies.get(US_BY_SIZE) is newer

@@ -27,9 +27,10 @@ for row in batched(view.steps, CARDS_PER_ROW):
     for column, card in zip(st.columns(CARDS_PER_ROW, border=True), row, strict=False):
         with column:
             st.caption(card.label)
-            st.subheader(card.title, icon=card.icon, anchor=False)
             if card.badge is None:
+                st.subheader(card.title, icon=card.icon, anchor=False)
                 st.write(card.summary)
             else:
+                st.subheader(f":gray[{card.title}]", icon=card.icon, anchor=False)
                 st.badge(card.badge, icon=":material/schedule:", color="gray")
                 st.caption(card.summary)

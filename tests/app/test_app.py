@@ -40,7 +40,7 @@ def test_home_explains_the_journey() -> None:
 
     assert app.title[0].value == "How would your investments have coped with a crash?"
     steps = [subheader.value for subheader in app.subheader]
-    assert steps == ["Design", "Stress-test", "Decide", "Track"]
+    assert steps == ["Design", "Stress-test", ":gray[Decide]", ":gray[Track]"]
     badges = [text.value for text in app.markdown if home.COMING_NEXT in text.value]
     assert len(badges) == 2
 
@@ -275,3 +275,14 @@ def test_the_stress_test_ends_with_where_to_go_next(monkeypatch: pytest.MonkeyPa
     assert links[stress_test.DESIGN_OWN].endswith("design")
     assert links[stress_test.HOW_IT_WORKS].endswith("how-it-works")
     assert stress_test.NEXT_HEADING in [subheader.value for subheader in app.subheader]
+
+
+def test_the_management_options_are_explained_under_the_chart_not_in_a_tooltip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = stress_test_page(monkeypatch, FakeLibrary())
+    assert stress_test.MANAGEMENT_HELP in captions(app)
+
+
+def test_design_says_how_long_the_splits_last() -> None:
+    assert design.SESSION_NOTE in captions(run_app(DESIGN_PAGE))

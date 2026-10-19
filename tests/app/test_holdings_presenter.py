@@ -51,14 +51,14 @@ def example_funds(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_every_label_and_name_says_it_is_modelled() -> None:
-    assert holding_label("sp500") == "S&P 500: US shares (modelled)"
+    assert holding_label("sp500") == "S&P 500 (modelled): US shares"
     assert holding_label("xmpl") == (
-        "XMPL: Example All-World UCITS ETF Acc, tracking FTSE All-World: world shares, including "
-        "emerging markets (modelled)"
+        "XMPL: Example All-World UCITS ETF Acc, tracking FTSE All-World (modelled): world shares, "
+        "including emerging markets"
     )
     assert holding_label("example_index_fund") == (
-        "Example All-World Index Fund C Acc, tracking FTSE All-World: world shares, including "
-        "emerging markets (modelled)"
+        "Example All-World Index Fund C Acc, tracking FTSE All-World (modelled): world shares, "
+        "including emerging markets"
     )
     assert holding_name("xmpl") == "XMPL (modelled)"
     assert holding_name("example_index_fund") == "Example All-World Index Fund C Acc (modelled)"
@@ -75,7 +75,7 @@ def test_a_short_name_is_the_ticker_or_else_the_name() -> None:
 def test_an_index_with_a_short_name_keeps_its_full_name_in_the_picker() -> None:
     """So that a search for any word of the index's name finds the index as well as its funds."""
     assert holding_label("ftse_gilts_all_stocks") == (
-        "FTSE Actuaries UK Conventional Gilts All Stocks: UK government bonds (modelled)"
+        "FTSE Actuaries UK Conventional Gilts All Stocks (modelled): UK government bonds"
     )
     assert holding_name("ftse_gilts_all_stocks") == "FTSE All Stocks gilts (modelled)"
 

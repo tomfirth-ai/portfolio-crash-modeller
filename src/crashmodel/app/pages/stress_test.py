@@ -102,8 +102,4 @@ with st.container(border=True):
     st.write(presenter.NEXT_TEXT)
     with st.container(horizontal=True):
         st.page_link(navigation.design_page(), label=presenter.DESIGN_OWN, icon=DESIGN.icon)
-        st.page_link(
-            navigation.how_it_works_page(),
-            label=presenter.HOW_IT_WORKS,
-            icon=":material/menu_book:",
-        )
+        st.page_link(navigation.how_it_works_page(), label=presenter.HOW_IT_WORKS)

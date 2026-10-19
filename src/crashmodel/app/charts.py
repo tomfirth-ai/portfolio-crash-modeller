@@ -107,13 +107,17 @@ def _crash_phase(view: ValueChartView) -> list[alt.Chart]:
         x=alt.X("utcyearmonth(first):T", title=view.x_title, scale=alt.Scale(type="utc")),
         x2="utcyearmonth(last):T",
     )
-    shade: alt.Chart = band.mark_rect(color=CRASH_PHASE_COLOUR, opacity=CRASH_PHASE_OPACITY)
+    # No tooltips: hovering the band would otherwise show its raw field names.
+    shade: alt.Chart = band.mark_rect(
+        color=CRASH_PHASE_COLOUR, opacity=CRASH_PHASE_OPACITY, tooltip=None
+    )
     label: alt.Chart = band.mark_text(
         align="left",
         baseline="bottom",
         dx=CRASH_PHASE_LABEL_OFFSET,
         dy=-CRASH_PHASE_LABEL_OFFSET,
         color=CRASH_PHASE_COLOUR,
+        tooltip=None,
     ).encode(text="label:N", y=alt.value(0))
     return [shade, label]
 

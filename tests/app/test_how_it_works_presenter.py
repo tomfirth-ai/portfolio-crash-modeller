@@ -1,4 +1,5 @@
 from crashmodel.app.presenters import how_it_works
+from tests.app.running import ROOT
 
 REPOSITORY = "https://github.com/example/project"
 
@@ -26,3 +27,8 @@ def test_the_page_says_what_the_models_leave_out_and_that_it_is_not_advice() -> 
     assert "simulated" in limits
     assert "not a reliable indicator of future results" in limits
     assert "nothing in this app is investment advice" in limits
+
+
+def test_each_linked_decision_record_exists() -> None:
+    for _, name in how_it_works.DECISION_RECORDS:
+        assert (ROOT / "docs/decisions" / name).is_file(), name

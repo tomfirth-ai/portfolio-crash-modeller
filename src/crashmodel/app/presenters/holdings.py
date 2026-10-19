@@ -66,7 +66,7 @@ MODEL_WORDS = {
 
 
 def holding_label(holding_id: HoldingId) -> str:
-    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World...: world shares...".
+    """Label a holding in the picker, such as "VWRP: Vanguard FTSE All-World... (modelled): ...".
 
     A fund whose name does not say which index it tracks has the index added, so that searching
     the picker for an index finds every fund tracking it. Every label ends with what its model
@@ -80,7 +80,7 @@ def holding_label(holding_id: HoldingId) -> str:
         name = fund.name if fund.ticker is None else f"{fund.ticker}: {fund.name}"
         if holding.index.name.casefold() not in fund.name.casefold():
             name = f"{name}, tracking {holding.index.name}"
-    return f"{name}: {MODEL_WORDS[holding.model]} {MODELLED}"
+    return f"{name} {MODELLED}: {MODEL_WORDS[holding.model]}"
 
 
 def holding_name(holding_id: HoldingId) -> str:
